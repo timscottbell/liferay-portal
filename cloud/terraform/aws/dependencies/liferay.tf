@@ -18,6 +18,9 @@ module "s3_bucket" {
 		}
 	}
 	source="terraform-aws-modules/s3-bucket/aws"
+	tags = {
+		LiferayData = "true"
+	}
 	version="~> 4.1.1"
 }
 resource "aws_db_instance" "postgres" {
@@ -35,6 +38,7 @@ resource "aws_db_instance" "postgres" {
 	storage_type="gp2"
 	tags={
 		Name="${var.deployment_name}-postgres-db"
+		LiferayData = "true"
 	}
 	username=random_password.postgres_username.result
 	vpc_security_group_ids=[var.cluster_security_group_id]
