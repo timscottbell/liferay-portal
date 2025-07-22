@@ -22,6 +22,9 @@ module "s3_bucket" {
 		LiferayData = "true"
 	}
 	version="~> 4.1.1"
+	versioning = {
+		enabled = true
+	}
 }
 resource "aws_db_instance" "postgres" {
 	allocated_storage=20
