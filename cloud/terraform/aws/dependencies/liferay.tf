@@ -3,28 +3,9 @@ data "aws_caller_identity" "current" {
 data "aws_region" "current" {
 }
 module "s3_bucket" {
-	block_public_acls=true
-	block_public_policy=true
-	bucket="${var.deployment_name}-s3-bucket-${random_password.s3_bucket_suffix.result}"
-	force_destroy=true
-	ignore_public_acls=true
-	restrict_public_buckets=true
-	server_side_encryption_configuration={
-		rule={
-			apply_server_side_encryption_by_default={
-				sse_algorithm="aws:kms"
-			}
-			bucket_key_enabled=true
-		}
-	}
-	source="terraform-aws-modules/s3-bucket/aws"
-	tags = {
-		Backup = "true"
-	}
-	version="~> 4.1.1"
-	versioning = {
-		enabled = true
-	}
+	source = "../modules/s3-bucket"
+
+	deployment_name = var.deployment_name
 }
 resource "aws_db_instance" "postgres" {
 	allocated_storage=20
@@ -64,8 +45,8 @@ resource "aws_iam_policy" "s3" {
 					]
 					Effect="Allow"
 					Resource=[
-						module.s3_bucket.s3_bucket_arn,
-						"${module.s3_bucket.s3_bucket_arn}/*"
+						"arn:aws:s3:::${module.s3_bucket.s3_bucket_prefix}*",
+						"arn:aws:s3:::${module.s3_bucket.s3_bucket_prefix}*/*"
 					]
 					Sid="AllowObjectOperations"
 				}
