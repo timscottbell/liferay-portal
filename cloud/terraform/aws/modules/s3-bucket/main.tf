@@ -13,6 +13,7 @@ module "s3_bucket" {
   force_destroy       = true
   ignore_public_acls  = true
   restrict_public_buckets = true
+  object_ownership = "BucketOwnerPreferred"
 
   server_side_encryption_configuration = {
     rule = {
