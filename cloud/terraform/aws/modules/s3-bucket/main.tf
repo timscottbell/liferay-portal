@@ -10,6 +10,7 @@ module "s3_bucket" {
 
   block_public_acls   = true
   block_public_policy = true
+  control_object_ownership = true
   force_destroy       = true
   ignore_public_acls  = true
   restrict_public_buckets = true
