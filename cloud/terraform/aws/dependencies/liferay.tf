@@ -45,8 +45,7 @@ resource "aws_iam_policy" "s3" {
 					]
 					Effect="Allow"
 					Resource=[
-						"arn:aws:s3:::${module.s3_bucket.s3_bucket_prefix}*",
-						"arn:aws:s3:::${module.s3_bucket.s3_bucket_prefix}*/*"
+						"arn:aws:s3:::${module.s3_bucket.s3_bucket_prefix}*"
 					]
 					Sid="AllowObjectOperations"
 				}
@@ -191,4 +190,12 @@ resource "kubernetes_secret" "managed_service_details" {
 		namespace=kubernetes_namespace.liferay.metadata[0].name
 	}
 	type="Opaque"
+
+	lifecycle {
+		ignore_changes = [
+			data["DATABASE_ENDPOINT"],
+			data["DATABASE_PORT"],
+			data["S3_BUCKET_ID"],
+		]
+	}
 }
