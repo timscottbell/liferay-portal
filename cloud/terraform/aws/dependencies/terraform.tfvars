@@ -1,0 +1,9 @@
+cluster_name="timtest-eks"
+region="us-east-2"
+private_subnet_ids=[
+	"subnet-0adc7531e239d0728",
+	"subnet-095f1c0a657c338b0"
+]
+deployment_name="timtest"
+deployment_namespace="liferay-system"
+data_active="blue"
