@@ -1,3 +1,2 @@
-data_active = "green"
-db_restore_snapshot_identifier = null
-is_restoring = true
+data_active = "blue"
+is_restoring = false
