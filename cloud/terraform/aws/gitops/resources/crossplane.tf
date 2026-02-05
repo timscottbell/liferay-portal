@@ -1,3 +1,36 @@
+resource "aws_iam_policy" "provider_aws_backup_policy" {
+	count=var.backup_enabled ? 1 : 0
+	name="${local.cluster_name}-provider-aws-backup"
+	policy=jsonencode({
+		Statement=[
+			{
+				Action=[
+					"backup:CreateBackupPlan",
+					"backup:CreateBackupSelection",
+					"backup:CreateBackupVault",
+					"backup:DeleteBackupPlan",
+					"backup:DeleteBackupSelection",
+					"backup:DeleteBackupVault",
+					"backup:DescribeBackupPlan",
+					"backup:DescribeBackupSelection",
+					"backup:DescribeBackupVault",
+					"backup:GetBackupPlan",
+					"backup:GetBackupSelection",
+					"backup:ListBackupPlans",
+					"backup:ListBackupSelections",
+					"backup:ListBackupVaults",
+					"backup:ListTags",
+					"backup:TagResource",
+					"backup:UntagResource",
+					"backup:UpdateBackupPlan",
+				]
+				Effect="Allow"
+				Resource="*"
+			},
+		]
+		Version="2012-10-17"
+	})
+}
 resource "aws_iam_policy" "provider_aws_ec2_policy" {
 	name="${local.cluster_name}-provider-aws-ec2"
 	policy=jsonencode({
@@ -185,6 +218,31 @@ resource "aws_iam_policy" "provider_aws_s3_policy" {
 		Version="2012-10-17"
 	})
 }
+resource "aws_iam_role" "provider_aws_backup_role" {
+	assume_role_policy=jsonencode(
+		{
+			Statement=[
+				{
+					Action="sts:AssumeRoleWithWebIdentity"
+					Condition={
+						StringEquals={
+							"${local.oidc_provider}:aud"="sts.amazonaws.com"
+						}
+						StringLike={
+							"${local.oidc_provider}:sub"="system:serviceaccount:${var.crossplane_namespace}:provider-aws-backup*"
+						}
+					}
+					Effect="Allow"
+					Principal={
+						Federated="arn:aws:iam::${local.account_id}:oidc-provider/${local.oidc_provider}"
+					}
+				},
+			]
+			Version="2012-10-17"
+		})
+	count=var.backup_enabled ? 1 : 0
+	name="${local.cluster_name}-provider-aws-backup-role"
+}
 resource "aws_iam_role" "provider_aws_ec2_role" {
 	assume_role_policy=jsonencode(
 		{
@@ -304,6 +362,11 @@ resource "aws_iam_role" "provider_aws_s3_role" {
 			Version="2012-10-17"
 		})
 	name="${local.cluster_name}-provider-aws-s3-role"
+}
+resource "aws_iam_role_policy_attachment" "provider_aws_backup_attachment" {
+	count=var.backup_enabled ? 1 : 0
+	policy_arn=aws_iam_policy.provider_aws_backup_policy[0].arn
+	role=aws_iam_role.provider_aws_backup_role[0].name
 }
 resource "aws_iam_role_policy_attachment" "provider_aws_ec2_attachment" {
 	policy_arn=aws_iam_policy.provider_aws_ec2_policy.arn

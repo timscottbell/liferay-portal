@@ -2,6 +2,10 @@ variable "argocd_namespace" {
 	default="argocd"
 	type=string
 }
+variable "backup_enabled" {
+	default=false
+	type=bool
+}
 variable "crossplane_namespace" {
 	default="crossplane-system"
 	type=string
