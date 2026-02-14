@@ -57,6 +57,14 @@ resource "kubernetes_manifest" "infrastructure_applicationset" {
 											value=var.infrastructure_git_repo_config.target.slugEnvironmentId
 										},
 										{
+											name="gateway.className"
+											value=var.gateway_class_name
+										},
+										{
+											name="gateway.name"
+											value="${local.gateway_name}"
+										},
+										{
 											name="projectId"
 											value=var.infrastructure_git_repo_config.target.slugProjectId
 										},
@@ -290,7 +298,6 @@ resource "kubernetes_manifest" "liferay_applicationset" {
 							{
 								helm={
 									parameters=[
-										{
 											name="global.aws.accountId"
 											value=local.account_id
 										},
@@ -305,6 +312,10 @@ resource "kubernetes_manifest" "liferay_applicationset" {
 										{
 											name="global.projectId"
 											value=var.infrastructure_git_repo_config.target.slugProjectId
+										},
+										{
+											name="${local.liferay_helm_chart_config.values_scope_prefix}gateway.name"
+											value="${local.gateway_name}"
 										},
 										{
 											name="${local.liferay_helm_chart_config.values_scope_prefix}serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
