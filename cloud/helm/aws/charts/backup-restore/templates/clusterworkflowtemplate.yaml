@@ -33,7 +33,7 @@ spec:
                 source: |-
                     {{- include "liferayAWSBackupRestore.script.applyTerraformModule" . | nindent 20 }}
                 {{- include "liferayAWSBackupRestore.gitCredentials.volumeMount" . | nindent 16 }}
-                workingDir: {{ printf "/src/%s" .Values.git.repository.paths.dependenciesModule }}
+                workingDir: {{ printf "/src/%s" .Values.git.infrastructureRepository.paths.dependenciesModule }}
         -   name: checkout-git-repository
             outputs:
                 artifacts:
@@ -88,7 +88,7 @@ spec:
                     {{- .Values.resources.getDependenciesModuleOutputs | toYaml | nindent 20 }}
                 source: |-
                     {{- include "liferayAWSBackupRestore.script.getDependenciesModuleOutputs" . | nindent 20 }}
-                workingDir: {{ printf "/src/%s" .Values.git.repository.paths.dependenciesModule }}
+                workingDir: {{ printf "/src/%s" .Values.git.infrastructureRepository.paths.dependenciesModule }}
         -   name: get-peer-recovery-points
             outputs:
                 parameters:

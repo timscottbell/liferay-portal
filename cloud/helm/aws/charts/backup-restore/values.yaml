@@ -19,12 +19,11 @@ git:
             token: git_token
             username: git_username
         name: liferay/credentials/backup-restore-git-credentials
-    repository:
+    infrastructureRepository:
         branch: master
         paths:
-            dependenciesModule: cloud/terraform/aws/dependencies
-            sparseCheckout: cloud/terraform/aws
-        url: https://github.com/liferay/liferay-portal.git
+            infrastructureValues: ""
+        url: ""
     user:
         emailAddress: ""
         name: ""

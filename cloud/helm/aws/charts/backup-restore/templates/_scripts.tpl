@@ -10,7 +10,7 @@ function main {
 	git config --global user.email "{{ .Values.git.user.emailAddress }}"
 	git config --global user.name "{{ .Values.git.user.name }}"
 
-	git pull origin {{ .Values.git.repository.branch }}
+	git pull origin {{ .Values.git.infrastructureRepository.branch }}
 
 	echo '{{ "{{" }}inputs.parameters.tfvars-content}}' > {{ .Values.tfvarsOverrideFileName }}
 
@@ -20,7 +20,7 @@ function main {
 	then
 		git commit --message "{{ "{{" }}inputs.parameters.commit-message}}"
 
-		git push origin HEAD:{{ .Values.git.repository.branch }}
+		git push origin HEAD:{{ .Values.git.infrastructureRepository.branch }}
 	fi
 
 	terraform init -input=false
@@ -43,18 +43,10 @@ function main {
 
 	git \
 		clone \
-		--branch "{{ .Values.git.repository.branch }}" \
+		--branch "{{ .Values.git.infrastructureRepository.branch }}" \
 		--depth 1 \
-		--filter blob:none \
-		--no-checkout \
-		"{{ .Values.git.repository.url }}" \
+		"{{ .Values.git.infrastructureRepository.url }}" \
 		/src
-
-	cd /src
-
-	git sparse-checkout set --no-cone "{{ .Values.git.repository.paths.sparseCheckout }}"
-
-	git checkout
 }
 
 main
