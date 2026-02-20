@@ -10,12 +10,15 @@ argo:
             secondsAfterCompletion: 86400
 awsBackupService:
     restoreWaitTimeoutSeconds: 7200
+clusterSecretStoreName: ""
 createClusterResources: true
 fullnameOverride: ""
 git:
-    credentials:
-        token: ""
-        username: ""
+    externalSecret:
+        keys:
+            token: git_token
+            username: git_username
+        name: liferay/credentials/backup-restore-git-credentials
     repository:
         branch: master
         paths:

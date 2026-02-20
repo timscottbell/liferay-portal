@@ -244,10 +244,8 @@ spec:
                         template: kubectl-rollout-status
     ttlStrategy:
         {{- .Values.argo.workflowSpec.ttlStrategy | toYaml | nindent 8 }}
-    {{- if and .Values.git.credentials.token .Values.git.credentials.username }}
     volumes:
         -   name: git-credentials
             secret:
-                secretName: {{ include "liferayAWSBackupRestore.gitCredentials.secretName" . }}
-    {{- end -}}
+                secretName: {{ include "liferayAWSBackupRestore.gitCredentials.externalSecretName" . }}
 {{- end -}}
