@@ -341,6 +341,7 @@ resource "kubernetes_manifest" "liferay_applicationset" {
 							{
 								helm={
 									parameters=[
+										{
 											name="global.aws.accountId"
 											value=local.account_id
 										},
