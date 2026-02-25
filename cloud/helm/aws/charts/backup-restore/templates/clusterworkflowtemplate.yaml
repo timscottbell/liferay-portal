@@ -20,9 +20,7 @@ spec:
         -   inputs:
                 artifacts:
                     -   name: git-repository
-                        path: /src
                     -   name: infrastructure-values
-                        path: /tmp/infrastructure-values.yaml
                 parameters:
                     -   name: commit-message
             name: apply-infra-changes
