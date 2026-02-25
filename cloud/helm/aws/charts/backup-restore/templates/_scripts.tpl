@@ -242,7 +242,7 @@ function main {
 		aws \
 			backup \
 			start-restore-job \
-			--iam-role-arn "{{ printf "arn:aws:iam::%s:role/%s-backup-service-role" .Values.global.aws.accountId (include "liferayAWSBackupRestore.infraResourceBaseName" .) }}" \
+			--iam-role-arn "{{ printf "arn:aws:iam::%v:role/%s-backup-service-role" .Values.global.aws.accountId (include "liferayAWSBackupRestore.infraResourceBaseName" .) }}" \
 			--metadata "DestinationBucketName={{ "{{" }}inputs.parameters.s3-bucket-id}},NewBucket=false" \
 			--recovery-point-arn "{{ "{{" }}inputs.parameters.s3-recovery-point-arn}}" \
 			--resource-type "S3" \
