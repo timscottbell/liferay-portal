@@ -28,8 +28,8 @@ git:
         name: Liferay AWS Backup Restore
 images:
     argocd:
-        repository: argoproj/argocd
-        tag: v2.12.2
+        repository: quay.io/argoproj/argocd
+        tag: v3.3.2
     awsCli:
         repository: amazon/aws-cli
         tag: 2.27.63
