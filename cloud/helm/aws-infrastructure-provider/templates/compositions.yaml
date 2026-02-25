@@ -374,8 +374,8 @@ spec:
                                         environmentId: {{ $environmentId }}
                                         projectId: {{ $projectId }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $baseName }}-database-{{ $dataPlane }}
                             managementPolicies: {{ $databaseInstanceManagementPolicies }}
                             writeConnectionSecretToRef:
@@ -680,8 +680,8 @@ spec:
                             forProvider:
                                 region: {{ $storageSpec.region }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $storageName }}-{{ $dataPlane }}
                             managementPolicies: {{ $managementPolicies }}
                         ---
