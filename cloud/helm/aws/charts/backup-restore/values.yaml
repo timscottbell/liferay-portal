@@ -24,8 +24,8 @@ git:
         paths:
             infrastructureValues: ""
     user:
-        emailAddress: ""
-        name: ""
+        emailAddress: aws.backup.restore@liferay.com
+        name: Liferay AWS Backup Restore
 images:
     argocd:
         repository: argoproj/argocd
