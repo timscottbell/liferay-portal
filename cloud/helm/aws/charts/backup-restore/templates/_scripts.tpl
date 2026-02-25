@@ -178,7 +178,7 @@ function main {
 
 	git \
 		clone \
-		--branch "{{ .Values.git.infrastructureRepository.revision }}" \
+		--branch "{{ .Values.git.infrastructureRepository.branch }}" \
 		--depth 1 \
 		"{{ .Values.git.infrastructureRepository.url }}" \
 		/src
@@ -197,7 +197,7 @@ function main {
 
 	git config --global credential.helper "store --file /tmp/.git-credentials"
 
-	git pull origin {{ .Values.git.infrastructureRepository.revision }}
+	git pull origin {{ .Values.git.infrastructureRepository.branch }}
 }
 
 main
@@ -223,7 +223,7 @@ function main {
 	then
 		git commit --message "{{ "{{" }}inputs.parameters.commit-message}}"
 
-		git push origin HEAD:{{ .Values.git.infrastructureRepository.revision }}
+		git push origin HEAD:{{ .Values.git.infrastructureRepository.branch }}
 	fi
 }
 

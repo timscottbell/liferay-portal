@@ -20,6 +20,7 @@ git:
             username: git_username
         name: liferay/credentials/backup-restore-git-credentials
     infrastructureRepository:
+        branch: master
         paths:
             infrastructureValues: ""
     user:
