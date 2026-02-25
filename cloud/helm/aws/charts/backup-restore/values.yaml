@@ -13,7 +13,6 @@ argoCD:
     infrastructureApplicationName: ""
 awsBackupService:
     restoreWaitTimeoutSeconds: 7200
-clusterSecretStoreName: ""
 createClusterResources: true
 fullnameOverride: ""
 git:
@@ -23,10 +22,8 @@ git:
             username: git_username
         name: liferay/credentials/backup-restore-git-credentials
     infrastructureRepository:
-        branch: master
         paths:
             infrastructureValues: ""
-        url: ""
     user:
         emailAddress: ""
         name: ""

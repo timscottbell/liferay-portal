@@ -358,6 +358,18 @@ resource "kubernetes_manifest" "liferay_applicationset" {
 											value=var.infrastructure_git_repo_config.target.slugProjectId
 										},
 										{
+											name="liferay-aws-backup-restore.clusterSecretStoreName"
+											value=local.secret_store_name
+										},
+										{
+											name="liferay-aws-backup-restore.git.infrastructureRepository.revision",
+											value=var.infrastructure_git_repo_config.revision
+										},
+										{
+											name="liferay-aws-backup-restore.git.infrastructureRepository.url",
+											value=local.infrastructure_git_repo_url
+										},
+										{
 											name="${local.liferay_helm_chart_config.values_scope_prefix}network.gatewayName"
 											value=local.gateway_name
 										},
