@@ -283,6 +283,10 @@ spec:
                                             value: "true"
                                         -   key: aws:ResourceTag/DeploymentName
                                             value: {{ $deploymentName }}
+                                        -   key: aws:ResourceTag/EnvironmentId
+                                            value: {{ $environmentId }}
+                                        -   key: aws:ResourceTag/ProjectId
+                                            value: {{ $projectId }}
                                 iamRoleArnSelector:
                                     matchLabels:
                                         app: liferay
