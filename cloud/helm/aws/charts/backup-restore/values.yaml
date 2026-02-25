@@ -1,6 +1,6 @@
 argo:
     artifactRepository:
-        namespace: argo-workflows
+        namespace: argo-workflows-system
     workflowSpec:
         artifactGC:
             strategy: OnWorkflowDeletion
