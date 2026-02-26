@@ -1,6 +1,4 @@
 argo:
-    artifactRepository:
-        namespace: argo-workflows
     workflowSpec:
         artifactGC:
             strategy: OnWorkflowDeletion
@@ -13,7 +11,6 @@ argoCD:
     infrastructureApplicationName: ""
 awsBackupService:
     restoreWaitTimeoutSeconds: 7200
-clusterSecretStoreName: ""
 createClusterResources: true
 fullnameOverride: ""
 git:
@@ -26,14 +23,13 @@ git:
         branch: master
         paths:
             infrastructureValues: ""
-        url: ""
     user:
-        emailAddress: ""
-        name: ""
+        emailAddress: aws.backup.restore@liferay.com
+        name: Liferay AWS Backup Restore
 images:
     argocd:
-        repository: argoproj/argocd
-        tag: v2.12.2
+        repository: quay.io/argoproj/argocd
+        tag: v3.3.2
     awsCli:
         repository: amazon/aws-cli
         tag: 2.27.63

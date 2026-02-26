@@ -32,7 +32,7 @@ volumeMounts:
 
 {{- define "liferayAWSBackupRestore.infraResourceBaseName" -}}
 {{- $projectIdFull := printf "%s-%s" .Values.global.projectId .Values.global.environmentId -}}
-{{- $uidHash := printf "%s-%s-%s" .Values.global.aws.accountId .Values.global.deploymentName $projectIdFull | sha256sum | trunc 6 -}}
+{{- $uidHash := printf "%v-%s-%s" .Values.global.aws.accountId .Values.global.deploymentName $projectIdFull | sha256sum | trunc 6 -}}
 {{- printf "%.18s-%s" $projectIdFull $uidHash -}}
 {{- end -}}
 
