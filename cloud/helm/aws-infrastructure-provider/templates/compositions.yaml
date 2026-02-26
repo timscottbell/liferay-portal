@@ -283,6 +283,10 @@ spec:
                                             value: "true"
                                         -   key: aws:ResourceTag/DeploymentName
                                             value: {{ $deploymentName }}
+                                        -   key: aws:ResourceTag/EnvironmentId
+                                            value: {{ $environmentId }}
+                                        -   key: aws:ResourceTag/ProjectId
+                                            value: {{ $projectId }}
                                 iamRoleArnSelector:
                                     matchLabels:
                                         app: liferay
@@ -374,8 +378,8 @@ spec:
                                         environmentId: {{ $environmentId }}
                                         projectId: {{ $projectId }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $baseName }}-database-{{ $dataPlane }}
                             managementPolicies: {{ $databaseInstanceManagementPolicies }}
                             writeConnectionSecretToRef:
@@ -680,8 +684,8 @@ spec:
                             forProvider:
                                 region: {{ $storageSpec.region }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $storageName }}-{{ $dataPlane }}
                             managementPolicies: {{ $managementPolicies }}
                         ---
@@ -713,12 +717,42 @@ spec:
                             managementPolicies: {{ $managementPolicies }}
                         ---
                         apiVersion: s3.aws.m.upbound.io/v1beta1
+                        kind: BucketOwnershipControls
+                        metadata:
+                            annotations:
+                                crossplane.io/external-name: {{ $storageName }}-ownership-controls-{{ $dataPlane }}
+                                gotemplating.fn.crossplane.io/composition-resource-name: storage-ownership-controls-{{ $dataPlane }}
+                            labels:
+                                app: liferay
+                                component: storage
+                                environmentId: {{ $environmentId }}
+                                projectId: {{ $projectId }}
+                            name: {{ $storageName }}-ownership-controls-{{ $dataPlane }}
+                            namespace: {{ $namespace }}
+                        spec:
+                            forProvider:
+                                bucketSelector:
+                                    matchLabels:
+                                        app: liferay
+                                        component: storage
+                                        dataPlane: {{ $dataPlane }}
+                                        environmentId: {{ $environmentId }}
+                                        projectId: {{ $projectId }}
+                                region: {{ $storageSpec.region }}
+                                rule:
+                                    objectOwnership: BucketOwnerPreferred
+                            managementPolicies: {{ $managementPolicies }}
+                        ---
+                        apiVersion: s3.aws.m.upbound.io/v1beta1
                         kind: BucketPublicAccessBlock
                         metadata:
                             annotations:
                                 crossplane.io/external-name: {{ $storageName }}-public-access-block-{{ $dataPlane }}
                                 gotemplating.fn.crossplane.io/composition-resource-name: storage-public-access-block-{{ $dataPlane }}
                             labels:
+                                app: liferay
+                                component: storage
+                                dataPlane: {{ $dataPlane }}
                                 environmentId: {{ $environmentId }}
                                 projectId: {{ $projectId }}
                             name: {{ $storageName }}-public-access-block-{{ $dataPlane }}
@@ -746,7 +780,7 @@ spec:
                                 gotemplating.fn.crossplane.io/composition-resource-name: storage-versioning-{{ $dataPlane }}
                             labels:
                                 app: liferay
-                                component: storage-versioning
+                                component: storage
                                 dataPlane: {{ $dataPlane }}
                                 environmentId: {{ $environmentId }}
                                 projectId: {{ $projectId }}
