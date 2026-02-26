@@ -14,6 +14,7 @@ database:
     storageGB: 20
     username: liferay_database_admin
 enabled: true
+endpoints: {}
 gateway: {}
 license: {}
 search:
