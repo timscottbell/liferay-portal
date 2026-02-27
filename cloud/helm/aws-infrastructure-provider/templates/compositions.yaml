@@ -283,6 +283,10 @@ spec:
                                             value: "true"
                                         -   key: aws:ResourceTag/DeploymentName
                                             value: {{ $deploymentName }}
+                                        -   key: aws:ResourceTag/EnvironmentId
+                                            value: {{ $environmentId }}
+                                        -   key: aws:ResourceTag/ProjectId
+                                            value: {{ $projectId }}
                                 iamRoleArnSelector:
                                     matchLabels:
                                         app: liferay
@@ -319,10 +323,24 @@ spec:
                         {{- end }}
 
                         {{- $databaseInstanceManagementPolicies := $backupSpec.enabled | ternary ((list "*") | toJson) $managementPolicies -}}
-                        {{- $databaseSpec := $xr.spec.database }}
+                        {{- $databaseSpec := $xr.spec.database -}}
+                        {{- $restorePhase := $xr.spec.restorePhase | default "none" -}}
 
-                        {{- range $dataPlane := list "blue" "green" -}}
-                        {{- if or (eq $dataPlane $xr.spec.activeDataPlane) $databaseSpec.isRestoring }}
+                        {{- $targetActiveDataPlane := $xr.spec.targetActiveDataPlane -}}
+
+                        {{- $targetInactiveDataPlane := (eq $targetActiveDataPlane "blue") | ternary "green" "blue" -}}
+
+                        {{- $activeDataPlane := $targetActiveDataPlane -}}
+                        {{- $dataPlanes := list $targetActiveDataPlane -}}
+
+                        {{- if (eq $restorePhase "promoting") -}}
+                            {{- $dataPlanes = list "blue" "green" -}}
+                        {{- elif (eq $restorePhase "provisioning") -}}
+                            {{- $activeDataPlane = $targetInactiveDataPlane -}}
+                            {{- $dataPlanes = list "blue" "green" -}}
+                        {{- end -}}
+
+                        {{- range $dataPlane := $dataPlanes -}}
                         ---
                         apiVersion: rds.aws.m.upbound.io/v1beta1
                         kind: Instance
@@ -361,7 +379,7 @@ spec:
                                     name: liferay-database-{{ $dataPlane }}-password
                                 region: {{ $databaseSpec.region }}
                                 skipFinalSnapshot: true
-                                {{- if and (ne $dataPlane $xr.spec.activeDataPlane) $databaseSpec.snapshotIdentifier }}
+                                {{- if and (eq $restorePhase "provisioning") (eq $dataPlane $targetActiveDataPlane) }}
                                 snapshotIdentifier: {{ $databaseSpec.snapshotIdentifier }}
                                 {{- end }}
                                 storageType: gp3
@@ -374,8 +392,8 @@ spec:
                                         environmentId: {{ $environmentId }}
                                         projectId: {{ $projectId }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $baseName }}-database-{{ $dataPlane }}
                             managementPolicies: {{ $databaseInstanceManagementPolicies }}
                             writeConnectionSecretToRef:
@@ -660,7 +678,7 @@ spec:
                         {{- $storageName := printf "%s-%s-storage" $accountId $baseName -}}
                         {{- $storageSpec := $xr.spec.storage }}
 
-                        {{- range $dataPlane := list "blue" "green" }}
+                        {{- range $dataPlane := $dataPlanes }}
                         ---
                         apiVersion: s3.aws.m.upbound.io/v1beta1
                         kind: Bucket
@@ -680,8 +698,8 @@ spec:
                             forProvider:
                                 region: {{ $storageSpec.region }}
                                 tags:
-                                    Active: {{ printf "%t" (eq $dataPlane $xr.spec.activeDataPlane) }}
-                                    Backup: true
+                                    Active: {{ printf "%t" (eq $dataPlane $activeDataPlane) | quote }}
+                                    Backup: "true"
                                     Name: {{ $storageName }}-{{ $dataPlane }}
                             managementPolicies: {{ $managementPolicies }}
                         ---
@@ -713,12 +731,42 @@ spec:
                             managementPolicies: {{ $managementPolicies }}
                         ---
                         apiVersion: s3.aws.m.upbound.io/v1beta1
+                        kind: BucketOwnershipControls
+                        metadata:
+                            annotations:
+                                crossplane.io/external-name: {{ $storageName }}-ownership-controls-{{ $dataPlane }}
+                                gotemplating.fn.crossplane.io/composition-resource-name: storage-ownership-controls-{{ $dataPlane }}
+                            labels:
+                                app: liferay
+                                component: storage
+                                environmentId: {{ $environmentId }}
+                                projectId: {{ $projectId }}
+                            name: {{ $storageName }}-ownership-controls-{{ $dataPlane }}
+                            namespace: {{ $namespace }}
+                        spec:
+                            forProvider:
+                                bucketSelector:
+                                    matchLabels:
+                                        app: liferay
+                                        component: storage
+                                        dataPlane: {{ $dataPlane }}
+                                        environmentId: {{ $environmentId }}
+                                        projectId: {{ $projectId }}
+                                region: {{ $storageSpec.region }}
+                                rule:
+                                    objectOwnership: BucketOwnerPreferred
+                            managementPolicies: {{ $managementPolicies }}
+                        ---
+                        apiVersion: s3.aws.m.upbound.io/v1beta1
                         kind: BucketPublicAccessBlock
                         metadata:
                             annotations:
                                 crossplane.io/external-name: {{ $storageName }}-public-access-block-{{ $dataPlane }}
                                 gotemplating.fn.crossplane.io/composition-resource-name: storage-public-access-block-{{ $dataPlane }}
                             labels:
+                                app: liferay
+                                component: storage
+                                dataPlane: {{ $dataPlane }}
                                 environmentId: {{ $environmentId }}
                                 projectId: {{ $projectId }}
                             name: {{ $storageName }}-public-access-block-{{ $dataPlane }}
@@ -746,7 +794,7 @@ spec:
                                 gotemplating.fn.crossplane.io/composition-resource-name: storage-versioning-{{ $dataPlane }}
                             labels:
                                 app: liferay
-                                component: storage-versioning
+                                component: storage
                                 dataPlane: {{ $dataPlane }}
                                 environmentId: {{ $environmentId }}
                                 projectId: {{ $projectId }}
@@ -1024,6 +1072,18 @@ spec:
 
                         {{- $environmentId := $xr.spec.environmentId -}}
                         {{- $projectId := $xr.spec.projectId -}}
+                        {{- $restorePhase := $xr.spec.restorePhase | default "none" -}}
+
+                        {{- $targetActiveDataPlane := $xr.spec.targetActiveDataPlane -}}
+
+                        {{- $targetInactiveDataPlane := (eq $targetActiveDataPlane "blue") | ternary "green" "blue" -}}
+
+                        {{- $activeDataPlane := $targetActiveDataPlane -}}
+
+                        {{- if (eq $restorePhase "provisioning") -}}
+                            {{- $activeDataPlane = $targetInactiveDataPlane -}}
+                        {{- fi -}}
+
                         {{- $projectIdFull := printf "%s-%s" $projectId $environmentId -}}
                         {{- $uidHash := printf "%s-%s-%s" $accountId $deploymentName $projectIdFull | sha256sum | trunc 6 -}}
                         {{- $baseName := printf "%.18s-%s" $projectIdFull $uidHash -}}
@@ -1031,9 +1091,9 @@ spec:
                         {{- $managementPolicies := $xr.spec.deletionProtection | ternary (list "Create" "Observe" "Update") (list "*") | toJson -}}
                         {{- $namespace := $xr.metadata.namespace -}}
 
-                        {{- $databaseResourceName := printf "database-%s" $xr.spec.activeDataPlane -}}
+                        {{- $databaseResourceName := printf "database-%s" $activeDataPlane -}}
                         {{- $searchResourceName := "search" -}}
-                        {{- $storageResourceName := printf "storage-%s" $xr.spec.activeDataPlane -}}
+                        {{- $storageResourceName := printf "storage-%s" $activeDataPlane -}}
 
                         {{- $database := dict -}}
                         {{- $search := dict -}}

@@ -10,26 +10,19 @@ function main {
 		kubectl \
 			get \
 			liferayinfrastructure \
-			--output json \
-			| jq ".items[0]")
+			"{{ include "liferayAWSBackupRestore.liferayInfrastructureName" . }}" \
+			--output json)
 
-	if [ $(echo "${liferay_infrastructure_json}" | jq --raw-output ".spec.database.snapshotIdentifier") != "null" ]
+	if [ $(echo "${liferay_infrastructure_json}" | jq --raw-output ".spec.restorePhase") != "none" ]
 	then
-		echo "LiferayInfrastructure spec.database.snapshotIdentifier is not empty. A restore may already be in progress." >&2
-
-		exit 1
-	fi
-
-	if [ $(echo "${liferay_infrastructure_json}" | jq --raw-output ".spec.database.isRestoring") = "true" ]
-	then
-		echo "LiferayInfrastructure spec.database.isRestoring is set to true. A restore may already be in progress." >&2
+		echo "LiferayInfrastructure spec.restorePhase is not set to none. A restore may already be in progress." >&2
 
 		exit 1
 	fi
 
 	local data_active
 
-	data_active=$(echo "${liferay_infrastructure_json}" | jq --raw-output ".spec.activeDataPlane")
+	data_active=$(echo "${liferay_infrastructure_json}" | jq --raw-output ".spec.targetActiveDataPlane")
 
 	echo "${data_active}" > /tmp/data-active.txt
 
@@ -166,70 +159,6 @@ function main {
 main
 {{- end -}}
 
-{{- define "liferayAWSBackupRestore.script.gitCheckout" -}}
-#!/bin/sh
-
-set -eu
-
-function main {
-	cp /mnt/.git-credentials /tmp/.git-credentials
-
-	git config --global credential.helper "store --file /tmp/.git-credentials"
-
-	git \
-		clone \
-		--branch "{{ .Values.git.infrastructureRepository.branch }}" \
-		--depth 1 \
-		"{{ .Values.git.infrastructureRepository.url }}" \
-		/src
-}
-
-main
-{{- end -}}
-
-{{- define "liferayAWSBackupRestore.script.gitPull" -}}
-#!/bin/sh
-
-set -eu
-
-function main {
-	cp /mnt/.git-credentials /tmp/.git-credentials
-
-	git config --global credential.helper "store --file /tmp/.git-credentials"
-
-	git pull origin {{ .Values.git.infrastructureRepository.branch }}
-}
-
-main
-{{- end -}}
-
-{{- define "liferayAWSBackupRestore.script.gitPush" -}}
-#!/bin/sh
-
-set -eu
-
-function main {
-	cp /mnt/.git-credentials /tmp/.git-credentials
-
-	git config --global credential.helper "store --file /tmp/.git-credentials"
-	git config --global user.email "{{ .Values.git.user.emailAddress }}"
-	git config --global user.name "{{ .Values.git.user.name }}"
-
-	local pathInfrastructureValues="{{ default (printf "liferay/projects/%s/environments/%s/liferay.yaml" .Values.global.projectId .Values.global.environmentId) .Values.git.infrastructureRepository.paths.infrastructureValues }}"
-
-	git add "${pathInfrastructureValues}"
-
-	if ! git diff --staged --quiet
-	then
-		git commit --message "{{ "{{" }}inputs.parameters.commit-message}}"
-
-		git push origin HEAD:{{ .Values.git.infrastructureRepository.branch }}
-	fi
-}
-
-main
-{{- end -}}
-
 {{- define "liferayAWSBackupRestore.script.restoreS3Bucket" -}}
 #!/bin/sh
 
@@ -242,7 +171,7 @@ function main {
 		aws \
 			backup \
 			start-restore-job \
-			--iam-role-arn "{{ printf "arn:aws:iam::%s:role/%s-backup-service-role" .Values.global.aws.accountId (include "liferayAWSBackupRestore.infraResourceBaseName" .) }}" \
+			--iam-role-arn "{{ printf "arn:aws:iam::%v:role/%s-backup-service-role" .Values.global.aws.accountId (include "liferayAWSBackupRestore.infraResourceBaseName" .) }}" \
 			--metadata "DestinationBucketName={{ "{{" }}inputs.parameters.s3-bucket-id}},NewBucket=false" \
 			--recovery-point-arn "{{ "{{" }}inputs.parameters.s3-recovery-point-arn}}" \
 			--resource-type "S3" \
@@ -296,7 +225,7 @@ function main {
 main
 {{- end -}}
 
-{{- define "liferayAWSBackupRestore.script.waitObservedGeneration" -}}
+{{- define "liferayAWSBackupRestore.script.waitInfrastructureReady" -}}
 #!/bin/sh
 
 set -eu
@@ -308,7 +237,8 @@ function main {
 		kubectl \
 			get \
 			liferayinfrastructure \
-			--output jsonpath="{.items[0].metadata.generation}")
+			"{{ include "liferayAWSBackupRestore.liferayInfrastructureName" . }}" \
+			--output jsonpath="{.metadata.generation}")
 
 	local attempt=0
 	local max_attempts=60
@@ -320,11 +250,12 @@ function main {
 			kubectl \
 				get \
 				liferayinfrastructure \
-				--output jsonpath="{.items[0].status.conditions[?(@.type=="Ready")].observedGeneration}" 2>/dev/null || echo 0)
+				"{{ include "liferayAWSBackupRestore.liferayInfrastructureName" . }}" \
+				--output jsonpath="{.status.conditions[?(@.type=="Ready")].observedGeneration}" 2>/dev/null || echo 0)
 
 		if [ $observed_generation -ge $generation ]
 		then
-		  break
+			break
 		fi
 
 		sleep 5

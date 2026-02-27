@@ -22,12 +22,6 @@ spec:
                     properties:
                         spec:
                             properties:
-                                activeDataPlane:
-                                    default: blue
-                                    enum:
-                                        -   blue
-                                        -   green
-                                    type: string
                                 backup:
                                     properties:
                                         enabled:
@@ -73,13 +67,11 @@ spec:
                                         instanceClass:
                                             default: db.t3.medium
                                             type: string
-                                        isRestoring:
-                                            default: false
-                                            type: boolean
                                         region:
                                             default: us-west-2
                                             type: string
                                         snapshotIdentifier:
+                                            nullable: true
                                             type: string
                                         storageGB:
                                             default: 20
@@ -104,6 +96,20 @@ spec:
                                         -   region
                                     type: object
                                 projectId:
+                                    type: string
+                                restorePhase:
+                                    default: none
+                                    enum:
+                                        -   none
+                                        -   provisioning
+                                        -   promoting
+                                        -   rollback
+                                    type: string
+                                targetActiveDataPlane:
+                                    default: blue
+                                    enum:
+                                        -   blue
+                                        -   green
                                     type: string
                                 search:
                                     properties:
