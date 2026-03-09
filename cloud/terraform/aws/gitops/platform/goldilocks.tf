@@ -1,0 +1,49 @@
+resource "helm_release" "goldilocks" {
+	chart="goldilocks"
+	create_namespace=true
+	name="goldilocks"
+	namespace=var.goldilocks_namespace
+	repository="https://charts.fairwinds.com/stable"
+	values=[
+		yamlencode(
+			{
+				controller={
+					rbac={
+						extraRules=[
+							{
+								apiGroups=["pkg.crossplane.io"]
+								resources=["functionrevisions", "providerrevisions"]
+								verbs=["get", "list", "watch"]
+							},
+						]
+					}
+					resources={
+						limits={
+							cpu="200m"
+							memory="512Mi"
+						}
+						requests={
+							cpu="100m"
+							memory="256Mi"
+						}
+					}
+				}
+				dashboard={
+					resources={
+						limits={
+							cpu="100m"
+							memory="256Mi"
+						}
+						requests={
+							cpu="50m"
+							memory="128Mi"
+						}
+					}
+				}
+				vpa={
+					enabled=false
+				}
+			})
+	]
+	version="10.3.0"
+}

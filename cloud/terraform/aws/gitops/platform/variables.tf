@@ -10,3 +10,9 @@ variable "crossplane_namespace" {
 variable "external_secrets_namespace" {
 	default="external-secrets-system"
 }
+variable "goldilocks_namespace" {
+	default="goldilocks-system"
+}
+variable "vpa_namespace" {
+	default="vpa-system"
+}

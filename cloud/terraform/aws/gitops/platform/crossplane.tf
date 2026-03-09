@@ -32,3 +32,11 @@ resource "helm_release" "crossplane" {
 	version="2.1.3"
 	wait=true
 }
+resource "kubernetes_labels" "crossplane_namespace" {
+	api_version="v1"
+	kind="Namespace"
+	metadata {
+		name=var.crossplane_namespace
+	}
+	labels=local.goldilocks_labels
+}

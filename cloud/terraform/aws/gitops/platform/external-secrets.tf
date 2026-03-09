@@ -44,3 +44,11 @@ resource "helm_release" "external_secrets" {
 	version="1.0.0"
 	wait=true
 }
+resource "kubernetes_labels" "external_secrets_namespace" {
+	api_version="v1"
+	kind="Namespace"
+	metadata {
+		name=var.external_secrets_namespace
+	}
+	labels=local.goldilocks_labels
+}

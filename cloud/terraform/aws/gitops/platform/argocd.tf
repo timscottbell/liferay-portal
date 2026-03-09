@@ -145,7 +145,7 @@ resource "helm_release" "argocd" {
 }
 resource "kubernetes_namespace" "argocd" {
 	metadata {
-		labels=local.common_labels
+		labels=local.goldilocks_labels
 		name=var.argocd_namespace
 	}
 }

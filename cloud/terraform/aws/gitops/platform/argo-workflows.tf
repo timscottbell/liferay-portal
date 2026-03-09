@@ -38,7 +38,7 @@ resource "helm_release" "argo_workflows" {
 }
 resource "kubernetes_namespace" "argo_workflows" {
 	metadata {
-		labels=local.common_labels
+		labels=local.goldilocks_labels
 		name=var.argo_workflows_namespace
 	}
 }
