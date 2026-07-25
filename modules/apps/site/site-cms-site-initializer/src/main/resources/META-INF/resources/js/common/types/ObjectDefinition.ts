@@ -11,10 +11,12 @@ export type ObjectField = {
 		| 'Decimal'
 		| 'Date'
 		| 'DateTime'
+		| 'EmailAddress'
 		| 'Integer'
 		| 'MultiselectPicklist'
 		| 'Long'
 		| 'LongText'
+		| 'PhoneNumber'
 		| 'Picklist'
 		| 'RichText'
 		| 'Relationship'
@@ -63,7 +65,10 @@ export type ObjectDefinition = {
 	label: Liferay.Language.LocalizedValue<string>;
 	name?: string;
 	objectDefinitionSettings?: {
-		name: 'acceptedGroupExternalReferenceCodes' | 'acceptAllGroups';
+		name:
+			| 'acceptAllGroups'
+			| 'acceptedGroupExternalReferenceCodes'
+			| 'allowStandaloneObjectEntry';
 		value: string;
 	}[];
 	objectFields?: ObjectField[];
@@ -73,6 +78,7 @@ export type ObjectDefinition = {
 		| 'L_CMS_STRUCTURE_REPEATABLE_GROUPS';
 	objectRelationships?: ObjectRelationship[];
 	pluralLabel: Liferay.Language.LocalizedValue<string>;
+	restContextPath?: string;
 	scope: 'company' | 'depot' | 'site';
 	status?: {
 		code: number;

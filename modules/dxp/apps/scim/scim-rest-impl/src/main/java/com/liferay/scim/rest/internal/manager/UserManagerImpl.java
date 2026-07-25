@@ -1097,7 +1097,7 @@ public class UserManagerImpl implements UserManager {
 			return StringPool.BLANK;
 		}
 
-		ExpandoValue expandoValue = _expandoValueLocalService.getValue(
+		ExpandoValue expandoValue = _expandoValueLocalService.fetchValue(
 			expandoTable.getTableId(), expandoColumn.getColumnId(), classPK);
 
 		if (expandoValue == null) {
@@ -1282,8 +1282,8 @@ public class UserManagerImpl implements UserManager {
 			portalUser.getUserId(), scimUser.getPassword(), StringPool.BLANK,
 			StringPool.BLANK, false, portalUser.getReminderQueryQuestion(),
 			portalUser.getReminderQueryAnswer(), scimUser.getScreenName(),
-			scimUser.getEmailAddresses()[0], false, null,
-			portalUser.getLanguageId(), scimUser.getTimeZoneId(),
+			scimUser.getEmailAddresses()[0], portalUser.getPortraitId() != 0,
+			null, portalUser.getLanguageId(), scimUser.getTimeZoneId(),
 			portalUser.getGreeting(), portalUser.getComments(),
 			scimUser.getFirstName(), scimUser.getMiddleName(),
 			scimUser.getLastName(), scimUser.getPrefix(), scimUser.getSuffix(),
@@ -1291,7 +1291,7 @@ public class UserManagerImpl implements UserManager {
 			contact.getSmsSn(), contact.getFacebookSn(), contact.getJabberSn(),
 			contact.getSkypeSn(), contact.getTwitterSn(),
 			scimUser.getJobTitle(), portalUser.getGroupIds(),
-			portalUser.getOrganizationIds(), scimUser.getRoleIds(), null,
+			portalUser.getOrganizationIds(), portalUser.getRoleIds(), null,
 			portalUser.getUserGroupIds(), portalUser.getAddresses(),
 			portalUser.getEmailAddresses(), portalUser.getPhones(),
 			portalUser.getWebsites(), null, new ServiceContext());

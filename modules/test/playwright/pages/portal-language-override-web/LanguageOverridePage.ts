@@ -81,6 +81,15 @@ export class LanguageOverridePage {
 		}
 	}
 
+	async assertLanguageKeyHasNoOverrideForLocale(
+		key: string,
+		languageId: string
+	) {
+		await expect(
+			this.page.getByRole('link', {name: key})
+		).not.toContainText(languageId.replace('-', '_'));
+	}
+
 	async assertLanguageKeyNotInListView(key: string) {
 		await expect(this.page.getByRole('link', {name: key})).toBeHidden();
 	}
@@ -208,8 +217,8 @@ export class LanguageOverridePage {
 	}
 
 	async searchLanguageKey(key: string) {
-		await this.page.getByRole('searchbox').click();
-		await this.page.getByRole('searchbox').fill(key);
+		await this.page.getByRole('searchbox', {name: 'Search for:'}).click();
+		await this.page.getByRole('searchbox', {name: 'Search for:'}).fill(key);
 
 		await this.page
 			.getByRole('button', {exact: true, name: 'Search for'})

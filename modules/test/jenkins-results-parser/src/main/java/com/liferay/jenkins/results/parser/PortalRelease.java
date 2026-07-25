@@ -71,7 +71,29 @@ public class PortalRelease {
 		jsonObject.put(
 			"bundles_base_url", String.valueOf(_bundlesBaseURL)
 		).put(
+			"plugins_war_zip_url_string", _pluginsWarZipURLString
+		).put(
+			"portal_bundle_glassfish_url_string",
+			_portalBundleGlassFishURLString
+		).put(
+			"portal_bundle_jboss_url_string", _portalBundleJBossURLString
+		).put(
+			"portal_bundle_tomcat_url_string", _portalBundleTomcatURLString
+		).put(
+			"portal_bundle_wildfly_url_string", _portalBundleWildFlyURLString
+		).put(
+			"portal_dependencies_zip_url_string",
+			_portalDependenciesZipURLString
+		).put(
+			"portal_osgi_zip_url_string", _portalOSGiZipURLString
+		).put(
+			"portal_sql_zip_url_string", _portalSQLZipURLString
+		).put(
+			"portal_tools_zip_url_string", _portalToolsZipURLString
+		).put(
 			"portal_version", _portalVersion
+		).put(
+			"portal_war_url_string", _portalWarURLString
 		);
 
 		return jsonObject;
@@ -423,7 +445,7 @@ public class PortalRelease {
 
 		String bundleFileName = bundleURLMatcher.group("bundleFileName");
 
-		Matcher bundleFileNameMatcher = _bundleFileNamePattern.find(
+		Matcher bundleFileNameMatcher = _bundleFileNameMultiPattern.find(
 			bundleFileName);
 
 		if (bundleFileNameMatcher != null) {
@@ -432,7 +454,7 @@ public class PortalRelease {
 
 		String bundlesBaseURLString = bundleURLMatcher.group("bundlesBaseURL");
 
-		Matcher bundlesBaseURLMatcher = _bundlesBaseURLPattern.find(
+		Matcher bundlesBaseURLMatcher = _bundlesBaseURLMultiPattern.find(
 			bundlesBaseURLString);
 
 		if (bundlesBaseURLMatcher == null) {
@@ -451,7 +473,27 @@ public class PortalRelease {
 			throw new RuntimeException(malformedURLException);
 		}
 
+		_pluginsWarZipURLString = jsonObject.optString(
+			"plugins_war_zip_url_string", null);
+		_portalBundleGlassFishURLString = jsonObject.optString(
+			"portal_bundle_glassfish_url_string", null);
+		_portalBundleJBossURLString = jsonObject.optString(
+			"portal_bundle_jboss_url_string", null);
+		_portalBundleTomcatURLString = jsonObject.optString(
+			"portal_bundle_tomcat_url_string", null);
+		_portalBundleWildFlyURLString = jsonObject.optString(
+			"portal_bundle_wildfly_url_string", null);
+		_portalDependenciesZipURLString = jsonObject.optString(
+			"portal_dependencies_zip_url_string", null);
+		_portalOSGiZipURLString = jsonObject.optString(
+			"portal_osgi_zip_url_string", null);
+		_portalSQLZipURLString = jsonObject.optString(
+			"portal_sql_zip_url_string", null);
+		_portalToolsZipURLString = jsonObject.optString(
+			"portal_tools_zip_url_string", null);
 		_portalVersion = jsonObject.getString("portal_version");
+		_portalWarURLString = jsonObject.optString(
+			"portal_war_url_string", null);
 
 		_initializeURLs();
 	}
@@ -717,12 +759,15 @@ public class PortalRelease {
 	private static final String _QUARTERLY_RELEASE_VERSION_REGEX =
 		"(?<portalVersion>(?<branchVersion>\\d{4}.[Qq]\\d+).\\d+)(-lts)?";
 
-	private static final MultiPattern _bundleFileNamePattern = new MultiPattern(
-		".+\\-" + _PORTAL_VERSION_REGEX + ".*\\.(7z|tar.gz|zip)",
-		".+\\-" + _QUARTERLY_RELEASE_VERSION_REGEX + ".*\\.(7z|tar.gz|zip)");
-	private static final MultiPattern _bundlesBaseURLPattern = new MultiPattern(
-		"https?://.+/" + _PORTAL_VERSION_REGEX,
-		"https?://.+/" + _QUARTERLY_RELEASE_VERSION_REGEX);
+	private static final MultiPattern _bundleFileNameMultiPattern =
+		new MultiPattern(
+			".+\\-" + _PORTAL_VERSION_REGEX + ".*\\.(7z|tar.gz|zip)",
+			".+\\-" + _QUARTERLY_RELEASE_VERSION_REGEX +
+				".*\\.(7z|tar.gz|zip)");
+	private static final MultiPattern _bundlesBaseURLMultiPattern =
+		new MultiPattern(
+			"https?://.+/" + _PORTAL_VERSION_REGEX,
+			"https?://.+/" + _QUARTERLY_RELEASE_VERSION_REGEX);
 	private static final Pattern _bundleURLPattern = Pattern.compile(
 		"(?<bundlesBaseURL>https?://.+)/(?<bundleFileName>[^\\/]+" +
 			"\\.(7z|tar.gz|zip))");

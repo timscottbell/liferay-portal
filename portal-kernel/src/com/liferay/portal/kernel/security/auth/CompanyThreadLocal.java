@@ -57,6 +57,7 @@ public class CompanyThreadLocal {
 		}
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select userId, languageId, timeZoneId from User_ where " +
 					"companyId = ? and type_ = ?")) {
@@ -103,6 +104,16 @@ public class CompanyThreadLocal {
 		}
 
 		return companyId;
+	}
+
+	public static boolean isDefaultCompany() {
+		if (getNonsystemCompanyId() ==
+				PortalInstancePool.getDefaultCompanyId()) {
+
+			return true;
+		}
+
+		return false;
 	}
 
 	public static boolean isInitializingPortalInstance() {
@@ -161,7 +172,7 @@ public class CompanyThreadLocal {
 
 		if (isLocked()) {
 			throw new UnsupportedOperationException(
-				"CompanyThreadLocal modification is not allowed");
+				"Unable to set company ID on locked company thread local");
 		}
 
 		_syncLastDBPartitionSessionState();
@@ -200,7 +211,7 @@ public class CompanyThreadLocal {
 		if (!companyId.equals(_companyId.get())) {
 			if (isLocked()) {
 				throw new UnsupportedOperationException(
-					"CompanyThreadLocal modification is not allowed");
+					"Unable to set company ID on locked company thread local");
 			}
 
 			_syncLastDBPartitionSessionState();
@@ -244,14 +255,15 @@ public class CompanyThreadLocal {
 		};
 	}
 
+	/**
+	 * @deprecated As of Cavanaugh (7.4.x), replaced by {@link
+	 *             #setRawCompanyIdWithSafeCloseable(long)}
+	 */
+	@Deprecated
 	public static SafeCloseable setInitializingCompanyIdWithSafeCloseable(
 		long companyId) {
 
-		if (companyId > 0) {
-			return _companyId.setWithSafeCloseable(companyId);
-		}
-
-		return _companyId.setWithSafeCloseable(CompanyConstants.SYSTEM);
+		return setRawCompanyIdWithSafeCloseable(companyId);
 	}
 
 	public static SafeCloseable setInitializingPortalInstanceWithSafeCloseable(
@@ -259,6 +271,16 @@ public class CompanyThreadLocal {
 
 		return _initializingPortalInstance.setWithSafeCloseable(
 			initializingPortalInstance);
+	}
+
+	public static SafeCloseable setRawCompanyIdWithSafeCloseable(
+		long companyId) {
+
+		if (companyId > 0) {
+			return _companyId.setWithSafeCloseable(companyId);
+		}
+
+		return _companyId.setWithSafeCloseable(CompanyConstants.SYSTEM);
 	}
 
 	public static SafeCloseable setUpgradingPortalInstanceWithSafeCloseable(

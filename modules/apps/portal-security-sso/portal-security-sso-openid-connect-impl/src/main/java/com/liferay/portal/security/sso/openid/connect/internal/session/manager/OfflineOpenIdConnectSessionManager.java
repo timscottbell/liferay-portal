@@ -25,8 +25,6 @@ import com.liferay.portal.kernel.messaging.MessageListener;
 import com.liferay.portal.kernel.scheduler.SchedulerJobConfiguration;
 import com.liferay.portal.kernel.scheduler.TimeUnit;
 import com.liferay.portal.kernel.scheduler.TriggerConfiguration;
-import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.kernel.util.MethodHandler;
 import com.liferay.portal.kernel.util.Time;
@@ -35,7 +33,6 @@ import com.liferay.portal.security.sso.openid.connect.configuration.OpenIdConnec
 import com.liferay.portal.security.sso.openid.connect.constants.OpenIdConnectWebKeys;
 import com.liferay.portal.security.sso.openid.connect.internal.AuthorizationServerMetadataResolver;
 import com.liferay.portal.security.sso.openid.connect.internal.constants.OpenIdConnectDestinationNames;
-import com.liferay.portal.security.sso.openid.connect.internal.util.OpenIdConnectProviderUtil;
 import com.liferay.portal.security.sso.openid.connect.internal.util.OpenIdConnectTokenRequestUtil;
 import com.liferay.portal.security.sso.openid.connect.persistence.model.OpenIdConnectSession;
 import com.liferay.portal.security.sso.openid.connect.persistence.service.OpenIdConnectSessionLocalService;
@@ -61,7 +58,6 @@ import java.util.Map;
 
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -246,25 +242,19 @@ public class OfflineOpenIdConnectSessionManager {
 				_authorizationServerMetadataResolver.
 					resolveOIDCProviderMetadata(
 						openIdConnectSession.getAuthServerWellKnownURI(),
+						oAuthClientEntry.getCompanyId(),
 						oAuthClientEntry.getMetadataCacheInSeconds(),
 						oAuthClientEntry.getOAuthClientEntryId());
-
-			Dictionary<String, Object> properties =
-				OpenIdConnectProviderUtil.
-					getOpenIdConnectProviderConfigurationProperties(
-						oAuthClientEntry.getAuthServerWellKnownURI(),
-						oAuthClientEntry.getClientId(),
-						CompanyThreadLocal.getCompanyId(), _configurationAdmin,
-						String.valueOf(oidcProviderMetadata.getIssuer()),
-						String.valueOf(
-							oidcProviderMetadata.getTokenEndpointURI()));
 
 			OIDCTokens oidcTokens = OpenIdConnectTokenRequestUtil.request(
 				OIDCClientInformation.parse(
 					JSONObjectUtils.parse(oAuthClientEntry.getInfoJSON())),
 				oidcProviderMetadata, refreshToken,
-				GetterUtil.getInteger(properties.get("tokenConnectionTimeout")),
+				oAuthClientEntry.getTokenConnectionTimeout(),
 				oAuthClientEntry.getTokenRequestParametersJSON());
+
+			_updateOpenIdConnectSessionIdToken(
+				oidcTokens.getIDTokenString(), openIdConnectSession);
 
 			_updateOpenIdConnectSession(
 				oidcTokens.getAccessToken(), openIdConnectSession,
@@ -359,6 +349,20 @@ public class OfflineOpenIdConnectSessionManager {
 		openIdConnectSession.setUserId(userId);
 		openIdConnectSession.setAuthServerWellKnownURI(authServerWellKnownURI);
 		openIdConnectSession.setClientId(clientId);
+
+		_updateOpenIdConnectSessionIdToken(idTokenString, openIdConnectSession);
+
+		_updateOpenIdConnectSession(
+			accessToken, openIdConnectSession, refreshToken);
+	}
+
+	private void _updateOpenIdConnectSessionIdToken(
+		String idTokenString, OpenIdConnectSession openIdConnectSession) {
+
+		if (idTokenString == null) {
+			return;
+		}
+
 		openIdConnectSession.setIdToken(idTokenString);
 
 		try {
@@ -375,9 +379,6 @@ public class OfflineOpenIdConnectSessionManager {
 				_log.warn(parseException);
 			}
 		}
-
-		_updateOpenIdConnectSession(
-			accessToken, openIdConnectSession, refreshToken);
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(
@@ -389,9 +390,6 @@ public class OfflineOpenIdConnectSessionManager {
 
 	@Reference
 	private ClusterMasterExecutor _clusterMasterExecutor;
-
-	@Reference
-	private ConfigurationAdmin _configurationAdmin;
 
 	@Reference
 	private CounterLocalService _counterLocalService;

@@ -9,6 +9,7 @@ import {OrderCustomFields, OrderTypes} from '../../../enums/Order';
 import {Liferay} from '../../../liferay/liferay';
 import zodSchema from '../../../schema/zod';
 import provisioningOAuth2 from '../../../services/oauth/Provisioning';
+import HeadlessDXPFreeRequest from '../../../services/rest/HeadlessDXPFreeRequest';
 import {getSiteURL} from '../../../utils/site';
 import ProductPurchase from './ProductPurchase';
 
@@ -50,8 +51,15 @@ export default class ProductPurchaseDXPTypeFree extends ProductPurchase {
 		await provisioningOAuth2.createLicenseKeyTypeFree({
 			assetReceiptLicenseUuid: order.id,
 			domains: this.form.domain,
-			owner: Liferay.ThemeDisplay.getUserEmailAddress(),
+			owner:
+				this.form.businessEmailAddress ||
+				Liferay.ThemeDisplay.getUserEmailAddress(),
 		});
+
+		await HeadlessDXPFreeRequest.createDXPFreeRequest({
+			...this.form,
+			r_orderToDXPFreeActivationKeyRequest_commerceOrderId: order.id,
+		}).catch(console.error);
 
 		return order;
 	}
@@ -61,6 +69,6 @@ export default class ProductPurchaseDXPTypeFree extends ProductPurchase {
 			return super.getNextStepsLink(cart);
 		}
 
-		return `${window.location.origin}${getSiteURL()}/customer-dashboard#/products/${cart.id}/activation-keys?next-steps`;
+		return `${window.location.origin}${getSiteURL()}/customer-dashboard#/products/${cart.id}?next-steps`;
 	}
 }

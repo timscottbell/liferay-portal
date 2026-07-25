@@ -5,7 +5,8 @@
 
 package com.liferay.depot.internal.feature.flag;
 
-import com.liferay.depot.internal.util.DepotRoleUtil;
+import com.liferay.depot.constants.DepotRolesConstants;
+import com.liferay.depot.util.DepotRoleUtil;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagListener;
@@ -13,6 +14,7 @@ import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.service.RoleLocalService;
 
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -32,22 +34,25 @@ public class CMSFeatureFlagListener implements FeatureFlagListener {
 	public void onValue(
 		long companyId, String featureFlagKey, boolean enabled) {
 
-		if (!enabled || !Objects.equals(featureFlagKey, "LPD-17564")) {
+		if (!Objects.equals(featureFlagKey, "LPD-17564")) {
 			return;
 		}
 
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setProductionModeWithSafeCloseable()) {
 
-			for (String name : DepotRoleUtil.DEPOT_ROLE_NAMES) {
+			for (String name : DepotRolesConstants.DEPOT_ROLE_NAMES) {
 				Role role = _roleLocalService.fetchRole(companyId, name);
 
 				if (role == null) {
 					continue;
 				}
 
-				Map<Locale, String> titleMap = DepotRoleUtil.getTitleMap(
-					companyId, _language, name);
+				Map<Locale, String> titleMap = Collections.emptyMap();
+
+				if (enabled) {
+					titleMap = DepotRoleUtil.getTitleMap(_language, name);
+				}
 
 				if (Objects.equals(titleMap, role.getTitleMap())) {
 					continue;

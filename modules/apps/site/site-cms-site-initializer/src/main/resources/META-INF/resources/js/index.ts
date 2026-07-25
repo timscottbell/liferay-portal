@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
+export {default as AddMembersInput} from './common/components/AddMembersInput';
 export {default as Breadcrumb} from './common/components/Breadcrumb';
-export {default as EnterpriseFeatureIndicator} from './common/components/EnterpriseFeatureIndicator';
 export {default as EnterpriseProductMenuBanner} from './common/components/EnterpriseProductMenuBanner';
 export {default as SpaceSelector} from './common/components/SpaceSelector';
 export {default as SpaceSticker} from './common/components/SpaceSticker';
 export {default as Toolbar} from './common/components/Toolbar';
+export {default as VerticalNavLayout} from './common/components/VerticalNavLayout';
 export {default as FieldPicker} from './common/components/forms/FieldPicker';
 export {default as FieldText} from './common/components/forms/FieldText';
 export {default as FieldWrapper} from './common/components/forms/FieldWrapper';
@@ -33,6 +34,7 @@ export {
 	displayNameInUseErrorToast,
 } from './common/utils/toastUtil';
 
+export {default as ContentEditorPreview} from './content_editor/components/ContentEditorPreview';
 export {default as ContentEditorSidePanel} from './content_editor/components/ContentEditorSidePanel';
 
 // Content Editor
@@ -49,7 +51,7 @@ export {default as CategorizationToolbar} from './main_view/categorization/Categ
 export {default as EditCategoryPage} from './main_view/categorization/categories/EditCategoryPage';
 export {default as ViewTags} from './main_view/categorization/tags/ViewTags';
 export {default as EditVocabulary} from './main_view/categorization/vocabularies/EditVocabulary';
-export {default as ViewDashboard} from './main_view/dashboard/ViewDashboard';
+export {default as Dashboards} from './main_view/dashboard/Dashboards';
 
 export {default as EditFolder} from './main_view/folders/EditFolder';
 export {default as QuickActions} from './main_view/home/QuickActions';
@@ -91,6 +93,7 @@ export {default as manageMembersAction} from './main_view/props_transformer/acti
 export {triggerAssetBulkAction} from './main_view/props_transformer/actions/triggerAssetBulkAction';
 export {default as SimpleActionLinkRenderer} from './main_view/props_transformer/cell_renderers/SimpleActionLinkRenderer';
 export {default as addOnClickToCreationMenuItems} from './main_view/props_transformer/utils/addOnClickToCreationMenuItems';
+export {default as AllQuickFilters} from './main_view/quick_filters/AllQuickFilters';
 export {default as RecycleBinToolbar} from './main_view/recycle_bin/RecycleBinToolbar';
 export {default as AddSpaceMembers} from './main_view/spaces/AddSpaceMembers';
 export {default as NewSpace} from './main_view/spaces/NewSpace';
@@ -98,6 +101,7 @@ export {default as SpaceSettings} from './main_view/spaces/SpaceSettings';
 export {default as SpaceSummaryHeader} from './main_view/spaces/SpaceSummaryHeader';
 export {default as SpacesNavigation} from './main_view/spaces_navigation/SpacesNavigation';
 export {default as VersionHistoryToolbar} from './main_view/version_history/VersionHistoryToolbar';
+export {default as ViewAsset} from './main_view/view_asset/ViewAsset';
 
 // Structure Builder
 

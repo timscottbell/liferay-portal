@@ -7,12 +7,13 @@ import {expect, mergeTests} from '@playwright/test';
 
 import {featureFlagsTest} from '../../../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../../../fixtures/loginTest';
-import {advancedClassicPageTest} from '../../../../frontend-editor-ckeditor-sample-web/fixtures/ckeditor5/classicPageTest';
+import getRandomString from '../../../../../utils/getRandomString';
+import {advancedClassicPageTest} from '../../../../frontend-editor-ckeditor5-sample-web/fixtures/classicPageTest';
 
 export const test = mergeTests(
 	advancedClassicPageTest,
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 		'LPS-178052': {enabled: true},
 	}),
 	loginTest()
@@ -41,6 +42,7 @@ test(
 				'Accessibility help',
 				'Undo',
 				'Redo',
+				'Find and replace',
 				'Styles',
 				'Normal',
 				'Bold',
@@ -61,7 +63,6 @@ test(
 				'Video',
 				'Horizontal line',
 				'Text alignment',
-				'AI Creator',
 				'Source',
 			];
 
@@ -74,7 +75,7 @@ test(
 		await test.step('Toolbar buttons have Clay icons', async () => {
 			await expect(
 				classicPage.toolbar.container.locator('svg use[href*="/clay/"]')
-			).toHaveCount(23);
+			).toHaveCount(22);
 		});
 	}
 );
@@ -148,38 +149,106 @@ test(
 );
 
 test(
-	'Select image by modal URL input',
-	{tag: '@LPD-11235'},
-	async ({classicPage}) => {
-		await classicPage.toolbar.container
-			.getByRole('button', {name: 'Image'})
-			.click();
-
-		const itemSelectorFrame = classicPage.itemSelectorFrame;
-
-		itemSelectorFrame.getByRole('link', {name: 'URL'}).click();
-
-		const imageURLInput = itemSelectorFrame.getByLabel('URL', {
-			exact: true,
+	'Can add a hyperlink to existing text',
+	{tag: '@LPS-110663'},
+	async ({classicPage, page}) => {
+		await test.step('Type some text in the editor', async () => {
+			await classicPage.editable.fill(getRandomString());
 		});
 
-		await expect(imageURLInput).toBeEnabled();
+		await test.step('Select text and add hyperlink', async () => {
+			await classicPage.editable.selectText();
 
-		const addButton = itemSelectorFrame.getByRole('button', {
-			exact: true,
-			name: 'Add',
+			await classicPage.toolbar.container
+				.getByRole('button', {name: 'Link'})
+				.click();
+
+			const urlInput = page.getByLabel('Link URL');
+
+			await expect(urlInput).toBeVisible({timeout: 3000});
+
+			await urlInput.fill('https://www.liferay.com');
+
+			await page.getByLabel('Insert', {exact: true}).click();
 		});
-
-		await expect(addButton).toBeDisabled();
-
-		await imageURLInput.fill('/documents/d/guest/tree-png');
-
-		await expect(addButton).toBeEnabled();
-
-		await addButton.click();
 
 		await expect(
-			classicPage.editable.locator('img[src*="tree-png"]')
+			classicPage.editable.locator('a[href*="https://www.liferay.com"]')
+		).toBeVisible();
+	}
+);
+
+test(
+	'Select image by modal URL input and check image link when aligned',
+	{tag: ['@LPD-11235', '@LPD-94512']},
+	async ({classicPage, page}) => {
+		const linkURL = 'https://www.liferay.com';
+
+		await test.step('Insert an image by modal URL input', async () => {
+			await classicPage.toolbar.container
+				.getByRole('button', {name: 'Image'})
+				.click();
+
+			const itemSelectorFrame = classicPage.itemSelectorFrame;
+
+			itemSelectorFrame.getByRole('link', {name: 'URL'}).click();
+
+			const imageURLInput = itemSelectorFrame.getByLabel('URL', {
+				exact: true,
+			});
+
+			await expect(imageURLInput).toBeEnabled();
+
+			const addButton = itemSelectorFrame.getByRole('button', {
+				exact: true,
+				name: 'Add',
+			});
+
+			await expect(addButton).toBeDisabled();
+
+			await imageURLInput.fill('/documents/d/guest/tree-png');
+
+			await expect(addButton).toBeEnabled();
+
+			await addButton.click();
+
+			await expect(
+				classicPage.editable.locator('img[src*="tree-png"]')
+			).toBeVisible();
+		});
+
+		await test.step('Center align the image', async () => {
+			await classicPage.editable.locator('img[src*="tree-png"]').click();
+
+			const centerButton = page.getByRole('button', {
+				name: 'Centered image',
+			});
+
+			await expect(centerButton).toBeVisible();
+
+			await centerButton.click();
+
+			await expect(centerButton).toHaveAttribute('aria-pressed', 'true');
+		});
+
+		await test.step('Add a hyperlink to the centered image', async () => {
+			await classicPage.toolbar.container
+				.getByRole('button', {name: 'Link'})
+				.click();
+
+			const urlInput = page.getByLabel('Link URL');
+
+			await expect(urlInput).toBeVisible({timeout: 3000});
+
+			await urlInput.fill(linkURL);
+
+			await page.getByLabel('Insert', {exact: true}).click();
+		});
+
+		await expect(
+			classicPage.editable.locator(
+				`figure.image a[href*="${linkURL}"] img[src*="tree-png"]`
+			)
 		).toBeVisible();
 	}
 );
@@ -219,27 +288,10 @@ test(
 	}
 );
 
-test('Open AI Creator popover', async ({classicPage, page}) => {
-	const AICreatorButton = classicPage.toolbar.container.getByRole('button', {
-		name: 'Create AI Content',
-	});
-
-	await AICreatorButton.click();
-
-	await expect(page.getByText('Configure OpenAI')).toBeVisible();
-});
-
 test(
 	'Opening source editing disables all custom controls',
 	{tag: '@LPD-11235'},
 	async ({classicPage}) => {
-		const AICreatorButton = classicPage.toolbar.container.getByRole(
-			'button',
-			{
-				name: 'Create AI Content',
-			}
-		);
-
 		const imageButton = classicPage.toolbar.container.getByRole('button', {
 			name: 'Image',
 		});
@@ -252,15 +304,37 @@ test(
 
 		await sourceButton.click();
 
-		await expect(AICreatorButton).toBeDisabled();
 		await expect(imageButton).toBeDisabled();
 		await expect(videoButton).toBeDisabled();
 
 		await sourceButton.click();
 
-		await expect(AICreatorButton).toBeEnabled();
 		await expect(imageButton).toBeEnabled();
 		await expect(videoButton).toBeEnabled();
+	}
+);
+
+test(
+	'Can view HTML in source mode formatted in wysiwyg view',
+	{tag: '@LRQA-67229'},
+	async ({classicPage}) => {
+		const sourceButton = classicPage.toolbar.container.getByRole('button', {
+			name: 'Source',
+		});
+
+		await sourceButton.click();
+
+		await classicPage.sourceEditable.fill(
+			'<h2>Heading Two</h2><p>Paragraph with <i>italic</i> text.</p>'
+		);
+
+		await sourceButton.click();
+
+		await expect(classicPage.editable.locator('h2')).toContainText(
+			'Heading Two'
+		);
+
+		await expect(classicPage.editable.locator('i')).toContainText('italic');
 	}
 );
 
@@ -324,5 +398,77 @@ test(
 
 			await expect(hiddenInput).toHaveValue('');
 		});
+	}
+);
+
+test(
+	'Find and Replace button is shown in the toolbar',
+	{tag: '@LPD-95091'},
+	async ({classicPage}) => {
+		await expect(
+			classicPage.toolbar.container.getByRole('button', {
+				exact: true,
+				name: 'Find and replace',
+			})
+		).toBeVisible();
+	}
+);
+
+test(
+	'Enhanced Paste from Office plugin is registered for licensed DXP installations',
+	{tag: '@LPD-95090'},
+	async ({classicPage, page}) => {
+		await expect(classicPage.editable).toBeVisible();
+
+		const {hasPasteFromOfficeEnhanced, showPasteFromOfficeEnhanced} =
+			await page.evaluate(() => {
+				const editorElement = Array.from(
+					document.querySelectorAll('.lfr-ck *')
+				).find((element) => (element as any).ckeditorInstance);
+
+				const editor = (editorElement as any)?.ckeditorInstance;
+
+				return {
+					hasPasteFromOfficeEnhanced:
+						editor?.plugins.has('PasteFromOfficeEnhanced') ?? false,
+					showPasteFromOfficeEnhanced:
+						editor?.config.get('showPasteFromOfficeEnhanced') ??
+						false,
+				};
+			});
+
+		test.skip(
+			!showPasteFromOfficeEnhanced,
+			'Enhanced Paste from Office is only available on licensed DXP installations'
+		);
+
+		expect(hasPasteFromOfficeEnhanced).toBe(true);
+	}
+);
+
+test(
+	'Style Book text colors are available in the Styles dropdown',
+	{tag: '@LPD-11235'},
+	async ({classicPage, page}) => {
+		await classicPage.toolbar.container
+			.getByRole('button', {name: 'Styles'})
+			.click();
+
+		const textColors = [
+			'Primary',
+			'Secondary',
+			'Success',
+			'Danger',
+			'Warning',
+			'Info',
+			'Dark',
+			'Light',
+		];
+
+		for (const color of textColors) {
+			await expect(
+				page.getByRole('option', {exact: true, name: color})
+			).toBeVisible();
+		}
 	}
 );

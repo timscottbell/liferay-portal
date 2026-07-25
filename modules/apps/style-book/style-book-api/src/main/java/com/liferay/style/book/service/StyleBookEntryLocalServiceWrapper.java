@@ -373,6 +373,12 @@ public class StyleBookEntryLocalServiceWrapper
 	}
 
 	@Override
+	public String generateStyleBookEntryName(long groupId, String name) {
+		return _styleBookEntryLocalService.generateStyleBookEntryName(
+			groupId, name);
+	}
+
+	@Override
 	public com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery
 		getActionableDynamicQuery() {
 
@@ -478,6 +484,44 @@ public class StyleBookEntryLocalServiceWrapper
 	}
 
 	@Override
+	public java.util.List<StyleBookEntry> getStyleBookEntries(
+		long[] groupIds, int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator<StyleBookEntry>
+			orderByComparator) {
+
+		return _styleBookEntryLocalService.getStyleBookEntries(
+			groupIds, start, end, orderByComparator);
+	}
+
+	@Override
+	public java.util.List<StyleBookEntry> getStyleBookEntries(
+		long[] groupIds, String themeId) {
+
+		return _styleBookEntryLocalService.getStyleBookEntries(
+			groupIds, themeId);
+	}
+
+	@Override
+	public java.util.List<StyleBookEntry> getStyleBookEntries(
+		long[] groupIds, String themeId, int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator<StyleBookEntry>
+			orderByComparator) {
+
+		return _styleBookEntryLocalService.getStyleBookEntries(
+			groupIds, themeId, start, end, orderByComparator);
+	}
+
+	@Override
+	public java.util.List<StyleBookEntry> getStyleBookEntries(
+		long[] groupIds, String name, String themeId, int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator<StyleBookEntry>
+			orderByComparator) {
+
+		return _styleBookEntryLocalService.getStyleBookEntries(
+			groupIds, name, themeId, start, end, orderByComparator);
+	}
+
+	@Override
 	public java.util.List<StyleBookEntry> getStyleBookEntriesByUuidAndCompanyId(
 		String uuid, long companyId) {
 
@@ -504,6 +548,20 @@ public class StyleBookEntryLocalServiceWrapper
 	public int getStyleBookEntriesCount(long groupId, String name) {
 		return _styleBookEntryLocalService.getStyleBookEntriesCount(
 			groupId, name);
+	}
+
+	@Override
+	public int getStyleBookEntriesCount(long[] groupIds, String themeId) {
+		return _styleBookEntryLocalService.getStyleBookEntriesCount(
+			groupIds, themeId);
+	}
+
+	@Override
+	public int getStyleBookEntriesCount(
+		long[] groupIds, String name, String themeId) {
+
+		return _styleBookEntryLocalService.getStyleBookEntriesCount(
+			groupIds, name, themeId);
 	}
 
 	/**
@@ -614,32 +672,36 @@ public class StyleBookEntryLocalServiceWrapper
 
 	@Override
 	public StyleBookEntry updatePreviewFileEntryId(
-			long styleBookEntryId, long previewFileEntryId)
+			long styleBookEntryId, long previewFileEntryId,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _styleBookEntryLocalService.updatePreviewFileEntryId(
-			styleBookEntryId, previewFileEntryId);
+			styleBookEntryId, previewFileEntryId, serviceContext);
 	}
 
 	@Override
 	public StyleBookEntry updateStyleBookEntry(
 			long userId, long styleBookEntryId, boolean defaultStylebookEntry,
 			String frontendTokensValues, String name, String styleBookEntryKey,
-			long previewFileEntryId)
+			long previewFileEntryId,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _styleBookEntryLocalService.updateStyleBookEntry(
 			userId, styleBookEntryId, defaultStylebookEntry,
-			frontendTokensValues, name, styleBookEntryKey, previewFileEntryId);
+			frontendTokensValues, name, styleBookEntryKey, previewFileEntryId,
+			serviceContext);
 	}
 
 	@Override
 	public StyleBookEntry updateStyleBookEntry(
-			long styleBookEntryId, String frontendTokensValues, String name)
+			long styleBookEntryId, String frontendTokensValues, String name,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _styleBookEntryLocalService.updateStyleBookEntry(
-			styleBookEntryId, frontendTokensValues, name);
+			styleBookEntryId, frontendTokensValues, name, serviceContext);
 	}
 
 	/**
@@ -701,3 +763,4 @@ public class StyleBookEntryLocalServiceWrapper
 	private StyleBookEntryLocalService _styleBookEntryLocalService;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:1754790557

@@ -25,6 +25,7 @@ export const FIELD_TYPES = [
 	'Date and Time',
 	'Boolean',
 	'Upload',
+	'Phone Number',
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -83,13 +84,12 @@ export class StructureBuilderPage {
 		}
 
 		await expect(async () => {
-			await this.page.goto(url);
+			await this.page.goto(url, {waitUntil: 'networkidle'});
 
-			await this.page
-				.locator('.component-tbar')
-				.getByText('Publish')
-				.waitFor({timeout: 2000});
-		}).toPass();
+			await expect(
+				this.page.locator('.component-tbar').getByText('Publish')
+			).toBeVisible({timeout: 5000});
+		}).toPass({timeout: 30000});
 	}
 
 	getTreeItem({
@@ -182,24 +182,72 @@ export class StructureBuilderPage {
 		});
 	}
 
+	async addRelatedContent(name: string, relatedContent: string) {
+		const hasFields = !(await this.page
+			.getByText('No Fields Yet')
+			.isVisible());
+
+		let trigger: Locator;
+
+		if (hasFields) {
+			trigger = this.page.getByLabel('Add Field');
+		}
+		else {
+			trigger = this.page.getByText('Add Field');
+		}
+
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: this.page.getByRole('menuitem', {
+				name: 'Select Related Content',
+			}),
+			trigger,
+		});
+
+		await this.page
+			.getByRole('textbox', {exact: true, name: 'Label Mandatory'})
+			.fill(name);
+
+		await expect(async () => {
+			await this.page
+				.getByRole('combobox', {exact: true, name: 'Related Content'})
+				.click();
+
+			await expect(
+				this.page.getByRole('option', {
+					exact: true,
+					name: relatedContent,
+				})
+			).toBeVisible();
+
+			await this.page
+				.getByRole('option', {exact: true, name: relatedContent})
+				.click();
+		}).toPass();
+	}
+
 	async changeFieldSettings({
 		erc,
 		label,
 		localizable,
 		mandatory,
+		maximumFileSize,
 		multiselection,
 		name,
 		picklist,
 		requestFile,
+		showFilesInLibrary,
 	}: {
 		erc?: string;
 		label?: string;
 		localizable?: boolean;
 		mandatory?: boolean;
+		maximumFileSize?: number;
 		multiselection?: boolean;
 		name?: string;
 		picklist?: string;
 		requestFile?: 'computer' | 'document-library';
+		showFilesInLibrary?: boolean;
 	}) {
 		if (erc !== undefined) {
 			const ercInput = this.page.getByLabel('ERC');
@@ -269,10 +317,30 @@ export class StructureBuilderPage {
 					name:
 						requestFile === 'computer'
 							? 'Computer'
-							: 'Documents and Media',
+							: 'Item Selector',
 				}),
 				trigger: this.page.getByLabel('Request Files'),
 			});
+		}
+
+		if (maximumFileSize !== undefined) {
+			const maxFileSizeInput = this.page.getByLabel('Maximum File Size');
+
+			await maxFileSizeInput.fill(String(maximumFileSize));
+			await maxFileSizeInput.blur();
+		}
+
+		if (showFilesInLibrary !== undefined) {
+			const showFilesInLibraryToggle = this.page.getByRole('checkbox', {
+				name: 'Show Files in CMS Library',
+			});
+
+			if (
+				(await showFilesInLibraryToggle.isChecked()) !==
+				showFilesInLibrary
+			) {
+				await showFilesInLibraryToggle.click();
+			}
 		}
 	}
 
@@ -374,6 +442,8 @@ export class StructureBuilderPage {
 		name = `StructureName${getRandomInt()}`,
 		page,
 		publish = true,
+		spaces,
+		type = 'content',
 	}: {
 		autoDelete?: boolean;
 		erc?: string;
@@ -381,10 +451,14 @@ export class StructureBuilderPage {
 		name?: string;
 		page: StructureBuilderPage;
 		publish?: boolean;
+		spaces?: string[];
+		type?: StructureType;
 	}) {
-		await page.goToCreateStructure();
+		await page.goToCreateStructure(type);
 
-		await page.enableForAllSpaces();
+		if (spaces) {
+			await this.selectSpaces(spaces);
+		}
 
 		await page.changeStructureSettings({
 			erc,
@@ -535,37 +609,17 @@ export class StructureBuilderPage {
 	}
 
 	async publishStructure() {
+		await this.publishButton.click();
+
+		await waitForAlert(this.page, 'published successfully', {
+			timeout: 10000,
+		});
+
 		const url = new URL(this.page.url());
 
 		const objectDefinitionId = url.searchParams.get('objectDefinitionId');
 
-		const publish = async () => {
-			await this.publishButton.click();
-
-			await waitForAlert(this.page, 'published successfully', {
-				timeout: 10000,
-			});
-		};
-
-		if (objectDefinitionId) {
-			await publish();
-
-			return Number(objectDefinitionId);
-		}
-
-		const [response] = await Promise.all([
-			this.page.waitForResponse(
-				(response) =>
-					response.url().includes('object-definitions') &&
-					response.status() === 200,
-				{timeout: 10000}
-			),
-			await publish(),
-		]);
-
-		const {id} = await response.json();
-
-		return id;
+		return objectDefinitionId ? Number(objectDefinitionId) : undefined;
 	}
 
 	async saveStructure(
@@ -640,8 +694,8 @@ export class StructureBuilderPage {
 
 				await expect(
 					this.page.locator('.label-secondary', {hasText: space})
-				).toBeVisible();
-			}).toPass();
+				).toBeVisible({timeout: 5000});
+			}).toPass({timeout: 20000});
 		}
 	}
 

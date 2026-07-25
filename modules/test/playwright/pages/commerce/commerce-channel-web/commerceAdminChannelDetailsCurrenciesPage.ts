@@ -3,16 +3,14 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {FrameLocator, Locator, Page} from '@playwright/test';
+import {FrameLocator, Locator, Page, expect} from '@playwright/test';
 
-import {ApplicationsMenuPage} from '../../product-navigation-applications-menu/ApplicationsMenuPage';
 import {searchTableRowByValue} from '../commerceDNDTablePage';
 
 export class CommerceAdminChannelDetailsCurrenciesPage {
 	readonly addCurrencyAddButton: Locator;
 	readonly addCurrencyButton: Locator;
 	readonly addCurrencyFrame: FrameLocator;
-	readonly applicationsMenuPage: ApplicationsMenuPage;
 	readonly currenciesTable: Locator;
 	readonly currenciesTableRow: (
 		colPosition: number,
@@ -38,7 +36,6 @@ export class CommerceAdminChannelDetailsCurrenciesPage {
 		this.addCurrencyFrame = page.frameLocator(
 			'iframe[title="Add Currency"]'
 		);
-		this.applicationsMenuPage = new ApplicationsMenuPage(page);
 		this.currenciesTable = page.locator(
 			'#_com_liferay_commerce_channel_web_internal_portlet_CommerceChannelsPortlet_editChannelContainer .fds table'
 		);
@@ -83,5 +80,21 @@ export class CommerceAdminChannelDetailsCurrenciesPage {
 			return this.addCurrencyFrame.getByLabel(currencyName);
 		};
 		this.page = page;
+	}
+
+	async addCurrencies(currencyNames: string[]) {
+		await this.addCurrencyButton.click();
+
+		for (const currencyName of currencyNames) {
+			await (await this.currencyFrameCurrency(currencyName)).check();
+		}
+
+		await this.addCurrencyAddButton.click();
+
+		for (const currencyName of currencyNames) {
+			await expect(
+				(await this.currenciesTableRow(0, currencyName, true)).row
+			).toBeVisible();
+		}
 	}
 }

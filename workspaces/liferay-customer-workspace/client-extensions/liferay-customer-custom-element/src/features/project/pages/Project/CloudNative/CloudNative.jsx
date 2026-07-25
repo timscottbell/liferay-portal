@@ -23,12 +23,12 @@ import {getOrRequestToken} from '~/services/liferay/security/auth/getOrRequestTo
 import i18n from '~/utils/I18n';
 
 const CloudNative = () => {
-	const [{project, subscriptionGroups, userAccount}, dispatch] =
+	const [{hasExperienceSubscription, project, subscriptionGroups}, dispatch] =
 		useAppContext();
 
 	const [oAuthToken, setOAuthToken] = useState();
 	const {setHasSideMenu} = useOutletContext();
-	const {featureFlags, provisioningServerAPI} = useAppPropertiesContext();
+	const {provisioningServerAPI} = useAppPropertiesContext();
 	const [downloadStatus, setDownloadStatus] = useState('');
 
 	const handleAlertStatus = useCallback((hasSuccessfullyDownloadedKeys) => {
@@ -66,7 +66,6 @@ const CloudNative = () => {
 	const headerClass = 'bg-neutral-1 font-weight-bold text-neutral-10';
 
 	const EnvironmentRow = ({
-		featureFlags,
 		handleAlertStatus,
 		label,
 		nodes,
@@ -78,9 +77,7 @@ const CloudNative = () => {
 		<ClayTable.Row>
 			<ClayTable.Cell>{i18n.translate(label)}</ClayTable.Cell>
 
-			{featureFlags.includes('LRSD-12057') && (
-				<ClayTable.Cell>{uuid}</ClayTable.Cell>
-			)}
+			<ClayTable.Cell>{uuid}</ClayTable.Cell>
 
 			<ClayTable.Cell>{nodes}</ClayTable.Cell>
 
@@ -120,16 +117,14 @@ const CloudNative = () => {
 										{i18n.translate('environment')}
 									</ClayTable.Cell>
 
-									{featureFlags.includes('LRSD-12057') && (
-										<ClayTable.Cell className={headerClass}>
-											{i18n.translate('subscription-id')}
+									<ClayTable.Cell className={headerClass}>
+										{i18n.translate('subscription-id')}
 
-											<PopoverIcon
-												symbol="question-circle-full"
-												title="please-copy-and-paste-this-subscription-id-to-your-cloud-native-instance"
-											/>
-										</ClayTable.Cell>
-									)}
+										<PopoverIcon
+											symbol="question-circle-full"
+											title="please-copy-and-paste-this-subscription-id-to-your-cloud-native-instance"
+										/>
+									</ClayTable.Cell>
 
 									<ClayTable.Cell className={headerClass}>
 										{i18n.translate(
@@ -142,7 +137,9 @@ const CloudNative = () => {
 										/>
 									</ClayTable.Cell>
 
-									<ClayTable.Cell className={`${headerClass} text-center`}>
+									<ClayTable.Cell
+										className={`${headerClass} text-center`}
+									>
 										{i18n.translate('download')}
 									</ClayTable.Cell>
 								</ClayTable.Row>
@@ -150,7 +147,6 @@ const CloudNative = () => {
 
 							<ClayTable.Body>
 								<EnvironmentRow
-									featureFlags={featureFlags}
 									handleAlertStatus={handleAlertStatus}
 									label="production"
 									nodes={
@@ -166,8 +162,25 @@ const CloudNative = () => {
 									}
 								/>
 
+								{!hasExperienceSubscription && (
+									<EnvironmentRow
+										handleAlertStatus={handleAlertStatus}
+										label="uat"
+										nodes={
+											cloudNativeEnvironment.maxClusterNodes
+										}
+										oAuthToken={oAuthToken}
+										projectName={project.name}
+										provisioningServerAPI={
+											provisioningServerAPI
+										}
+										uuid={
+											cloudNativeEnvironment.productionSubscriptionUuid
+										}
+									/>
+								)}
+
 								<EnvironmentRow
-									featureFlags={featureFlags}
 									handleAlertStatus={handleAlertStatus}
 									label="non-production"
 									nodes={1}

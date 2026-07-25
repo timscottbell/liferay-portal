@@ -33,6 +33,8 @@ import com.liferay.headless.commerce.delivery.order.client.pagination.Pagination
 import com.liferay.headless.commerce.delivery.order.client.resource.v1_0.PlacedOrderResource;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
+import com.liferay.portal.kernel.encryptor.Encryptor;
 import com.liferay.portal.kernel.model.Address;
 import com.liferay.portal.kernel.model.Country;
 import com.liferay.portal.kernel.model.Region;
@@ -49,7 +51,9 @@ import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.DateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.URLCodec;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.test.rule.Inject;
 
@@ -59,11 +63,13 @@ import java.text.DateFormat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -107,14 +113,30 @@ public class PlacedOrderResourceTest extends BasePlacedOrderResourceTestCase {
 			_commerceCurrency.getCode(), _serviceContext);
 
 		_country = _countryLocalService.addCountry(
-			"XY", "XYZ", true, true, RandomTestUtil.randomString(),
+			null, "XY", "XYZ", true, true, RandomTestUtil.randomString(),
 			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
 			RandomTestUtil.nextDouble(), true, true, false, _serviceContext);
 
 		_region = _regionLocalService.addRegion(
-			_country.getCountryId(), true, RandomTestUtil.randomString(),
+			null, _country.getCountryId(), true, RandomTestUtil.randomString(),
 			RandomTestUtil.nextDouble(), RandomTestUtil.randomString(),
 			_serviceContext);
+	}
+
+	@After
+	@Override
+	public void tearDown() throws Exception {
+		super.tearDown();
+
+		for (CommerceOrder commerceOrder :
+				_commerceOrderLocalService.getCommerceOrders(
+					_commerceChannel.getGroupId(),
+					_accountEntry.getAccountEntryId(), QueryUtil.ALL_POS,
+					QueryUtil.ALL_POS, null)) {
+
+			_commerceOrderLocalService.deleteCommerceOrder(
+				commerceOrder.getCommerceOrderId());
+		}
 	}
 
 	@Override
@@ -203,11 +225,11 @@ public class PlacedOrderResourceTest extends BasePlacedOrderResourceTestCase {
 		super.testGetPlacedOrderByExternalReferenceCodePaymentURL();
 	}
 
-	@Ignore
 	@Override
 	@Test
 	public void testGetPlacedOrderPaymentURL() throws Exception {
-		super.testGetPlacedOrderPaymentURL();
+		_testGetPlacedOrderPaymentURLWithBusinessAccountEntry();
+		_testGetPlacedOrderPaymentURLWithGuestAccountEntry();
 	}
 
 	@Override
@@ -605,7 +627,12 @@ public class PlacedOrderResourceTest extends BasePlacedOrderResourceTestCase {
 		commerceOrder.setName(RandomTestUtil.randomString() + StringPool.AT);
 		commerceOrder.setPurchaseOrderNumber(
 			RandomTestUtil.randomString() + StringPool.AMPERSAND);
-		commerceOrder.setRequestedDeliveryDate(RandomTestUtil.nextDate());
+
+		Calendar calendar = Calendar.getInstance();
+
+		calendar.add(Calendar.MONTH, 1);
+
+		commerceOrder.setRequestedDeliveryDate(calendar.getTime());
 
 		User filterUser = UserTestUtil.addUser(testCompany);
 
@@ -673,6 +700,53 @@ public class PlacedOrderResourceTest extends BasePlacedOrderResourceTestCase {
 			Pagination.of(1, 10), null);
 
 		Assert.assertEquals(1, page.getTotalCount());
+	}
+
+	private void _testGetPlacedOrderPaymentURLWithBusinessAccountEntry()
+		throws Exception {
+
+		PlacedOrder placedOrder = _addCommerceOrder(randomPlacedOrder());
+
+		String callbackURL = RandomTestUtil.randomString();
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				"http://localhost:", PortalUtil.getPortalServerPort(false),
+				"/o/commerce-payment?groupId=", _commerceChannel.getGroupId(),
+				"&nextStep=", callbackURL, "&uuid=",
+				placedOrder.getOrderUUID()),
+			placedOrderResource.getPlacedOrderPaymentURL(
+				placedOrder.getId(), callbackURL));
+	}
+
+	private void _testGetPlacedOrderPaymentURLWithGuestAccountEntry()
+		throws Exception {
+
+		AccountEntry accountEntry =
+			_accountEntryLocalService.getGuestAccountEntry(
+				testCompany.getCompanyId());
+
+		CommerceOrder commerceOrder =
+			_commerceOrderLocalService.addCommerceOrder(
+				_user.getUserId(), _commerceChannel.getGroupId(),
+				accountEntry.getAccountEntryId(), _commerceCurrency.getCode(),
+				0);
+
+		commerceOrder.setOrderStatus(
+			CommerceOrderConstants.ORDER_STATUS_COMPLETED);
+
+		commerceOrder = _commerceOrderLocalService.updateCommerceOrder(
+			commerceOrder);
+
+		String guestToken = URLCodec.encodeURL(
+			_encryptor.encrypt(
+				testCompany.getKeyObj(),
+				String.valueOf(commerceOrder.getCommerceOrderId())));
+
+		String paymentURL = placedOrderResource.getPlacedOrderPaymentURL(
+			commerceOrder.getCommerceOrderId(), RandomTestUtil.randomString());
+
+		Assert.assertTrue(paymentURL.contains("guestToken=" + guestToken));
 	}
 
 	private void _testGetPlacedOrderWithPlacedOrderBillingAddress()
@@ -756,6 +830,9 @@ public class PlacedOrderResourceTest extends BasePlacedOrderResourceTestCase {
 
 	@Inject
 	private CountryLocalService _countryLocalService;
+
+	@Inject
+	private Encryptor _encryptor;
 
 	@Inject
 	private ExpandoColumnLocalService _expandoColumnLocalService;

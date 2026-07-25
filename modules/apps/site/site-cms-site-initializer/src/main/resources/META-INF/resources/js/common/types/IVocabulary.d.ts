@@ -11,6 +11,7 @@ export interface IVocabulary {
 	description_i18n?: {
 		[key: string]: string;
 	};
+	externalReferenceCode?: string;
 	id?: number;
 	multiValued: boolean;
 	name: string;
@@ -18,6 +19,8 @@ export interface IVocabulary {
 		[key: string]: string;
 	};
 	numberOfCategories?: number;
+	projects: AssetLibraryType[];
 	siteId?: number;
+	system?: boolean;
 	visibilityType: 'PUBLIC' | 'INTERNAL';
 }

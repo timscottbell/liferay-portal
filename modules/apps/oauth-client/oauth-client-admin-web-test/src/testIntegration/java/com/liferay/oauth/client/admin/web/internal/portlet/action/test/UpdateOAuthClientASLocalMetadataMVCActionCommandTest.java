@@ -46,6 +46,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -75,6 +76,20 @@ public class UpdateOAuthClientASLocalMetadataMVCActionCommandTest {
 			TestPropsValues.getCompanyId());
 
 		_user = UserTestUtil.addUser(_company);
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		for (OAuthClientASLocalMetadata oAuthClientASLocalMetadata :
+				_oAuthClientASLocalMetadataLocalService.
+					getCompanyOAuthClientASLocalMetadata(
+						TestPropsValues.getCompanyId())) {
+
+			_oAuthClientASLocalMetadataLocalService.
+				deleteOAuthClientASLocalMetadata(
+					oAuthClientASLocalMetadata.
+						getOAuthClientASLocalMetadataId());
+		}
 	}
 
 	@Test
@@ -211,11 +226,11 @@ public class UpdateOAuthClientASLocalMetadataMVCActionCommandTest {
 					HashMapBuilder.put(
 						"authorizationEndpoint", new String[] {urlString}
 					).put(
-						"enabledLocalWellKnown", new String[] {"true"}
-					).put(
 						"issuer", new String[] {urlString}
 					).put(
 						"jwksURI", new String[] {urlString}
+					).put(
+						"localWellKnownEnabled", new String[] {"true"}
 					).put(
 						"oAuthClientASLocalMetadataId",
 						new String[] {
@@ -344,18 +359,18 @@ public class UpdateOAuthClientASLocalMetadataMVCActionCommandTest {
 	@Inject
 	private static CompanyLocalService _companyLocalService;
 
-	@Inject
-	private static OAuthClientASLocalMetadataLocalService
-		_oAuthClientASLocalMetadataLocalService;
-
 	private static User _user;
-
-	@Inject
-	private static UserLocalService _userLocalService;
 
 	@Inject(
 		filter = "mvc.command.name=/oauth_client_admin/update_oauth_client_as_local_metadata"
 	)
 	private MVCActionCommand _editMVCActionCommand;
+
+	@Inject
+	private OAuthClientASLocalMetadataLocalService
+		_oAuthClientASLocalMetadataLocalService;
+
+	@Inject
+	private UserLocalService _userLocalService;
 
 }

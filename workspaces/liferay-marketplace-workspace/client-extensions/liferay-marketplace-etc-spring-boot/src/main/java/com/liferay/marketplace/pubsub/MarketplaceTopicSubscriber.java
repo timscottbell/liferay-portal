@@ -23,6 +23,7 @@ import com.google.pubsub.v1.TopicName;
 import com.liferay.marketplace.constants.MarketplaceConstants;
 import com.liferay.marketplace.service.KoroneikiService;
 import com.liferay.marketplace.service.MarketplaceService;
+import com.liferay.marketplace.service.ProvisioningHubService;
 
 import java.io.ByteArrayInputStream;
 
@@ -48,24 +49,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class MarketplaceTopicSubscriber {
 
-	@PreDestroy
-	public void tearDown() {
-		for (Subscriber subscriber : _subscribers) {
-			if (subscriber != null) {
-				ApiService apiService = subscriber.stopAsync();
-
-				apiService.awaitTerminated();
-			}
-		}
-
-		if (_subscriptionAdminClient != null) {
-			_subscriptionAdminClient.close();
-		}
-	}
-
 	@PostConstruct
-	protected void activate() throws Exception {
-		GoogleCredentials googleCredentials;
+	public void postConstruct() throws Exception {
+		GoogleCredentials googleCredentials = null;
 
 		try {
 			googleCredentials = ServiceAccountCredentials.fromStream(
@@ -103,6 +89,21 @@ public class MarketplaceTopicSubscriber {
 				PUBSUB_TOPIC_NAME_KORONEIKI_PRODUCT_PURCHASE_CREATE);
 	}
 
+	@PreDestroy
+	public void preDestroy() {
+		for (Subscriber subscriber : _subscribers) {
+			if (subscriber != null) {
+				ApiService apiService = subscriber.stopAsync();
+
+				apiService.awaitTerminated();
+			}
+		}
+
+		if (_subscriptionAdminClient != null) {
+			_subscriptionAdminClient.close();
+		}
+	}
+
 	private void _subscribe(
 		CredentialsProvider credentialsProvider, String topicName) {
 
@@ -123,7 +124,7 @@ public class MarketplaceTopicSubscriber {
 			_subscriptionAdminClient.createSubscription(
 				Subscription.newBuilder(
 				).setAckDeadlineSeconds(
-					30
+					90
 				).setName(
 					subscriptionName
 				).setRetryPolicy(
@@ -131,12 +132,12 @@ public class MarketplaceTopicSubscriber {
 					).setMaximumBackoff(
 						Duration.newBuilder(
 						).setSeconds(
-							1800
+							600
 						).build()
 					).setMinimumBackoff(
 						Duration.newBuilder(
 						).setSeconds(
-							600
+							60
 						).build()
 					).build()
 				).setTopic(
@@ -148,7 +149,8 @@ public class MarketplaceTopicSubscriber {
 		Subscriber subscriber = Subscriber.newBuilder(
 			subscriptionName,
 			new MarketplaceMessageReceiver(
-				_koroneikiService, _marketplaceService, _productKeys, topicName)
+				_koroneikiService, _marketplaceService, _productKeys,
+				_provisioningHubService, topicName)
 		).setCredentialsProvider(
 			credentialsProvider
 		).build();
@@ -182,6 +184,9 @@ public class MarketplaceTopicSubscriber {
 
 	@Value("${liferay.marketplace.pubsub.gcp.project.id}")
 	private String _projectId;
+
+	@Autowired
+	private ProvisioningHubService _provisioningHubService;
 
 	@Value("${liferay.marketplace.pubsub.gcp.service.account.key}")
 	private String _serviceAccountKey;

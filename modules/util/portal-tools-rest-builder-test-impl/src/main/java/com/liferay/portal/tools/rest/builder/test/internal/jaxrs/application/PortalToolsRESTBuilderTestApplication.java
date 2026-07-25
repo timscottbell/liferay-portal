@@ -17,7 +17,8 @@ import org.osgi.service.component.annotations.Component;
  */
 @Component(
 	property = {
-		"liferay.jackson=false", "osgi.jaxrs.application.base=/test",
+		"liferay.jackson=false",
+		"osgi.jaxrs.application.base=/portal-tools-rest-builder-test",
 		"osgi.jaxrs.extension.select=(osgi.jaxrs.name=Liferay.Vulcan)",
 		"osgi.jaxrs.name=Liferay.Portal.Tools.REST.Builder.Test"
 	},
@@ -26,3 +27,4 @@ import org.osgi.service.component.annotations.Component;
 @Generated("")
 public class PortalToolsRESTBuilderTestApplication extends Application {
 }
+// LIFERAY-REST-BUILDER-HASH:2006009564

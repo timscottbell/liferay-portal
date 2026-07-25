@@ -5,6 +5,7 @@
 
 package com.liferay.headless.admin.list.type.internal.resource.v1_0;
 
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.headless.admin.list.type.dto.v1_0.ListTypeDefinition;
 import com.liferay.headless.admin.list.type.dto.v1_0.ListTypeEntry;
@@ -85,8 +86,11 @@ public class ListTypeDefinitionResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor
+		<com.liferay.list.type.model.ListTypeDefinition>
+			getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
 
 			@Override
 			public String getKey() {
@@ -99,9 +103,10 @@ public class ListTypeDefinitionResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return com.liferay.list.type.model.ListTypeDefinition.class.
-					getName();
+			public Class<com.liferay.list.type.model.ListTypeDefinition>
+				getModelClass() {
+
+				return com.liferay.list.type.model.ListTypeDefinition.class;
 			}
 
 			@Override
@@ -117,6 +122,11 @@ public class ListTypeDefinitionResourceImpl
 			@Override
 			public Scope getScope() {
 				return Scope.COMPANY;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_CONTENT_AND_DATA;
 			}
 
 		};

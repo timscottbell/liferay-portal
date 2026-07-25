@@ -565,3 +565,4 @@ public class DataLayoutRenderingContext implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-24899576

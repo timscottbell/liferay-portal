@@ -67,6 +67,7 @@ public class CPSpecificationOptionUpgradeProcessTest {
 		long cpSpecificationOptionId = RandomTestUtil.randomLong();
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,
@@ -86,15 +87,16 @@ public class CPSpecificationOptionUpgradeProcessTest {
 		_runUpgrade();
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select count(*) as count from CPSOListTypeDefinitionRel " +
-					"where cpSpecificationOptionId = ?")) {
+					"where CPSpecificationOptionId = ?")) {
 
 			preparedStatement.setLong(1, cpSpecificationOptionId);
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				while (resultSet.next()) {
-					Assert.assertEquals(1, resultSet.getInt("count"));
+					Assert.assertEquals(1, resultSet.getLong("count"));
 				}
 			}
 		}
@@ -124,6 +126,6 @@ public class CPSpecificationOptionUpgradeProcessTest {
 	@Inject(
 		filter = "(&(component.name=com.liferay.commerce.product.internal.upgrade.registry.CommerceProductServiceUpgradeStepRegistrator))"
 	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

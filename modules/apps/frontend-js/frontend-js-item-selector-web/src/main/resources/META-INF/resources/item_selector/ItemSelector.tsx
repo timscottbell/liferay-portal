@@ -11,6 +11,7 @@ import {useModal} from '@clayui/modal';
 import ClayMultiSelect from '@clayui/multi-select';
 import {InternalDispatch, useControlledState} from '@clayui/shared';
 import {ClayTooltipProvider} from '@clayui/tooltip';
+import {DEFAULT_FETCH_HEADERS} from '@liferay/frontend-data-set-web';
 import {fetch, getObjectValueFromPath} from 'frontend-js-web';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 
@@ -154,6 +155,12 @@ export interface IBaseItemSelectorProps<T> {
 	items?: T[];
 
 	/**
+	 * Optional predicate used to filter the fetched items before they are
+	 * rendered in the dropdown. Items for which it returns `false` are hidden.
+	 */
+	itemsFilter?: (item: T) => boolean;
+
+	/**
 	 * A string key used to locate the id, label, or value within each item.
 	 * Can be used as a period separated path (e.g.: 'embedded.id').
 	 */
@@ -224,6 +231,7 @@ function ItemSelector<T extends Record<string, any>>({
 	onItemsChange,
 	multiSelect = false,
 	items: externalItems,
+	itemsFilter,
 	defaultValue,
 	defaultItems,
 	displaySelectedItems = true,
@@ -266,7 +274,9 @@ function ItemSelector<T extends Record<string, any>>({
 		resource: sourceItems = [],
 	} = useResource({
 		fetch: async (link) => {
-			const result = await fetch(link);
+			const result = await fetch(link, {
+				headers: DEFAULT_FETCH_HEADERS,
+			});
 
 			const contentType = result.headers.get('Content-Type') || '';
 
@@ -318,6 +328,14 @@ function ItemSelector<T extends Record<string, any>>({
 			) ?? []
 		);
 	}, [items, locator.value]);
+
+	const filteredSourceItems = useMemo(
+		() =>
+			itemsFilter && sourceItems
+				? sourceItems.filter(itemsFilter)
+				: sourceItems,
+		[itemsFilter, sourceItems]
+	);
 
 	const memoizedChildren = useCallback(
 		(item: T) => {
@@ -417,7 +435,7 @@ function ItemSelector<T extends Record<string, any>>({
 				onChange={setValue}
 				onItemsChange={setItems}
 				onLoadMore={async () => loadMore()}
-				sourceItems={sourceItems}
+				sourceItems={filteredSourceItems}
 				value={value}
 			>
 				{children}
@@ -435,7 +453,7 @@ function ItemSelector<T extends Record<string, any>>({
 						path: locator.label,
 					});
 				}}
-				items={sourceItems}
+				items={filteredSourceItems}
 				loadingState={networkStatus}
 				menuTrigger="focus"
 				messages={{

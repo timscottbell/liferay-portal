@@ -5,7 +5,6 @@
 
 package com.liferay.object.internal.field.business.type;
 
-import com.liferay.object.constants.ObjectDefinitionConstants;
 import com.liferay.object.constants.ObjectFieldConstants;
 import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
@@ -17,6 +16,8 @@ import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectRelationship;
+import com.liferay.object.scope.ObjectScopeProvider;
+import com.liferay.object.scope.ObjectScopeProviderRegistry;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
@@ -103,29 +104,29 @@ public class RelationshipObjectFieldBusinessType
 			1
 		);
 
+		Map.Entry<String, Object> relatedElementEntry = MapUtil.getEntry(
+			values, relationshipName);
+
 		if (Objects.equals(
 				objectField.getRelationshipType(),
 				ObjectRelationshipConstants.TYPE_ONE_TO_MANY) &&
-			values.containsKey(relationshipName)) {
+			(relatedElementEntry != null)) {
 
 			ObjectRelationship objectRelationship =
 				_objectRelationshipLocalService.
 					fetchObjectRelationshipByObjectDefinitionId(
 						objectField.getObjectDefinitionId(), relationshipName);
 
-			if (objectRelationship == null) {
-				return 0;
-			}
+			Object relatedElement = relatedElementEntry.getValue();
 
-			Object relatedElement = values.get(relationshipName);
+			if ((objectRelationship == null) ||
+				!(relatedElement instanceof Map)) {
 
-			if (!(relatedElement instanceof Map)) {
 				return 0;
 			}
 
 			String externalReferenceCode = MapUtil.getString(
-				(Map<String, Object>)values.get(relationshipName),
-				"externalReferenceCode");
+				(Map<String, Object>)relatedElement, "externalReferenceCode");
 
 			if (Validator.isNull(externalReferenceCode)) {
 				return 0;
@@ -166,8 +167,11 @@ public class RelationshipObjectFieldBusinessType
 
 		PortalException portalException1 = null;
 
-		if (values.containsKey(objectField.getName())) {
-			Object value = values.get(objectField.getName());
+		Map.Entry<String, Object> valueEntry = MapUtil.getEntry(
+			values, objectField.getName());
+
+		if (valueEntry != null) {
+			Object value = valueEntry.getValue();
 
 			if (value == null) {
 				return 0;
@@ -222,9 +226,12 @@ public class RelationshipObjectFieldBusinessType
 					NAME_OBJECT_RELATIONSHIP_ERC_OBJECT_FIELD_NAME,
 				objectField);
 
-		if (values.containsKey(objectRelationshipERCObjectFieldName)) {
-			String externalReferenceCode = MapUtil.getString(
-				values, objectRelationshipERCObjectFieldName);
+		Map.Entry<String, Object> externalReferenceCodeEntry = MapUtil.getEntry(
+			values, objectRelationshipERCObjectFieldName);
+
+		if (externalReferenceCodeEntry != null) {
+			String externalReferenceCode = GetterUtil.getString(
+				externalReferenceCodeEntry.getValue());
 
 			if (Validator.isNull(externalReferenceCode)) {
 				return 0;
@@ -249,13 +256,14 @@ public class RelationshipObjectFieldBusinessType
 			ObjectDefinition objectDefinition2 =
 				_objectDefinitionLocalService.getObjectDefinition(
 					objectRelationship.getObjectDefinitionId2());
+			ObjectScopeProvider objectScopeProvider =
+				_objectScopeProviderRegistry.getObjectScopeProvider(
+					objectDefinition1.getScope());
 
 			if (Objects.equals(
 					objectDefinition1.getScope(),
-					ObjectDefinitionConstants.SCOPE_SITE) &&
-				Objects.equals(
-					objectDefinition2.getScope(),
-					ObjectDefinitionConstants.SCOPE_SITE)) {
+					objectDefinition2.getScope()) &&
+				objectScopeProvider.isGroupAware()) {
 
 				objectDefinition1GroupId = GetterUtil.getLong(groupId);
 			}
@@ -333,6 +341,9 @@ public class RelationshipObjectFieldBusinessType
 
 	@Reference
 	private ObjectRelationshipLocalService _objectRelationshipLocalService;
+
+	@Reference
+	private ObjectScopeProviderRegistry _objectScopeProviderRegistry;
 
 	@Reference
 	private SystemObjectDefinitionManagerRegistry

@@ -76,6 +76,10 @@ public class DBCopyTablesProcessTest {
 
 	@AfterClass
 	public static void tearDownClass() throws Exception {
+		if (System.getProperty("database.postgresql.driver") == null) {
+			return;
+		}
+
 		AutoBatchPreparedStatementUtil.stop();
 
 		DataSourceFactoryUtil.destroyDataSource(_targetDataSource);
@@ -114,6 +118,7 @@ public class DBCopyTablesProcessTest {
 		int total = 0;
 
 		try (Connection connection = _targetDataSource.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select testColumn from " + _targetTableName +
 					" order by id ASC")) {
@@ -191,6 +196,7 @@ public class DBCopyTablesProcessTest {
 		int total = 0;
 
 		try (Connection connection = _targetDataSource.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select testColumn from " + _targetTableName +
 					" order by id ASC")) {
@@ -198,7 +204,8 @@ public class DBCopyTablesProcessTest {
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				while (resultSet.next()) {
 					Assert.assertArrayEquals(
-						(byte[])values[total++], resultSet.getBytes(1));
+						(byte[])values[total++],
+						resultSet.getBytes("testColumn"));
 				}
 			}
 		}
@@ -235,6 +242,7 @@ public class DBCopyTablesProcessTest {
 		int total = 0;
 
 		try (Connection connection = _targetDataSource.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select testColumn from " + _targetTableName +
 					" order by id ASC")) {
@@ -243,7 +251,7 @@ public class DBCopyTablesProcessTest {
 				while (resultSet.next()) {
 					Assert.assertEquals(
 						expectedFunction.apply(expectedValues[total++]),
-						getFunction.apply(resultSet.getObject(1)));
+						getFunction.apply(resultSet.getObject("testColumn")));
 				}
 			}
 		}
@@ -292,6 +300,7 @@ public class DBCopyTablesProcessTest {
 
 	private void _insertValues(Object[] values) throws Exception {
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement =
 				com.liferay.portal.kernel.dao.jdbc.
 					AutoBatchPreparedStatementUtil.autoBatch(

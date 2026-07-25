@@ -135,7 +135,7 @@
 			<finder-column name="countryId" />
 		</finder>
 	</entity>
-	<entity local-service="true" name="CommerceAvailabilityEstimate" remote-service="true" uuid="true">
+	<entity external-reference-code="company" local-service="true" name="CommerceAvailabilityEstimate" remote-service="true" uuid="true">
 
 		<!-- PK fields -->
 
@@ -154,6 +154,7 @@
 		<column localized="true" name="title" type="String" />
 		<column name="priority" type="double" />
 		<column name="lastPublishDate" type="Date" />
+		<column name="status" type="int" />
 
 		<!-- Order -->
 
@@ -306,6 +307,49 @@
 			<finder-column comparator="&lt;" name="createDate" />
 			<finder-column name="commerceAccountId" />
 			<finder-column name="orderStatus" />
+		</finder>
+	</entity>
+	<entity external-reference-code="company" local-service="true" name="CommerceOrderAttachment" remote-service="true" uuid="true">
+
+		<!-- PK fields -->
+
+		<column name="commerceOrderAttachmentId" primary="true" type="long" />
+
+		<!-- Group instance -->
+
+		<column name="groupId" type="long" />
+
+		<!-- Audit fields -->
+
+		<column name="companyId" type="long" />
+		<column name="userId" type="long" />
+		<column name="userName" type="String" />
+		<column name="createDate" type="Date" />
+		<column name="modifiedDate" type="Date" />
+
+		<!-- Other fields -->
+
+		<column name="commerceOrderId" type="long" />
+		<column name="fileEntryId" type="long" />
+		<column name="priority" type="double" />
+		<column name="restricted" type="boolean" />
+		<column name="title" type="String" />
+		<column name="type" type="String" />
+
+		<!-- Order -->
+
+		<order by="asc">
+			<order-column name="priority" />
+		</order>
+
+		<!-- Finder methods -->
+
+		<finder name="CommerceOrderId" return-type="Collection">
+			<finder-column name="commerceOrderId" />
+		</finder>
+		<finder name="C_R" return-type="Collection">
+			<finder-column name="commerceOrderId" />
+			<finder-column name="restricted" />
 		</finder>
 	</entity>
 	<entity external-reference-code="company" local-service="true" name="CommerceOrderItem" remote-service="true" uuid="true">
@@ -944,6 +988,8 @@
 		<exception>CommerceAddressZip</exception>
 		<exception>CommerceGeocoder</exception>
 		<exception>CommerceOrderAccountLimit</exception>
+		<exception>CommerceOrderAttachmentTitle</exception>
+		<exception>CommerceOrderAttachmentType</exception>
 		<exception>CommerceOrderBillingAddress</exception>
 		<exception>CommerceOrderDate</exception>
 		<exception>CommerceOrderDefaultBillingAddress</exception>

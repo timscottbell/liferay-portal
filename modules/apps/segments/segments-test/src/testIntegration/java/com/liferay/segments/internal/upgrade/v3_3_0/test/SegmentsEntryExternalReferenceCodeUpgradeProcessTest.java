@@ -42,7 +42,7 @@ public class SegmentsEntryExternalReferenceCodeUpgradeProcessTest
 
 		return new ExternalReferenceCodeModel[] {
 			_segmentsEntryLocalService.addSegmentsEntry(
-				RandomTestUtil.randomString(),
+				null, RandomTestUtil.randomString(),
 				Collections.singletonMap(
 					defaultLocale, RandomTestUtil.randomString()),
 				Collections.singletonMap(
@@ -79,12 +79,12 @@ public class SegmentsEntryExternalReferenceCodeUpgradeProcessTest
 		return new Version(3, 3, 0);
 	}
 
+	@Inject
+	private SegmentsEntryLocalService _segmentsEntryLocalService;
+
 	@Inject(
 		filter = "(&(component.name=com.liferay.segments.internal.upgrade.registry.SegmentsServiceUpgradeStepRegistrator))"
 	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
-	@Inject
-	private SegmentsEntryLocalService _segmentsEntryLocalService;
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

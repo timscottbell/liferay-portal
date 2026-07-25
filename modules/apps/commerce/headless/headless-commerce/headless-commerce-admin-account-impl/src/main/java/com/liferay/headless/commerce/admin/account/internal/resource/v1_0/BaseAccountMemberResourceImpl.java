@@ -5,6 +5,7 @@
 
 package com.liferay.headless.commerce.admin.account.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.commerce.admin.account.dto.v1_0.AccountMember;
 import com.liferay.headless.commerce.admin.account.dto.v1_0.User;
 import com.liferay.headless.commerce.admin.account.resource.v1_0.AccountMemberResource;
@@ -75,14 +76,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/accountMembers/{userId}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Removes a member from the Account, addressed by Account external reference code and User internal ID. Deprecated. Use `DELETE /o/headless-admin-user/v1.0/accounts/by-external-reference-code/{accountExternalReferenceCode}/user-accounts/by-external-reference-code/{externalReferenceCode}` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -121,14 +127,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/accountMembers/{userId}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Removes a member from the Account, addressed by Account internal ID and User internal ID. Deprecated. Use `DELETE /o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts/{userAccountId}` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -165,14 +176,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/accountMembers/{userId}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads a single AccountMember, addressed by Account external reference code and User internal ID. Deprecated. Use `GET /o/headless-admin-user/v1.0/accounts/by-external-reference-code/{accountExternalReferenceCode}/user-accounts/by-external-reference-code/{externalReferenceCode}` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -209,18 +225,24 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/accountMembers'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the AccountMembers of the Account identified by external reference code. Each entry pairs a user with their account-scoped AccountRoles. Deprecated. Use `GET /o/headless-admin-user/v1.0/accounts/by-external-reference-code/{externalReferenceCode}/user-accounts` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -255,14 +277,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/accountMembers/{userId}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads a single AccountMember, addressed by Account internal ID and User internal ID. Deprecated. Use `GET /o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts/{userAccountId}` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -297,18 +324,24 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/accountMembers'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the AccountMembers of the Account identified by internal ID. Each entry pairs a user with their account-scoped AccountRoles. Deprecated. Use `GET /o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -340,14 +373,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/accountMembers/{userId}' -d $'{"accountId": ___, "accountRoles": ___, "email": ___, "externalReferenceCode": ___, "name": ___, "userExternalReferenceCode": ___, "userId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Updates the AccountRoles of a member, addressed by Account external reference code and User internal ID. Side effect -- the supplied accountRoles fully replace the user's previous account-scoped role set; roles not present in the body are removed. Deprecated. Assign or remove account-scoped roles through `POST` and `DELETE /o/headless-admin-user/v1.0/accounts/by-external-reference-code/{accountExternalReferenceCode}/account-roles/{accountRoleId}/user-accounts/by-external-reference-code/{externalReferenceCode}` in the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -388,14 +426,19 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/accountMembers/{userId}' -d $'{"accountId": ___, "accountRoles": ___, "email": ___, "externalReferenceCode": ___, "name": ___, "userExternalReferenceCode": ___, "userId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Updates the AccountRoles of a member, addressed by Account internal ID and User internal ID. Side effect -- the supplied accountRoles fully replace the user's previous account-scoped role set; roles not present in the body are removed. Deprecated. Assign or remove account-scoped roles through `POST` and `DELETE /o/headless-admin-user/v1.0/accounts/{accountId}/account-roles/{accountRoleId}/user-accounts/{userAccountId}` in the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key of the related User.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "userId"
 			)
@@ -434,10 +477,14 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/accountMembers' -d $'{"accountId": ___, "accountRoles": ___, "email": ___, "externalReferenceCode": ___, "name": ___, "userExternalReferenceCode": ___, "userId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Adds an existing user as a member of the Account identified by external reference code. The user is referenced by userId or userExternalReferenceCode in the body; the supplied accountRoles become the user's account-scoped roles. Deprecated. Use `POST /o/headless-admin-user/v1.0/accounts/by-external-reference-code/{externalReferenceCode}/user-accounts` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -472,10 +519,14 @@ public abstract class BaseAccountMemberResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/accountMembers' -d $'{"accountId": ___, "accountRoles": ___, "email": ___, "externalReferenceCode": ___, "name": ___, "userExternalReferenceCode": ___, "userId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Adds an existing user as a member of the Account identified by internal ID. The user is referenced by userId or userExternalReferenceCode in the body; the supplied accountRoles become the user's account-scoped roles. Deprecated. Use `POST /o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts` from the headless-admin-user module instead."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -660,6 +711,15 @@ public abstract class BaseAccountMemberResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -1237,3 +1297,4 @@ public abstract class BaseAccountMemberResourceImpl
 		LogFactoryUtil.getLog(BaseAccountMemberResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:2030160344

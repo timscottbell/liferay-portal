@@ -14,6 +14,7 @@ import com.liferay.account.service.AccountEntryService;
 import com.liferay.asset.kernel.model.AssetCategory;
 import com.liferay.asset.kernel.service.AssetCategoryService;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.kernel.lar.PortletDataContext;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.headless.admin.user.dto.v1_0.Account;
@@ -58,11 +59,11 @@ import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.Sort;
+import com.liferay.portal.kernel.search.WildcardQuery;
 import com.liferay.portal.kernel.search.filter.BooleanFilter;
 import com.liferay.portal.kernel.search.filter.Filter;
 import com.liferay.portal.kernel.search.filter.QueryFilter;
 import com.liferay.portal.kernel.search.filter.TermFilter;
-import com.liferay.portal.kernel.search.generic.WildcardQueryImpl;
 import com.liferay.portal.kernel.service.EmailAddressService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ListTypeLocalService;
@@ -300,8 +301,10 @@ public class OrganizationResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<com.liferay.portal.kernel.model.Organization>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
 
 			@Override
 			public String getKey() {
@@ -314,9 +317,10 @@ public class OrganizationResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return com.liferay.portal.kernel.model.Organization.class.
-					getName();
+			public Class<com.liferay.portal.kernel.model.Organization>
+				getModelClass() {
+
+				return com.liferay.portal.kernel.model.Organization.class;
 			}
 
 			@Override
@@ -343,6 +347,11 @@ public class OrganizationResourceImpl
 			@Override
 			public Scope getScope() {
 				return Scope.COMPANY;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_USERS;
 			}
 
 		};
@@ -941,6 +950,7 @@ public class OrganizationResourceImpl
 		}
 
 		return ServiceBuilderCountryUtil.toServiceBuilderCountryId(
+			location.getAddressCountryExternalReferenceCode(),
 			contextCompany.getCompanyId(), location.getAddressCountry());
 	}
 
@@ -1085,7 +1095,7 @@ public class OrganizationResourceImpl
 					if (serviceBuilderOrganizationId != 0L) {
 						booleanFilter.add(
 							new QueryFilter(
-								new WildcardQueryImpl(
+								new WildcardQuery(
 									"treePath",
 									"*" + parentOrganizationId + "*")));
 						booleanFilter.add(
@@ -1206,7 +1216,9 @@ public class OrganizationResourceImpl
 		}
 
 		return ServiceBuilderRegionUtil.getServiceBuilderRegionId(
-			location.getAddressRegion(), countryId);
+			location.getAddressRegionExternalReferenceCode(),
+			contextCompany.getCompanyId(), location.getAddressRegion(),
+			countryId);
 	}
 
 	private long _getServiceBuilderOrganizationId(String organizationId)

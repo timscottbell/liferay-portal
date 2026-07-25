@@ -23,7 +23,10 @@ export class CommerceCartSummaryPage {
 	readonly viewButton: Locator;
 
 	constructor(page: Page) {
-		this.checkoutButton = page.getByRole('button', {name: 'Checkout'});
+		this.checkoutButton = page.getByRole('button', {
+			exact: true,
+			name: 'Checkout',
+		});
 		this.layoutsPage = new CommerceLayoutsPage(page);
 		this.orderItemActionsButton = page.getByRole('button', {
 			name: 'Actions',
@@ -44,9 +47,11 @@ export class CommerceCartSummaryPage {
 		this.processQuoteButton = page.getByRole('button', {
 			name: 'Process Quote',
 		});
-		this.requestAQuoteButton = page.getByRole('button', {
-			name: 'Request a Quote',
-		});
+		this.requestAQuoteButton = page
+			.getByRole('button', {
+				name: 'Request a Quote',
+			})
+			.and(page.locator('.btn-md'));
 		this.requestAQuoteModal = page.locator('.modal-content');
 		this.requestAQuoteModalSubmit = this.requestAQuoteModal.getByRole(
 			'button',

@@ -14,14 +14,11 @@ import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {usersAndOrganizationsPagesTest} from '../../../fixtures/usersAndOrganizationsPagesTest';
 import {createCategories} from '../../../helpers/CreateCategories';
+import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
 import getGlobalSiteId from '../../../utils/getGlobalSiteId';
 import {getRandomInt} from '../../../utils/getRandomInt';
 import getRandomString from '../../../utils/getRandomString';
-import performLogin, {
-	performLoginViaApi,
-	performLogout,
-	userData,
-} from '../../../utils/performLogin';
+import {performUserSwitch, userData} from '../../../utils/performLogin';
 import {waitForAlert} from '../../../utils/waitForAlert';
 import {assetCategoriesPagesTest} from '../../asset-categories-admin-web/main/fixtures/assetCategoriesAdminPagesTest';
 
@@ -210,8 +207,7 @@ test(
 			user.id
 		);
 
-		await performLogout(page);
-		await performLogin(page, user.alternateName);
+		await performUserSwitch(page, user.alternateName);
 
 		await page.goto(
 			'/group/control_panel/manage?p_p_id=com_liferay_users_admin_web_portlet_UsersAdminPortlet'
@@ -415,6 +411,10 @@ test(
 
 		await usersAndOrganizationsPage.goToOrganizations();
 
+		await usersAndOrganizationsPage.organizationsTable.search(
+			organization.name
+		);
+
 		await usersAndOrganizationsPage.organizationsTable
 			.valueLink(organization.name)
 			.click();
@@ -456,6 +456,10 @@ test(
 			await apiHelpers.headlessAdminUser.postOrganization();
 
 		await usersAndOrganizationsPage.goToOrganizations();
+
+		await usersAndOrganizationsPage.organizationsTable.search(
+			organization.name
+		);
 
 		await (
 			await usersAndOrganizationsPage.organizationsTable.rowActions(
@@ -598,6 +602,8 @@ test(
 	'Check custom field is escaped',
 	{tag: '@LPD-29981'},
 	async ({page, usersAndOrganizationsPage}) => {
+		const fieldName = `field${getRandomInt()}`;
+
 		await page.goto('/');
 
 		await usersAndOrganizationsPage.goToUsers();
@@ -618,7 +624,7 @@ test(
 
 		await customFieldLabel.waitFor({state: 'visible'});
 		await customFieldLabel.click();
-		await customFieldLabel.fill('fieldTest');
+		await customFieldLabel.fill(fieldName);
 
 		const customFieldValue = page.getByLabel('Values Required');
 
@@ -642,21 +648,28 @@ test(
 			await usersAndOrganizationsPage.usersTableRowLink('test')
 		).click();
 
-		const customFieldDropDownLabel = page.getByLabel('Fieldtest', {
+		const fieldLabel =
+			fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+		const fieldTitle = fieldName.replace(
+			/[A-Z]/g,
+			(match) => `-${match.toLowerCase()}`
+		);
+
+		const customFieldDropDownLabel = page.getByLabel(fieldLabel, {
 			exact: true,
 		});
 
 		await customFieldDropDownLabel.waitFor({state: 'visible'});
 
-		const customFieldDropDownOptions = await page.evaluate(() => {
-			const selection = document.querySelector('[title="field-test"]');
+		const customFieldDropDownOptions = await page.evaluate((title) => {
+			const selection = document.querySelector(`[title="${title}"]`);
 
 			// @ts-ignore
 
 			return [...selection.options].some(
 				(option) => option.text === 'a & b'
 			);
-		});
+		}, fieldTitle);
 
 		expect(customFieldDropDownOptions).toBeTruthy();
 	}
@@ -792,10 +805,13 @@ test(
 			type: 'organizationUserAccountAssociation',
 		});
 
-		await performLogout(page);
-		await performLogin(page, user.alternateName);
+		await performUserSwitch(page, user.alternateName);
 
 		await usersAndOrganizationsPage.goToOrganizationsWithLimitedAccess();
+
+		await usersAndOrganizationsPage.organizationsTable.search(
+			organization.name
+		);
 
 		await usersAndOrganizationsPage.organizationsTable
 			.valueLink(organization.name)
@@ -1018,11 +1034,9 @@ test(
 			[userAccount1.id, userAccount2.id]
 		);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const role =
 			await apiHelpers.headlessAdminUser.getRoleByName(
@@ -1041,7 +1055,7 @@ test(
 		await expect(async () => {
 			await siteMembershipsPage.newUserGroupButton.click();
 			await siteMembershipsPage.assignUserGroupTable.changeView('Table');
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			siteMembershipsPage.assignUserGroupTable.cell(userGroup.name)
@@ -1056,11 +1070,7 @@ test(
 
 		await waitForAlert(page);
 
-		await performLogout(page);
-		await performLoginViaApi({
-			page,
-			screenName: userAccount1.alternateName,
-		});
+		await performUserSwitch(page, userAccount1.alternateName);
 
 		const document = await apiHelpers.headlessDelivery.postDocument(
 			site.id,
@@ -1093,11 +1103,7 @@ test(
 
 		await waitForAlert(page, 'Success:The item was shared successfully.');
 
-		await performLogout(page);
-		await performLoginViaApi({
-			page,
-			screenName: userAccount2.alternateName,
-		});
+		await performUserSwitch(page, userAccount2.alternateName);
 
 		await notificationsPage.goto(userAccount2.name);
 
@@ -1191,11 +1197,7 @@ test(
 			userAccount3.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({
-			page,
-			screenName: userAccount1.alternateName,
-		});
+		await performUserSwitch(page, userAccount1.alternateName);
 
 		await usersAndOrganizationsPage.goToUsersWithLimitedAccess();
 
@@ -1210,19 +1212,14 @@ test(
 			)
 		).not.toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await apiHelpers.headlessAdminUser.postRoleByExternalReferenceCodeUserAccountAssociation(
 			role2.externalReferenceCode,
 			userAccount1.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({
-			page,
-			screenName: userAccount1.alternateName,
-		});
+		await performUserSwitch(page, userAccount1.alternateName);
 
 		await usersAndOrganizationsPage.goToUsersWithLimitedAccess();
 
@@ -1252,11 +1249,7 @@ test(
 
 		await newPage.close();
 
-		await performLogout(page);
-		await performLoginViaApi({
-			page,
-			screenName: userAccount3.alternateName,
-		});
+		await performUserSwitch(page, userAccount3.alternateName);
 
 		await usersAndOrganizationsPage.goToUsers();
 
@@ -1550,8 +1543,7 @@ test(
 			surname: user.familyName,
 		};
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await accountSettingsPage.goToAccountSettings();
 		await accountSettingsPage.passwordMenuItem.click();
@@ -1571,8 +1563,7 @@ test(
 			surname: user.familyName,
 		};
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await expect(accountSettingsPage.userPersonalMenuButton).toBeVisible();
 	}
@@ -1590,8 +1581,7 @@ test(
 			surname: user.familyName,
 		};
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await accountSettingsPage.goToAccountSettings();
 		await accountSettingsPage.passwordMenuItem.click();
@@ -1615,8 +1605,7 @@ test(
 			)
 		).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await expect(accountSettingsPage.userPersonalMenuButton).toBeVisible();
 	}
@@ -1695,6 +1684,8 @@ test(
 		await expect(
 			usersAndOrganizationsPage.statusText('Approved')
 		).toBeVisible();
+
+		await usersAndOrganizationsPage.organizationsTable.changeView('Table');
 	}
 );
 
@@ -1757,11 +1748,10 @@ test(
 			memberUser.emailAddress
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({
+		await performUserSwitch(
 			page,
-			screenName: organizationAdministratorUser.alternateName,
-		});
+			organizationAdministratorUser.alternateName
+		);
 
 		await usersAndOrganizationsPage.goToUsersWithLimitedAccess();
 		await usersAndOrganizationsPage.goToUser(memberUser.alternateName);
@@ -1829,8 +1819,12 @@ test(
 			)
 		).click();
 
-		await editUserPage.categoryInput(vocabularyName + 'Required').click();
-		await editUserPage.categoryOption(categoryName).click({timeout: 1000});
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: editUserPage.categoryOption(categoryName),
+			trigger: editUserPage.categoryInput(vocabularyName),
+		});
+
 		await editUserPage.saveButton.click();
 		await editUserPage.membershipsLink.click();
 
@@ -1839,7 +1833,7 @@ test(
 		await expect(async () => {
 			await editUserPage.selectUserGroupsButton.click();
 			await editUserPage.selectUserGroupTable.changeView('table');
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await editUserPage.selectUserGroupTable.cell(userGroup.name).click();
 
@@ -1898,6 +1892,8 @@ test(
 				'Upload images no larger than 0 B.'
 			)
 		).not.toBeVisible();
+
+		await userSettingsPage.updateUserImageMaxFileSize(307200);
 	}
 );
 
@@ -1949,6 +1945,71 @@ test(
 		await expect(
 			await organizationUsersPage.screenName(
 				userAccount.givenName + ' ' + userAccount.familyName
+			)
+		).toBeVisible();
+
+		await organizationUsersPage.organizationUsersTable.changeView('Table');
+	}
+);
+
+test(
+	'All ancestor organizations are added when a suborganization is assigned to a user',
+	{tag: '@LPD-90728'},
+	async ({apiHelpers, editUserPage, page, usersAndOrganizationsPage}) => {
+		const parentOrganization =
+			await apiHelpers.headlessAdminUser.postOrganization();
+		const organization1 =
+			await apiHelpers.headlessAdminUser.postOrganization({
+				parentOrganization: {
+					externalReferenceCode:
+						parentOrganization.externalReferenceCode,
+				},
+			});
+		const organization2 =
+			await apiHelpers.headlessAdminUser.postOrganization({
+				parentOrganization: {
+					externalReferenceCode: organization1.externalReferenceCode,
+				},
+			});
+		const organization3 =
+			await apiHelpers.headlessAdminUser.postOrganization({
+				parentOrganization: {
+					externalReferenceCode: organization1.externalReferenceCode,
+				},
+			});
+
+		await apiHelpers.headlessAdminUser.assignUserToOrganizationByEmailAddress(
+			organization2.id,
+			'test@liferay.com'
+		);
+
+		apiHelpers.data.push({
+			id: `${organization2.id}_test@liferay.com`,
+			type: 'organizationUserAccountAssociation',
+		});
+
+		await usersAndOrganizationsPage.goToUsers();
+
+		await (
+			await usersAndOrganizationsPage.usersTableRowLink('test')
+		).click();
+
+		await page.waitForLoadState('networkidle');
+
+		await editUserPage.organizationsLink.click();
+
+		await expect(
+			editUserPage.organizationsTable.getByText(`${organization1.name}`)
+		).toBeVisible();
+		await expect(
+			editUserPage.organizationsTable.getByText(`${organization2.name}`)
+		).toBeVisible();
+		await expect(
+			editUserPage.organizationsTable.getByText(`${organization3.name}`)
+		).not.toBeVisible();
+		await expect(
+			editUserPage.organizationsTable.getByText(
+				`${parentOrganization.name}`
 			)
 		).toBeVisible();
 	}

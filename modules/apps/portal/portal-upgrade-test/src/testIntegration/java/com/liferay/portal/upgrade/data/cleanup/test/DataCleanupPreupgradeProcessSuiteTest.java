@@ -11,7 +11,9 @@ import com.liferay.petra.function.UnsafeRunnable;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.dao.jdbc.DataAccess;
 import com.liferay.portal.kernel.instance.PortalInstancePool;
+import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.ReleaseConstants;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.util.PropsValuesTestUtil;
@@ -34,6 +36,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -60,6 +63,7 @@ public class DataCleanupPreupgradeProcessSuiteTest
 	@BeforeClass
 	public static void setUpClass() throws Exception {
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select schemaVersion from Release_ where releaseId = ?")) {
 
@@ -68,7 +72,8 @@ public class DataCleanupPreupgradeProcessSuiteTest
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				resultSet.next();
 
-				_currentPortalSchemaVersion = resultSet.getString(1);
+				_currentPortalSchemaVersion = resultSet.getString(
+					"schemaVersion");
 
 				_updatePortalSchemaVersion(_currentPortalSchemaVersion + ".0");
 			}
@@ -78,12 +83,19 @@ public class DataCleanupPreupgradeProcessSuiteTest
 			long[] companyIds = PortalInstancePool.getCompanyIds();
 
 			_companiesCount = companyIds.length;
+
+			_safeCloseable = CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+				CompanyConstants.SYSTEM);
 		}
 	}
 
 	@AfterClass
 	public static void tearDownClass() throws Exception {
 		_updatePortalSchemaVersion(_currentPortalSchemaVersion);
+
+		if (_safeCloseable != null) {
+			_safeCloseable.close();
+		}
 	}
 
 	@Before
@@ -241,6 +253,7 @@ public class DataCleanupPreupgradeProcessSuiteTest
 		throws Exception {
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"update Release_ set schemaVersion = ? where releaseId = ?")) {
 
@@ -280,8 +293,9 @@ public class DataCleanupPreupgradeProcessSuiteTest
 
 	private static int _companiesCount = 1;
 	private static String _currentPortalSchemaVersion;
+	private static SafeCloseable _safeCloseable;
 
-	private final List<String> _cleanupMessages = new ArrayList<>();
+	private final List<String> _cleanupMessages = new CopyOnWriteArrayList<>();
 	private Map
 		<DataCleanupPreupgradeProcess, List<DataCleanupPreupgradeProcess>>
 			_originalDataCleanupPreupgradeProcessesMap;

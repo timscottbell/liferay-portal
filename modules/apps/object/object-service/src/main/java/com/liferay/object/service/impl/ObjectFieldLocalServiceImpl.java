@@ -91,6 +91,8 @@ import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.module.service.Snapshot;
 import com.liferay.portal.kernel.search.Indexable;
 import com.liferay.portal.kernel.search.IndexableType;
+import com.liferay.portal.kernel.search.Indexer;
+import com.liferay.portal.kernel.search.IndexerRegistryUtil;
 import com.liferay.portal.kernel.security.permission.ResourceActions;
 import com.liferay.portal.kernel.service.PortletLocalService;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
@@ -264,16 +266,32 @@ public class ObjectFieldLocalServiceImpl
 				objectFieldSettings);
 		}
 
+		ObjectField objectField = (ObjectField)existingObjectField.clone();
+
 		validateExternalReferenceCode(
-			externalReferenceCode, existingObjectField.getObjectFieldId(),
-			existingObjectField.getCompanyId(),
-			existingObjectField.getObjectDefinitionId());
-		_validateLabel(labelMap, existingObjectField);
+			externalReferenceCode, objectField.getObjectFieldId(),
+			objectField.getCompanyId(), objectField.getObjectDefinitionId());
+		_validateIndexed(
+			objectField.getBusinessType(), objectField.getDBType(),
+			objectField.isIndexed(), indexedAsKeyword, indexedLanguageId);
+		_validateLabel(labelMap, objectField);
 
-		existingObjectField.setExternalReferenceCode(externalReferenceCode);
-		existingObjectField.setLabelMap(labelMap, LocaleUtil.getSiteDefault());
+		objectField.setExternalReferenceCode(externalReferenceCode);
+		objectField.setIndexedAsKeyword(indexedAsKeyword);
+		objectField.setIndexedLanguageId(indexedLanguageId);
+		objectField.setLabelMap(labelMap, LocaleUtil.getSiteDefault());
 
-		return objectFieldPersistence.update(existingObjectField);
+		objectField = objectFieldPersistence.update(objectField);
+
+		_addOrUpdateObjectFieldSettings(
+			objectField,
+			_objectDefinitionPersistence.findByPrimaryKey(
+				objectField.getObjectDefinitionId()),
+			_objectFieldBusinessTypeRegistry.getObjectFieldBusinessType(
+				objectField.getBusinessType()),
+			objectFieldSettings, existingObjectField);
+
+		return objectField;
 	}
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -346,6 +364,8 @@ public class ObjectFieldLocalServiceImpl
 	public void deleteObjectFieldByObjectDefinitionId(Long objectDefinitionId)
 		throws PortalException {
 
+		Indexer<ObjectField> indexer = IndexerRegistryUtil.nullSafeGetIndexer(
+			ObjectField.class);
 		ObjectDefinition objectDefinition =
 			_objectDefinitionPersistence.findByPrimaryKey(objectDefinitionId);
 
@@ -358,6 +378,8 @@ public class ObjectFieldLocalServiceImpl
 			}
 
 			objectFieldPersistence.remove(objectField);
+
+			indexer.delete(objectField);
 
 			if (FeatureFlagManagerUtil.isEnabled(
 					objectField.getCompanyId(), "LPD-17564") &&
@@ -494,15 +516,6 @@ public class ObjectFieldLocalServiceImpl
 					throw new UnsupportedOperationException(
 						"Unsupported method getColumn with field name " + name);
 				}
-			}
-
-			if (Objects.equals(
-					objectField.getBusinessType(),
-					ObjectFieldConstants.BUSINESS_TYPE_RICH_TEXT)) {
-
-				throw new UnsupportedOperationException(
-					"Unsupported operation with " +
-						objectField.getBusinessType() + " field");
 			}
 
 			Table<?> table = getTable(
@@ -755,6 +768,10 @@ public class ObjectFieldLocalServiceImpl
 				ObjectFieldConstants.BUSINESS_TYPE_RELATIONSHIP)) {
 
 			_validateObjectRelationshipDeletionType(objectFieldId, required);
+		}
+
+		if (objectField.isRequired() == required) {
+			return objectField;
 		}
 
 		objectField.setRequired(required);
@@ -1249,7 +1266,12 @@ public class ObjectFieldLocalServiceImpl
 		if (ObjectDefinitionThreadLocal.isDeleteObjectDefinitionId(
 				objectField.getObjectDefinitionId())) {
 
-			return objectFieldPersistence.remove(objectField);
+			objectField = objectFieldPersistence.remove(objectField);
+
+			_objectFieldSettingLocalService.deleteObjectFieldObjectFieldSetting(
+				objectField);
+
+			return objectField;
 		}
 
 		if (objectDefinition.isSystem() && objectField.isSystem() &&
@@ -1272,7 +1294,7 @@ public class ObjectFieldLocalServiceImpl
 		}
 
 		List<ObjectField> objectFields = ListUtil.filter(
-			objectFieldLocalService.getObjectFields(
+			objectFieldPersistence.findByObjectDefinitionId(
 				objectField.getObjectDefinitionId()),
 			objectField1 -> !objectField1.isMetadata());
 

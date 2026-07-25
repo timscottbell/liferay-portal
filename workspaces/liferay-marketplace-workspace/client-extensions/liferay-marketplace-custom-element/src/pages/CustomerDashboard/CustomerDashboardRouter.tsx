@@ -6,7 +6,7 @@
 import {Route, Routes} from 'react-router-dom';
 
 import withProviders from '../../hoc/withProviders';
-import App from '../PublisherDashboard/pages/Apps/App';
+import CustomerDashboardApp from '../CustomerDashboard/pages/Apps/App/App';
 import CustomerDashboardOutlet from './CustomerDashboardOutlet';
 import Apps from './pages/Apps';
 import AppOutlet from './pages/Apps/App/AppOutlet';
@@ -20,10 +20,12 @@ import CreateLicense from './pages/Apps/App/Licenses/CreateLicense';
 import Licenses from './pages/Apps/App/Licenses/Licenses';
 import Support from './pages/Apps/App/Support/Support';
 import Connections from './pages/Connections';
+import AiHubRedirect from './pages/LiferayProducts/AIHubRedirect';
 import LiferayProductsBundles from './pages/LiferayProducts/Bundles/Bundles';
-import LiferayProductsLicenses from './pages/LiferayProducts/Licenses/Licenses';
+import BuyLiferayTokens from './pages/LiferayProducts/BuyLiferayTokens';
 import LiferayProduct from './pages/LiferayProducts/LiferayProduct';
 import LiferayProductsOutlet from './pages/LiferayProducts/LiferayProductsOutlet';
+import DSRWorkspace from './pages/LiferayProducts/Workspace/DSRWorkspace';
 import LiferayProductsListView from './pages/LiferayProducts/index';
 import Solutions from './pages/Solutions';
 import Solution from './pages/Solutions/Solution';
@@ -38,7 +40,7 @@ const CustomerDashboardRouter = () => {
 				<Route element={<Connections />} path="connections" />
 
 				<Route element={<AppOutlet />} path="order/:orderId">
-					<Route element={<App />} index />
+					<Route element={<CustomerDashboardApp />} index />
 
 					<Route element={<Download />} path="download" />
 
@@ -61,14 +63,16 @@ const CustomerDashboardRouter = () => {
 					<Route element={<LiferayProduct />} index />
 
 					<Route
-						element={<LiferayProductsLicenses />}
-						path="activation-keys"
-					/>
-
-					<Route
 						element={<LiferayProductsBundles />}
 						path="bundles"
 					/>
+
+					<Route
+						element={<BuyLiferayTokens />}
+						path="buy-liferay-tokens"
+					/>
+
+					<Route element={<DSRWorkspace />} path="workspace" />
 				</Route>
 
 				<Route element={<Solutions />} path="solutions" />
@@ -95,6 +99,11 @@ const CustomerDashboardRouter = () => {
 					path="installation"
 				/>
 			</Route>
+
+			<Route
+				element={<AiHubRedirect />}
+				path="/:accountErc/ai-hub/:tokens?"
+			/>
 		</Routes>
 	);
 };

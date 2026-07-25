@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -13,6 +13,7 @@ import '@testing-library/jest-dom';
 import {checkAccessibility} from '@liferay/layout-js-components-web/test/__lib__/index';
 
 import MultipleFileUploader from '../../src/main/resources/META-INF/resources/multiple_file_uploader/MultipleFileUploader';
+import {UploadBatchesCallback} from '../../src/main/resources/META-INF/resources/multiple_file_uploader/types';
 
 jest.mock('frontend-js-web', () => ({
 	formatStorage: (str: string) => `${str} MB`,
@@ -272,7 +273,7 @@ describe('MultipleFileUploader', () => {
 
 		const mockUploadRequestFail = jest
 			.fn()
-			.mockResolvedValue({error: true});
+			.mockResolvedValue({error: 'failed to upload'});
 
 		const {container, getByText} = render(
 			<MultipleFileUploader
@@ -433,5 +434,117 @@ describe('MultipleFileUploader', () => {
 		).toBeInTheDocument();
 
 		expect(getByRole('button', {name: 'upload-(1)'})).toBeInTheDocument();
+	});
+
+	describe('batch upload', () => {
+		it('uploads all files in parallel by default', async () => {
+			const started: string[] = [];
+			let resolveFirst!: () => void;
+
+			const mockBatchRequest = jest.fn().mockImplementation(
+				({fileData}: {fileData: {name: string}}) =>
+					new Promise<{error: boolean}>((resolve) => {
+						started.push(fileData.name);
+
+						if (fileData.name === 'A.pdf') {
+							resolveFirst = () => resolve({error: false});
+						}
+						else {
+							resolve({error: false});
+						}
+					})
+			);
+
+			const {container} = render(
+				<MultipleFileUploader
+					{...DEFAULT_PROPS}
+					uploadRequest={mockBatchRequest}
+				/>
+			);
+
+			const input =
+				container.querySelector<HTMLInputElement>(
+					'input[type="file"]'
+				)!;
+
+			fireEvent.change(input, {
+				target: {
+					files: [
+						createFile('A.pdf', 1024),
+						createFile('A.txt', 1024),
+					],
+				},
+			});
+
+			expect(await screen.findByText('A.pdf')).toBeInTheDocument();
+
+			fireEvent.click(screen.getByRole('button', {name: /upload/i}));
+
+			await waitFor(() => expect(started).toContain('A.pdf'));
+
+			expect(started).toContain('A.txt');
+
+			resolveFirst();
+
+			await waitFor(() => expect(mockUploadComplete).toHaveBeenCalled());
+		});
+
+		it('uploads files sequentially when uploadBatches returns one file per batch', async () => {
+			const callOrder: string[] = [];
+			let resolveFirstBatch!: () => void;
+
+			const mockBatchRequest = jest.fn().mockImplementation(
+				({fileData}: {fileData: {name: string}}) =>
+					new Promise<{error: boolean}>((resolve) => {
+						callOrder.push(fileData.name);
+
+						if (fileData.name === 'A.pdf') {
+							resolveFirstBatch = () => resolve({error: false});
+						}
+						else {
+							resolve({error: false});
+						}
+					})
+			);
+
+			const sequentialUploadBatches: UploadBatchesCallback = (files) =>
+				files.map((file) => [file]);
+
+			const {container} = render(
+				<MultipleFileUploader
+					{...DEFAULT_PROPS}
+					uploadBatches={sequentialUploadBatches}
+					uploadRequest={mockBatchRequest}
+				/>
+			);
+
+			const input =
+				container.querySelector<HTMLInputElement>(
+					'input[type="file"]'
+				)!;
+
+			fireEvent.change(input, {
+				target: {
+					files: [
+						createFile('A.pdf', 1024),
+						createFile('B.pdf', 1024),
+					],
+				},
+			});
+
+			expect(await screen.findByText('A.pdf')).toBeInTheDocument();
+
+			fireEvent.click(screen.getByRole('button', {name: /upload/i}));
+
+			await waitFor(() => expect(callOrder).toContain('A.pdf'));
+
+			expect(callOrder).not.toContain('B.pdf');
+
+			resolveFirstBatch();
+
+			await waitFor(() => expect(callOrder).toContain('B.pdf'));
+
+			await waitFor(() => expect(mockUploadComplete).toHaveBeenCalled());
+		});
 	});
 });

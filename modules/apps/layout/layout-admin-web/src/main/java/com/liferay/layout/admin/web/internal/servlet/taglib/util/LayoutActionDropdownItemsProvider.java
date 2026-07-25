@@ -19,8 +19,10 @@ import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.bean.BeanPropertiesUtil;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.model.LayoutConstants;
 import com.liferay.portal.kernel.portlet.LiferayPortletResponse;
 import com.liferay.portal.kernel.portlet.LiferayWindowState;
 import com.liferay.portal.kernel.portlet.RequestBackedPortletURLFactoryUtil;
@@ -91,6 +93,10 @@ public class LayoutActionDropdownItemsProvider {
 					).add(
 						_getPreviewLayoutActionUnsafeConsumer(
 							draftLayout, layout)
+					).add(
+						() -> _layoutActionsHelper.isShowViewHistoryAction(
+							layout),
+						_getViewHistoryLayoutActionUnsafeConsumer(layout)
 					).build());
 				dropdownGroupItem.setSeparator(true);
 			}
@@ -139,6 +145,7 @@ public class LayoutActionDropdownItemsProvider {
 						() -> _isShowConvertToPageTemplateAction(layout),
 						_getConvertToPageTemplateActionUnsafeConsumer(layout)
 					).addContext(
+						() -> _isShowMakeACopyAction(layout),
 						_getCopyLayoutWithPermissionsActionUnsafeConsumer(
 							layout)
 					).add(
@@ -691,6 +698,18 @@ public class LayoutActionDropdownItemsProvider {
 		};
 	}
 
+	private UnsafeConsumer<DropdownItem, Exception>
+		_getViewHistoryLayoutActionUnsafeConsumer(Layout layout) {
+
+		return dropdownItem -> {
+			dropdownItem.setHref(
+				_layoutsAdminDisplayContext.getViewHistoryLayoutURL(layout));
+			dropdownItem.setIcon("date-time");
+			dropdownItem.setLabel(
+				LanguageUtil.get(_httpServletRequest, "view-history"));
+		};
+	}
+
 	private boolean _hasScopeGroup(Layout layout) throws Exception {
 		if (layout.hasScopeGroup()) {
 			return true;
@@ -729,6 +748,20 @@ public class LayoutActionDropdownItemsProvider {
 		}
 
 		return false;
+	}
+
+	private boolean _isShowMakeACopyAction(Layout layout) {
+		String type = layout.getType();
+
+		if (!type.equals(LayoutConstants.TYPE_FULL_PAGE_APPLICATION) &&
+			!type.equals(LayoutConstants.TYPE_PANEL) &&
+			!type.equals(LayoutConstants.TYPE_PORTLET)) {
+
+			return true;
+		}
+
+		return FeatureFlagManagerUtil.isEnabled(
+			_themeDisplay.getCompanyId(), "LPD-76864");
 	}
 
 	private final HttpServletRequest _httpServletRequest;

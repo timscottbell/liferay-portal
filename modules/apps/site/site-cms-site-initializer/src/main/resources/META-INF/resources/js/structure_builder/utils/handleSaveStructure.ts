@@ -6,19 +6,24 @@
 import {openToast} from 'frontend-js-components-web';
 import {Dispatch} from 'react';
 
-import StructureService from '../../common/services/StructureService';
+import StructureService, {
+	StructureServiceError,
+} from '../../common/services/StructureService';
 import {Action, State} from '../contexts/StateContext';
 import selectHistory from '../selectors/selectHistory';
+import selectPublishedChildren from '../selectors/selectPublishedChildren';
 import selectStructureChildren from '../selectors/selectStructureChildren';
 import selectStructureERC from '../selectors/selectStructureERC';
 import selectStructureId from '../selectors/selectStructureId';
 import selectStructureLabel from '../selectors/selectStructureLabel';
 import selectStructureLocalizedLabel from '../selectors/selectStructureLocalizedLabel';
 import selectStructureName from '../selectors/selectStructureName';
+import selectStructureSettings from '../selectors/selectStructureSettings';
 import selectStructureSpaces from '../selectors/selectStructureSpaces';
 import selectStructureStatus from '../selectors/selectStructureStatus';
 import selectStructureUuid from '../selectors/selectStructureUuid';
 import selectStructureWorkflows from '../selectors/selectStructureWorkflows';
+import buildStructureErrorAction from './buildStructureErrorAction';
 
 type Props = {
 	dispatch: Dispatch<Action>;
@@ -44,6 +49,8 @@ export default async function handleSaveStructure({
 	const label = selectStructureLabel(state);
 	const localizedLabel = selectStructureLocalizedLabel(state);
 	const name = selectStructureName(state);
+	const publishedChildren = selectPublishedChildren(state);
+	const settings = selectStructureSettings(state);
 	const spaces = selectStructureSpaces(state);
 	const status = selectStructureStatus(state);
 	const workflows = selectStructureWorkflows(state);
@@ -51,14 +58,8 @@ export default async function handleSaveStructure({
 
 	const previousStatus = state.structure.status;
 
-	const onError = () =>
-		dispatch({
-			error: 'unexpected',
-			property: 'global',
-			status: previousStatus,
-			type: 'add-error',
-			uuid,
-		});
+	const onError = (error: StructureServiceError) =>
+		dispatch(buildStructureErrorAction({error, previousStatus, uuid}));
 
 	dispatch({status: 'saving', type: 'set-structure-status'});
 
@@ -68,13 +69,15 @@ export default async function handleSaveStructure({
 			erc,
 			label,
 			name,
+			publishedChildren,
+			settings,
 			spaces,
 			status: 'draft',
 			workflows,
 		});
 
 		if (error) {
-			onError();
+			onError(error);
 
 			return;
 		}
@@ -90,17 +93,20 @@ export default async function handleSaveStructure({
 			id,
 			label,
 			name,
+			publishedChildren,
+			settings,
 			spaces,
 			status: 'draft',
 			workflows,
 		});
 
 		if (error) {
-			onError();
+			onError(error);
 
 			return;
 		}
 		else {
+			dispatch({status: 'draft', type: 'set-structure-status'});
 			dispatch({type: 'clear-errors'});
 		}
 	}

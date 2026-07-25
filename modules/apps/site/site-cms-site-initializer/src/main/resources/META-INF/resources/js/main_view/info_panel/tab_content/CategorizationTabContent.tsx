@@ -13,8 +13,7 @@ import React, {
 
 import {IAssetObjectEntry} from '../../../common/types/AssetType';
 import {displayErrorToast} from '../../../common/utils/toastUtil';
-import AssetCategories from '../components/AssetCategories';
-import AssetTags from '../components/AssetTags';
+import AssetCategorizationSections from '../components/AssetCategorizationSections';
 import {AssetTypeInfoPanelContext} from '../context';
 import ObjectEntryService from '../services/ObjectEntryService';
 
@@ -38,6 +37,8 @@ const CategorizationTabContent = () => {
 			}
 
 			delete (data as Partial<IAssetObjectEntry>).actions;
+
+			delete (data as Partial<IAssetObjectEntry>).file;
 
 			setCurrentAsset(data);
 		}
@@ -69,7 +70,6 @@ const CategorizationTabContent = () => {
 					error,
 				} = await ObjectEntryService.patchObjectEntry(
 					{
-						...currentAsset,
 						keywords: keywords || currentAsset.keywords,
 						taxonomyCategoryIds:
 							taxonomyCategoryIds ||
@@ -104,22 +104,13 @@ const CategorizationTabContent = () => {
 	}
 
 	return !currentAsset ? null : (
-		<>
-			<AssetCategories
-				cmsGroupId={cmsGroupId}
-				hasUpdatePermission={hasUpdatePermission}
-				objectEntry={currentAsset}
-				updateObjectEntry={updateObjectEntry}
-			/>
-
-			<AssetTags
-				assetLibraryId={assetLibrary.groupId}
-				cmsGroupId={cmsGroupId}
-				hasUpdatePermission={hasUpdatePermission}
-				objectEntry={currentAsset}
-				updateObjectEntry={updateObjectEntry}
-			/>
-		</>
+		<AssetCategorizationSections
+			assetLibraryId={assetLibrary.groupId}
+			cmsGroupId={cmsGroupId}
+			hasUpdatePermission={hasUpdatePermission}
+			objectEntry={currentAsset}
+			updateObjectEntry={updateObjectEntry}
+		/>
 	);
 };
 

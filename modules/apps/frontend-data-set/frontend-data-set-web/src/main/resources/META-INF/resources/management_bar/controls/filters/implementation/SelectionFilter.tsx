@@ -29,6 +29,7 @@ import {
 	FilterImplementationArgs,
 	IOdataStringArgs,
 	ISelectedItemsLabelArgs,
+	ISelectedItemsPreview,
 } from '../Filter';
 import {EEntityFieldType} from '../utils/types';
 
@@ -73,6 +74,7 @@ interface SearchOptions {
 
 const DEFAULT_DEBOUNCE_DELAY = 300;
 const DEFAULT_PAGE_SIZE = 10;
+const PREVIEW_ITEMS_COUNT = 3;
 
 function fetchData(
 	apiURL: string,
@@ -106,6 +108,21 @@ function getSelectedItemsLabel({
 	);
 }
 
+function getSelectedItemsPreview({
+	selectedData,
+}: ISelectedItemsLabelArgs): ISelectedItemsPreview {
+	const {exclude, selectedItems} = selectedData as unknown as SelectedData;
+
+	const visibleItems = selectedItems.slice(0, PREVIEW_ITEMS_COUNT);
+
+	return {
+		hiddenItemsCount: selectedItems.length - visibleItems.length,
+		label:
+			(exclude ? `(${Liferay.Language.get('exclude')}) ` : '') +
+			visibleItems.map((item) => item.label).join(', '),
+	};
+}
+
 function getOdataString({
 	entityFieldType,
 	id,
@@ -118,15 +135,44 @@ function getOdataString({
 		return '';
 	}
 
-	const quotedSelectedItems = selectedItems.map((item) =>
-		entityFieldType === EEntityFieldType.STRING ||
-		(typeof item.value === 'string' &&
-			entityFieldType !== EEntityFieldType.INTEGER)
-			? `'${item.value}'`
-			: item.value
-	);
+	const quotedSelectedItems = selectedItems.map((item) => {
+		if (
+			entityFieldType === EEntityFieldType.COLLECTION_INTEGER ||
+			entityFieldType === EEntityFieldType.INTEGER
+		) {
+			return item.value;
+		}
 
-	if (entityFieldType === EEntityFieldType.COLLECTION) {
+		if (
+			entityFieldType === EEntityFieldType.COLLECTION ||
+			entityFieldType === EEntityFieldType.COLLECTION_STRING ||
+			entityFieldType === EEntityFieldType.STRING
+		) {
+			return `'${item.value}'`;
+		}
+
+		if (entityFieldType === EEntityFieldType.BOOLEAN) {
+			let parsedValue =
+				typeof item.value === 'string'
+					? item.value
+					: String(item.value);
+
+			item.value === '0' && (parsedValue = `false`);
+			item.value === '1' && (parsedValue = `true`);
+
+			return parsedValue.toLocaleLowerCase();
+		}
+
+		return typeof item.value === 'string'
+			? `'${item.value.replace(/'/g, "''")}'`
+			: item.value;
+	});
+
+	if (
+		entityFieldType === EEntityFieldType.COLLECTION ||
+		entityFieldType === EEntityFieldType.COLLECTION_INTEGER ||
+		entityFieldType === EEntityFieldType.COLLECTION_STRING
+	) {
 		return `${id}/any(x:${quotedSelectedItems
 			.map((value) => `(x ${exclude ? 'ne' : 'eq'} ${value})`)
 			.join(exclude ? ' and ' : ' or ')})`;
@@ -218,10 +264,12 @@ function SelectionFilter({
 			fetchData(apiURL, searchOptions.query, searchOptions.currentPage)
 				.then((response) => {
 					const selectionItems = response.items.map((item: any) => {
+						const rawLabel = itemLabel
+							? getValueFromItem(item, itemLabel.split('.'))
+							: item.label;
+
 						return {
-							label: itemLabel
-								? getValueFromItem(item, itemLabel.split('.'))
-								: item.label,
+							label: rawLabel === null ? '' : String(rawLabel),
 							value: itemKey
 								? getValueFromItem(item, itemKey.split('.'))
 								: item.value,
@@ -389,7 +437,7 @@ function SelectionFilter({
 										}}
 										key={selectedItem.value}
 									>
-										{selectedItem.label}
+										{selectedItem.label.toString()}
 									</ClayLabel>
 								))}
 							</div>
@@ -426,7 +474,7 @@ function SelectionFilter({
 						className="inline-scroller mx-n2 px-2"
 						ref={setScrollingArea}
 					>
-						{items.map(({label, value}) => {
+						{items.map(({label, value}, index) => {
 							const newValue = {
 								label,
 								value,
@@ -440,8 +488,8 @@ function SelectionFilter({
 											(element) => element.value === value
 										)
 									)}
-									key={value}
-									label={label}
+									key={`${value}-${index}`}
+									label={label.toString()}
 									multiple={multiple}
 									onChange={() => {
 										setSelectedItems(
@@ -532,6 +580,7 @@ const filterImplementation: FilterImplementation<SelectionFilterImplementationAr
 		Component: SelectionFilter,
 		getOdataString,
 		getSelectedItemsLabel,
+		getSelectedItemsPreview,
 	};
 
 export default filterImplementation;

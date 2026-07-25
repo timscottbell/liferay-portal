@@ -14,10 +14,14 @@ export class CommerceMiniCartPage {
 	readonly miniCartButton: Locator;
 	readonly miniCartButtonClose: Locator;
 	readonly miniCartInvalidQuantityMessage: Locator;
+	readonly miniCartPriceOnApplicationInfoMessage: Locator;
 	readonly miniCartItem: (productName: string) => Locator;
 	readonly miniCartItemsContainer: Locator;
 	readonly miniCartItemPrice: (text: RegExp) => Locator;
+	readonly miniCartItemReplacementLabel: (productName: string) => Locator;
+	readonly miniCartReplacementInfoMessage: Locator;
 	readonly miniCartSaveButton: Locator;
+	readonly miniCartSku: (skuName: string) => Locator;
 	readonly miniCartTotalPrice: Locator;
 	readonly miniCartUnitOfMeasureSelector: Locator;
 	readonly page: Page;
@@ -39,6 +43,8 @@ export class CommerceMiniCartPage {
 	) => Promise<string[]>;
 	readonly showOptionsButton: Locator;
 	readonly signInToCheckoutButton: Locator;
+	readonly removeAllItemsButton: Locator;
+	readonly removeAllItemsConfirmButton: Locator;
 	readonly submitButton: Locator;
 	readonly unitOfMeasureTableLabel: Locator;
 	readonly viewDetailsButton: Locator;
@@ -61,17 +67,29 @@ export class CommerceMiniCartPage {
 			'The product quantity is not valid.',
 			{exact: true}
 		);
+		this.miniCartPriceOnApplicationInfoMessage = page.getByText(
+			'Your cart has products that require a quote to complete the checkout.'
+		);
 		this.miniCartItemsContainer = page.locator('div.mini-cart-cart-items');
 		this.miniCartItem = (productName: string) =>
 			page.locator('div.mini-cart-item').filter({hasText: productName});
 		this.miniCartItemPrice = (text: RegExp) =>
 			page.locator('div').filter({hasText: text}).first();
+		this.miniCartItemReplacementLabel = (productName: string) =>
+			this.miniCartItem(productName).getByText('Replacement', {
+				exact: true,
+			});
+		this.miniCartReplacementInfoMessage = page.getByText(
+			'There are replacement products in your cart.'
+		);
 		this.miniCartSaveButton = page
 			.locator('.mini-cart-footer')
 			.getByRole('button', {
 				exact: true,
 				name: 'Save',
 			});
+		this.miniCartSku = (skuName: string) =>
+			page.getByText(skuName, {exact: true});
 		this.miniCartTotalPrice = page.locator(
 			`xpath=//div[text()='Total']/../following-sibling::div/div`
 		);
@@ -109,6 +127,14 @@ export class CommerceMiniCartPage {
 		});
 		this.signInToCheckoutButton = page.getByRole('button', {
 			name: 'Sign In to Checkout',
+		});
+		this.removeAllItemsButton = page.getByRole('button', {
+			exact: true,
+			name: 'Remove All Items',
+		});
+		this.removeAllItemsConfirmButton = page.getByRole('button', {
+			exact: true,
+			name: 'Yes',
 		});
 		this.submitButton = page.getByRole('button', {name: 'Submit'});
 		this.unitOfMeasureTableLabel = page.getByText('Unit of Measure Table', {

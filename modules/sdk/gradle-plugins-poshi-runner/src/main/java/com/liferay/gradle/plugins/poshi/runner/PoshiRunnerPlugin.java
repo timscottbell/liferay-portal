@@ -69,7 +69,6 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.api.tasks.testing.TestTaskReports;
 import org.gradle.api.tasks.testing.logging.TestLoggingContainer;
 import org.gradle.process.ExecSpec;
-import org.gradle.util.CollectionUtils;
 import org.gradle.util.GUtil;
 
 /**
@@ -846,8 +845,11 @@ public class PoshiRunnerPlugin implements Plugin<Project> {
 			Integer chromeMajorVersion = Integer.parseInt(
 				matcher.group("majorVersion"));
 
-			if (_chromeDriverVersions.containsKey(chromeMajorVersion)) {
-				return _chromeDriverVersions.get(chromeMajorVersion);
+			String chromeDriverVersion = _chromeDriverVersions.get(
+				chromeMajorVersion);
+
+			if (chromeDriverVersion != null) {
+				return chromeDriverVersion;
 			}
 
 			try {
@@ -871,7 +873,7 @@ public class PoshiRunnerPlugin implements Plugin<Project> {
 					_LEGACY_CHROME_DRIVER_BASE_URL + "LATEST_RELEASE_" +
 						chromeMajorVersion.toString());
 
-				String chromeDriverVersion = StringUtil.read(url.openStream());
+				chromeDriverVersion = StringUtil.read(url.openStream());
 
 				return chromeDriverVersion.trim();
 			}
@@ -1219,7 +1221,7 @@ public class PoshiRunnerPlugin implements Plugin<Project> {
 
 		if (!testNames.isEmpty()) {
 			gradleSystemProperties.put(
-				"test.name", CollectionUtils.join(",", testNames));
+				"test.name", String.join(",", testNames));
 		}
 
 		ExtensionContainer extensionContainer = project.getExtensions();

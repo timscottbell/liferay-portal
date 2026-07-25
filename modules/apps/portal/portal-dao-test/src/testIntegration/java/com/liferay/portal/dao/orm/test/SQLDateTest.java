@@ -91,7 +91,9 @@ public class SQLDateTest {
 
 	protected long readTimeJDBC() throws Exception {
 		try (Connection connection = DataAccess.getConnection();
+
 			Statement statement = connection.createStatement();
+
 			ResultSet resultSet = statement.executeQuery(
 				_READ_RELEASE_MODIFIED_DATE)) {
 
@@ -113,8 +115,6 @@ public class SQLDateTest {
 
 			release.setModifiedDate(new Timestamp(time));
 
-			session.saveOrUpdate(release);
-
 			session.flush();
 
 			session.clear();
@@ -126,6 +126,7 @@ public class SQLDateTest {
 
 	protected void writeTimeJDBC(long time) throws Exception {
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				_WRITE_RELEASE_MODIFIED_DATE)) {
 

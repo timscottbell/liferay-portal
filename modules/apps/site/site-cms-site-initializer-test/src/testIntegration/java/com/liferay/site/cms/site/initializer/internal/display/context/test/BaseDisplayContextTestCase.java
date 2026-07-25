@@ -5,7 +5,6 @@
 
 package com.liferay.site.cms.site.initializer.internal.display.context.test;
 
-import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.info.constants.InfoDisplayWebKeys;
 import com.liferay.layout.test.util.LayoutTestUtil;
 import com.liferay.object.constants.ObjectDefinitionConstants;
@@ -28,6 +27,7 @@ import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.Inject;
@@ -37,9 +37,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import org.junit.Assert;
 import org.junit.Before;
 
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -56,19 +54,23 @@ public abstract class BaseDisplayContextTestCase {
 		mockHttpServletRequest = getMockHttpServletRequest();
 
 		themeDisplay = getThemeDisplay(mockHttpServletRequest);
+
+		mockHttpServletRequest.setAttribute(
+			WebKeys.THEME_DISPLAY, themeDisplay);
 	}
 
 	protected ObjectDefinition addCustomObjectDefinition(
-			long objectFolderId, boolean active, boolean enableObjectEntryDraft,
+			long objectFolderId, boolean active, boolean enableComments,
+			boolean enableObjectEntryDraft,
 			List<ObjectDefinitionSetting> objectDefinitionSettings,
 			String scope, int status)
 		throws Exception {
 
 		ObjectDefinition objectDefinition =
 			objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), objectFolderId, null, false,
-				true, false, true, enableObjectEntryDraft, false, false, false,
-				null,
+				null, TestPropsValues.getUserId(), objectFolderId, null, true,
+				enableComments, true, false, true, enableObjectEntryDraft,
+				false, false, false, null,
 				Collections.singletonMap(
 					LocaleUtil.getDefault(), RandomTestUtil.randomString()),
 				ObjectDefinitionTestUtil.getRandomName(), null, null,
@@ -123,33 +125,23 @@ public abstract class BaseDisplayContextTestCase {
 
 	protected ObjectDefinition addCustomObjectDefinition(
 			long objectFolderId, boolean active, boolean enableObjectEntryDraft,
+			List<ObjectDefinitionSetting> objectDefinitionSettings,
+			String scope, int status)
+		throws Exception {
+
+		return addCustomObjectDefinition(
+			objectFolderId, active, false, enableObjectEntryDraft,
+			objectDefinitionSettings, scope, status);
+	}
+
+	protected ObjectDefinition addCustomObjectDefinition(
+			long objectFolderId, boolean active, boolean enableObjectEntryDraft,
 			String scope, int status)
 		throws Exception {
 
 		return addCustomObjectDefinition(
 			objectFolderId, active, enableObjectEntryDraft,
 			Collections.emptyList(), scope, status);
-	}
-
-	protected void assertFDSActionDropdownItem(
-		FDSActionDropdownItem fdsActionDropdownItem, String icon, String id,
-		String label, String method, String type,
-		Map<String, Object> visibilityFilters) {
-
-		Assert.assertNotNull(fdsActionDropdownItem);
-
-		Map<String, Object> data =
-			(Map<String, Object>)fdsActionDropdownItem.get("data");
-
-		Assert.assertEquals(id, data.get("id"));
-		Assert.assertEquals(method, data.get("method"));
-
-		Assert.assertEquals(icon, fdsActionDropdownItem.get("icon"));
-		Assert.assertEquals(
-			language.get(LocaleUtil.getDefault(), label),
-			fdsActionDropdownItem.get("label"));
-		Assert.assertEquals(type, fdsActionDropdownItem.get("type"));
-		Assert.assertEquals(visibilityFilters, data.get("visibilityFilters"));
 	}
 
 	protected MockHttpServletRequest getMockHttpServletRequest()
@@ -217,12 +209,15 @@ public abstract class BaseDisplayContextTestCase {
 		themeDisplay.setPathMain(portal.getPathMain());
 		themeDisplay.setPermissionChecker(
 			PermissionThreadLocal.getPermissionChecker());
-		themeDisplay.setPortalURL("http://localhost:8080");
+		themeDisplay.setPortalURL(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false));
 		themeDisplay.setRealUser(user);
 		themeDisplay.setRequest(httpServletRequest);
 		themeDisplay.setScopeGroupId(group.getGroupId());
 		themeDisplay.setSiteGroupId(group.getGroupId());
-		themeDisplay.setURLCurrent("http://localhost:8080/currentURL");
+		themeDisplay.setURLCurrent(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/currentURL");
 		themeDisplay.setUser(user);
 
 		return themeDisplay;

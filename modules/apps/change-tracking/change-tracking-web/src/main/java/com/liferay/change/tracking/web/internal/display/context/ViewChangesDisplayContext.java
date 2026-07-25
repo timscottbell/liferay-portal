@@ -20,6 +20,7 @@ import com.liferay.change.tracking.service.CTEntryLocalService;
 import com.liferay.change.tracking.service.CTSchemaVersionLocalService;
 import com.liferay.change.tracking.spi.display.CTDisplayRenderer;
 import com.liferay.change.tracking.spi.display.CTDisplayRendererRegistry;
+import com.liferay.change.tracking.web.internal.configuration.CTConfiguration;
 import com.liferay.change.tracking.web.internal.display.BasePersistenceRegistry;
 import com.liferay.change.tracking.web.internal.display.CTModelDisplayRendererAdapter;
 import com.liferay.change.tracking.web.internal.security.permission.resource.CTCollectionPermission;
@@ -38,6 +39,7 @@ import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProviderUtil;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.sql.CTSQLModeThreadLocal;
 import com.liferay.portal.kernel.dao.orm.ORMException;
@@ -52,6 +54,7 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.BaseModel;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.PortletPreferences;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.UserTable;
@@ -59,12 +62,11 @@ import com.liferay.portal.kernel.model.WorkflowInstanceLink;
 import com.liferay.portal.kernel.module.service.Snapshot;
 import com.liferay.portal.kernel.portlet.url.builder.PortletURLBuilder;
 import com.liferay.portal.kernel.search.BooleanClause;
-import com.liferay.portal.kernel.search.BooleanClauseFactoryUtil;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
+import com.liferay.portal.kernel.search.BooleanQuery;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.filter.BooleanFilter;
 import com.liferay.portal.kernel.search.filter.ExistsFilter;
-import com.liferay.portal.kernel.search.generic.BooleanQueryImpl;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.service.GroupLocalService;
@@ -114,11 +116,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -279,7 +280,7 @@ public class ViewChangesDisplayContext {
 					_renderResponse
 				).setMVCRenderCommandName(
 					"/change_tracking/view_change"
-				).setRedirect(
+				).setBackURL(
 					_themeDisplay.getURLCurrent()
 				).setParameter(
 					"ctCollectionId", "{ctCollectionId}"
@@ -434,105 +435,75 @@ public class ViewChangesDisplayContext {
 			return _reactData;
 		}
 
-		JSONObject contextViewJSONObject = null;
-
 		CTClosure ctClosure = null;
-
-		if (_ctCollection.getStatus() != WorkflowConstants.STATUS_APPROVED) {
-			try {
-				ctClosure = _ctClosureFactory.create(
-					_ctCollection.getCtCollectionId());
-			}
-			catch (Exception exception) {
-				contextViewJSONObject = JSONUtil.put(
-					"errorMessage",
-					_language.get(
-						_httpServletRequest, "context-view-is-unavailable"));
-
-				_log.error(exception);
-			}
-		}
 
 		Map<Long, Set<Long>> classNameIdClassPKsMap = new HashMap<>();
 		Map<ModelInfoKey, ModelInfo> modelInfoMap = new HashMap<>();
 
-		if (ctClosure == null) {
-			List<CTEntry> ctEntries =
-				_ctEntryLocalService.getCTCollectionCTEntries(
+		List<CTEntry> ctEntries = _ctEntryLocalService.getCTCollectionCTEntries(
+			_ctCollection.getCtCollectionId());
+
+		int modelKeyCounter = 1;
+
+		for (CTEntry ctEntry : ctEntries) {
+			modelInfoMap.put(
+				new ModelInfoKey(
+					ctEntry.getModelClassNameId(), ctEntry.getModelClassPK()),
+				new ModelInfo(modelKeyCounter++));
+
+			Set<Long> classPKs = classNameIdClassPKsMap.computeIfAbsent(
+				ctEntry.getModelClassNameId(), key -> new HashSet<>());
+
+			classPKs.add(ctEntry.getModelClassPK());
+		}
+
+		if ((_modelClassNameId != 0) && (_modelClassPK != 0) &&
+			(_ctCollection.getStatus() != WorkflowConstants.STATUS_APPROVED) &&
+			(_ctCollection.getScore() < _getContextViewScoreThreshold())) {
+
+			try {
+				ctClosure = _ctClosureFactory.create(
 					_ctCollection.getCtCollectionId());
 
-			int modelKeyCounter = 1;
-
-			for (CTEntry ctEntry : ctEntries) {
-				modelInfoMap.put(
-					new ModelInfoKey(
-						ctEntry.getModelClassNameId(),
-						ctEntry.getModelClassPK()),
-					new ModelInfo(modelKeyCounter++));
-
-				Set<Long> classPKs = classNameIdClassPKsMap.computeIfAbsent(
-					ctEntry.getModelClassNameId(), key -> new HashSet<>());
-
-				classPKs.add(ctEntry.getModelClassPK());
-			}
-		}
-		else {
-			Map.Entry<Long, List<Long>> entry = null;
-			boolean foundSelectedEntry = false;
-			int[] modelKeyCounterHolder = {1};
-
-			Map<Long, List<Long>> rootPKsMap = _getRootPKsMap(ctClosure);
-
-			Queue<Map.Entry<Long, List<Long>>> queue = new LinkedList<>(
-				rootPKsMap.entrySet());
-
-			while ((entry = queue.poll()) != null) {
-				long classNameId = entry.getKey();
-
-				if (!foundSelectedEntry) {
-					Set<Long> classPKs = classNameIdClassPKsMap.computeIfAbsent(
-						classNameId, key -> new HashSet<>());
-
-					classPKs.addAll(entry.getValue());
-				}
-
-				for (long classPK : entry.getValue()) {
-					ModelInfoKey modelInfoKey = new ModelInfoKey(
-						classNameId, classPK);
-
-					if (!modelInfoMap.containsKey(modelInfoKey)) {
-						modelInfoMap.put(
-							modelInfoKey,
-							new ModelInfo(modelKeyCounterHolder[0]++));
-
-						Map<Long, List<Long>> childPKsMap =
-							ctClosure.getChildPKsMap(classNameId, classPK);
-
-						if (!childPKsMap.isEmpty()) {
-							queue.addAll(childPKsMap.entrySet());
-						}
-					}
-
-					if ((classNameId == _modelClassNameId) &&
-						(classPK == _modelClassPK)) {
-
-						foundSelectedEntry = true;
-					}
-				}
-			}
-
-			if (foundSelectedEntry) {
-				Map<Long, List<Long>> childPKsMap = ctClosure.getChildPKsMap(
+				ModelInfoKey selectedModelInfoKey = new ModelInfoKey(
 					_modelClassNameId, _modelClassPK);
 
-				for (Map.Entry<Long, List<Long>> childPKEntry :
-						childPKsMap.entrySet()) {
+				if (modelInfoMap.get(selectedModelInfoKey) == null) {
+					modelInfoMap.put(
+						selectedModelInfoKey, new ModelInfo(modelKeyCounter++));
 
 					Set<Long> classPKs = classNameIdClassPKsMap.computeIfAbsent(
-						childPKEntry.getKey(), key -> new HashSet<>());
+						_modelClassNameId, key -> new HashSet<>());
 
-					classPKs.addAll(childPKEntry.getValue());
+					classPKs.add(_modelClassPK);
 				}
+
+				for (Map.Entry<Long, List<Long>> entry :
+						ctClosure.getParentPKsMap(
+							_modelClassNameId, _modelClassPK
+						).entrySet()) {
+
+					long classNameId = entry.getKey();
+
+					for (long classPK : entry.getValue()) {
+						ModelInfoKey modelInfoKey = new ModelInfoKey(
+							classNameId, classPK);
+
+						if (modelInfoMap.get(modelInfoKey) == null) {
+							modelInfoMap.put(
+								modelInfoKey, new ModelInfo(modelKeyCounter++));
+
+							Set<Long> classPKs =
+								classNameIdClassPKsMap.computeIfAbsent(
+									classNameId, key -> new HashSet<>());
+
+							classPKs.add(classPK);
+						}
+					}
+				}
+			}
+			catch (Exception exception) {
+				_log.error(exception);
 			}
 		}
 
@@ -573,14 +544,13 @@ public class ViewChangesDisplayContext {
 				_renderResponse
 			).setMVCRenderCommandName(
 				"/change_tracking/view_change"
+			).setBackURL(
+				_themeDisplay.getURLCurrent()
 			).setParameter(
 				"ctCollectionId", _ctCollection.getCtCollectionId()
 			).buildString()
 		).put(
-			"contextView",
-			_getContextViewJSONObject(
-				ctClosure, modelInfoMap, contextViewJSONObject,
-				typeNameCacheMap)
+			"contextView", _getContextViewJSONObject(ctClosure, modelInfoMap)
 		).put(
 			"dataURL",
 			() -> {
@@ -635,6 +605,41 @@ public class ViewChangesDisplayContext {
 			}
 		).put(
 			"entryFromURL", ParamUtil.getString(_renderRequest, "entry")
+		).put(
+			"layoutContentChangesURL",
+			() -> {
+				if (!FeatureFlagManagerUtil.isEnabled(
+						_themeDisplay.getCompanyId(), "LPD-75671") ||
+					!Objects.equals(
+						_portal.getClassNameId(Layout.class),
+						_modelClassNameId)) {
+
+					return null;
+				}
+
+				ResourceURL dataURL = _renderResponse.createResourceURL();
+
+				long ctEntryId = ParamUtil.getLong(_renderRequest, "ctEntryId");
+
+				if (ctEntryId == 0) {
+					CTEntry ctEntry = _ctEntryLocalService.fetchCTEntry(
+						_ctCollection.getCtCollectionId(), _modelClassNameId,
+						_modelClassPK);
+
+					if (ctEntry == null) {
+						return null;
+					}
+
+					ctEntryId = ctEntry.getCtEntryId();
+				}
+
+				dataURL.setParameter("ctEntryId", String.valueOf(ctEntryId));
+
+				dataURL.setResourceID(
+					"/change_tracking/get_layout_content_changes");
+
+				return dataURL.toString();
+			}
 		).put(
 			"modelData",
 			() -> {
@@ -1110,100 +1115,103 @@ public class ViewChangesDisplayContext {
 	}
 
 	private JSONObject _getContextViewJSONObject(
-		CTClosure ctClosure, Map<ModelInfoKey, ModelInfo> modelInfoMap,
-		JSONObject defaultContextViewJSONObject,
-		Map<Long, String> typeNameCacheMap) {
+		CTClosure ctClosure, Map<ModelInfoKey, ModelInfo> modelInfoMap) {
 
 		if (ctClosure == null) {
-			return defaultContextViewJSONObject;
+			return null;
 		}
 
 		JSONObject everythingJSONObject = JSONUtil.put("nodeId", 0);
 
-		Set<Integer> rootModelKeys = new HashSet<>();
-		Map<Long, JSONArray> rootDisplayMap = new HashMap<>();
-
 		int nodeIdCounter = 1;
 
-		Queue<ParentModel> queue = new LinkedList<>();
+		// Build child nodes of the selected entry
 
-		queue.add(
-			new ParentModel(everythingJSONObject, _getRootPKsMap(ctClosure)));
+		JSONArray childrenJSONArray = JSONFactoryUtil.createJSONArray();
 
-		ParentModel parentModel = null;
+		for (Map.Entry<Long, List<Long>> entry :
+				ctClosure.getChildPKsMap(
+					_modelClassNameId, _modelClassPK
+				).entrySet()) {
 
-		while ((parentModel = queue.poll()) != null) {
-			if (parentModel._jsonObject == null) {
-				continue;
+			for (long classPK : entry.getValue()) {
+				ModelInfo modelInfo = modelInfoMap.get(
+					new ModelInfoKey(entry.getKey(), classPK));
+
+				if (modelInfo == null) {
+					continue;
+				}
+
+				childrenJSONArray.put(
+					JSONUtil.put(
+						"modelKey", modelInfo._modelKey
+					).put(
+						"nodeId", nodeIdCounter++
+					));
 			}
+		}
 
-			JSONArray childrenJSONArray = JSONFactoryUtil.createJSONArray();
+		// Build selected entry node
 
-			for (Map.Entry<Long, List<Long>> entry :
-					parentModel._childPKsMap.entrySet()) {
+		ModelInfo selectedModelInfo = modelInfoMap.get(
+			new ModelInfoKey(_modelClassNameId, _modelClassPK));
 
-				long modelClassNameId = entry.getKey();
+		if (selectedModelInfo == null) {
+			return null;
+		}
 
-				for (long modelClassPK : entry.getValue()) {
+		JSONObject selectedJSONObject = JSONUtil.put(
+			"children", childrenJSONArray
+		).put(
+			"modelKey", selectedModelInfo._modelKey
+		).put(
+			"nodeId", nodeIdCounter++
+		);
+
+		// Build parent nodes
+
+		Map<Long, List<Long>> parentPKsMap = ctClosure.getParentPKsMap(
+			_modelClassNameId, _modelClassPK);
+
+		if (parentPKsMap.isEmpty()) {
+			everythingJSONObject.put(
+				"children", JSONUtil.put(selectedJSONObject));
+		}
+		else {
+			JSONArray parentJSONArray = JSONFactoryUtil.createJSONArray();
+
+			for (Map.Entry<Long, List<Long>> entry : parentPKsMap.entrySet()) {
+				for (long classPK : entry.getValue()) {
 					ModelInfo modelInfo = modelInfoMap.get(
-						new ModelInfoKey(modelClassNameId, modelClassPK));
+						new ModelInfoKey(entry.getKey(), classPK));
 
 					if (modelInfo == null) {
 						continue;
 					}
 
-					int modelKey = modelInfo._modelKey;
-
-					int nodeId = nodeIdCounter++;
-
-					JSONObject jsonObject = JSONUtil.put(
-						"modelKey", modelKey
-					).put(
-						"nodeId", nodeId
-					);
-
-					childrenJSONArray.put(jsonObject);
-
-					if (rootModelKeys.add(modelKey)) {
-						JSONArray jsonArray = rootDisplayMap.computeIfAbsent(
-							modelClassNameId,
-							key -> JSONFactoryUtil.createJSONArray());
-
-						// Copy JSON object to prevent appending children
-
-						jsonArray.put(
-							JSONUtil.put(
-								"modelKey", modelKey
-							).put(
-								"nodeId", nodeId
-							));
-					}
-
-					Map<Long, List<Long>> childPKsMap =
-						ctClosure.getChildPKsMap(
-							modelClassNameId, modelClassPK);
-
-					if (!childPKsMap.isEmpty()) {
-						queue.add(new ParentModel(jsonObject, childPKsMap));
-					}
+					parentJSONArray.put(
+						JSONUtil.put(
+							"children", JSONUtil.put(selectedJSONObject)
+						).put(
+							"modelKey", modelInfo._modelKey
+						).put(
+							"nodeId", nodeIdCounter++
+						));
 				}
 			}
 
-			parentModel._jsonObject.put("children", childrenJSONArray);
+			everythingJSONObject.put("children", parentJSONArray);
 		}
 
-		JSONObject contextViewJSONObject = JSONUtil.put(
-			"everything", everythingJSONObject);
+		return JSONUtil.put("everything", everythingJSONObject);
+	}
 
-		for (Map.Entry<Long, JSONArray> entry : rootDisplayMap.entrySet()) {
-			contextViewJSONObject.put(
-				_getTypeName(
-					_themeDisplay.getLocale(), entry.getKey(),
-					typeNameCacheMap),
-				JSONUtil.put("children", entry.getValue()));
-		}
+	private int _getContextViewScoreThreshold() throws Exception {
+		CTConfiguration ctConfiguration =
+			ConfigurationProviderUtil.getCompanyConfiguration(
+				CTConfiguration.class, _themeDisplay.getCompanyId());
 
-		return contextViewJSONObject;
+		return ctConfiguration.contextViewScoreThreshold();
 	}
 
 	private JSONArray _getDropdownItemsJSONArray(
@@ -1425,8 +1433,7 @@ public class ViewChangesDisplayContext {
 					searchContext.setAttribute("showHideable", showHideable);
 
 					if (groupId == -1) {
-						BooleanQueryImpl booleanQueryImpl =
-							new BooleanQueryImpl();
+						BooleanQuery booleanQuery = new BooleanQuery();
 
 						BooleanFilter booleanFilter = new BooleanFilter();
 
@@ -1434,13 +1441,12 @@ public class ViewChangesDisplayContext {
 							new ExistsFilter(Field.GROUP_ID),
 							BooleanClauseOccur.MUST_NOT);
 
-						booleanQueryImpl.setPreBooleanFilter(booleanFilter);
+						booleanQuery.setPreBooleanFilter(booleanFilter);
 
 						searchContext.setBooleanClauses(
 							new BooleanClause[] {
-								BooleanClauseFactoryUtil.create(
-									booleanQueryImpl,
-									BooleanClauseOccur.MUST.getName())
+								new BooleanClause<>(
+									booleanQuery, BooleanClauseOccur.MUST)
 							});
 					}
 					else {
@@ -1468,16 +1474,6 @@ public class ViewChangesDisplayContext {
 		}
 
 		return objectValuePairs;
-	}
-
-	private Map<Long, List<Long>> _getRootPKsMap(CTClosure ctClosure) {
-		if (_rootPKsMap != null) {
-			return _rootPKsMap;
-		}
-
-		_rootPKsMap = ctClosure.getRootPKsMap();
-
-		return _rootPKsMap;
 	}
 
 	private <T extends BaseModel<T>> String _getTitle(
@@ -1831,7 +1827,6 @@ public class ViewChangesDisplayContext {
 	private Map<String, Object> _reactData;
 	private final RenderRequest _renderRequest;
 	private final RenderResponse _renderResponse;
-	private Map<Long, List<Long>> _rootPKsMap;
 	private final ThemeDisplay _themeDisplay;
 	private Map<String, Object> _toolbarReactData;
 	private final User _user;
@@ -1882,20 +1877,6 @@ public class ViewChangesDisplayContext {
 
 		private final long _classNameId;
 		private final long _classPK;
-
-	}
-
-	private static class ParentModel {
-
-		private ParentModel(
-			JSONObject jsonObject, Map<Long, List<Long>> childPKsMap) {
-
-			_jsonObject = jsonObject;
-			_childPKsMap = childPKsMap;
-		}
-
-		private final Map<Long, List<Long>> _childPKsMap;
-		private final JSONObject _jsonObject;
 
 	}
 

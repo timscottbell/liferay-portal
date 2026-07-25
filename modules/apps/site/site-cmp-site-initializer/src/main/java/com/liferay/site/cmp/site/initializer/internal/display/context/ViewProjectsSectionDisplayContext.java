@@ -14,10 +14,7 @@ import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenuBuilder;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.service.ObjectEntryService;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
-import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.site.cmp.site.initializer.internal.constants.CMPActionConstants;
@@ -28,6 +25,7 @@ import com.liferay.site.cmp.site.initializer.internal.frontend.data.set.filter.S
 import com.liferay.site.cmp.site.initializer.internal.frontend.data.set.filter.TagSelectionFDSFilter;
 import com.liferay.site.cmp.site.initializer.internal.util.ActionUtil;
 import com.liferay.site.cmp.site.initializer.internal.util.ObjectEntryUtil;
+import com.liferay.site.cms.site.initializer.util.CMSDepotEntryGroupUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -53,6 +51,12 @@ public class ViewProjectsSectionDisplayContext
 		_depotEntryLocalService = depotEntryLocalService;
 	}
 
+	public Map<String, Object> getAdditionalProps() {
+		return HashMapBuilder.<String, Object>put(
+			"filter", CMSDepotEntryGroupUtil.getFilterString()
+		).build();
+	}
+
 	public String getAPIURL() {
 		StringBundler sb = new StringBundler(5);
 
@@ -63,29 +67,6 @@ public class ViewProjectsSectionDisplayContext
 		sb.append(",r_userToCMPProjectSponsor_user");
 
 		return sb.toString();
-	}
-
-	public Map<String, Object> getBreadcrumbProps() throws PortalException {
-		return HashMapBuilder.<String, Object>put(
-			"breadcrumbItems",
-			JSONUtil.putAll(
-				JSONUtil.put(
-					"active", false
-				).put(
-					"label",
-					() -> {
-						Layout layout = themeDisplay.getLayout();
-
-						if (layout == null) {
-							return null;
-						}
-
-						return layout.getName(themeDisplay.getLocale(), true);
-					}
-				))
-		).put(
-			"hideSpace", true
-		).build();
 	}
 
 	public CreationMenu getCreationMenu() throws Exception {

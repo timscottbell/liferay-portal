@@ -285,9 +285,12 @@ public class VerifyAuditedModel extends VerifyProcess {
 			long previousCompanyId = 0;
 
 			try (Connection connection = DataAccess.getConnection();
+
 				PreparedStatement preparedStatement1 =
 					connection.prepareStatement(sb.toString());
+
 				ResultSet resultSet = preparedStatement1.executeQuery();
+
 				PreparedStatement preparedStatement2 =
 					AutoBatchPreparedStatementUtil.autoBatch(
 						connection,

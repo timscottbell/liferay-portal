@@ -11,14 +11,17 @@ import com.liferay.fragment.service.FragmentEntryLinkService;
 import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.info.search.InfoSearchClassMapperRegistry;
 import com.liferay.layout.manager.FormManager;
+import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
-import com.liferay.object.service.ObjectDefinitionService;
+import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryService;
 import com.liferay.portal.kernel.struts.StrutsAction;
+import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.site.cms.site.initializer.internal.util.ActionUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,29 +46,19 @@ public class EditContentItemStrutsAction implements StrutsAction {
 			HttpServletResponse httpServletResponse)
 		throws Exception {
 
-		String redirect = ParamUtil.getString(httpServletRequest, "redirect");
-
-		ObjectEntry objectEntry = _objectEntryService.getObjectEntry(
-			ParamUtil.getLong(httpServletRequest, "objectEntryId"));
+		ObjectEntry objectEntry = _getObjectEntry(httpServletRequest);
 
 		String editURL = ActionUtil.getEditURL(
 			_formManager, _fragmentEntryLinkListenerRegistry,
 			_fragmentEntryLinkService, _fragmentRendererRegistry,
 			httpServletRequest, String.valueOf(objectEntry.getObjectEntryId()),
 			_infoItemServiceRegistry, _infoSearchClassMapperRegistry,
-			_objectDefinitionService.getObjectDefinition(
+			_objectDefinitionLocalService.getObjectDefinition(
 				objectEntry.getObjectDefinitionId()));
-
-		if (Validator.isNotNull(redirect)) {
-			editURL = HttpComponentsUtil.addParameter(
-				editURL, "redirect", redirect);
-		}
 
 		String layoutMode = ParamUtil.getString(httpServletRequest, "p_l_mode");
 
-		if (Validator.isNotNull(layoutMode) &&
-			Objects.equals(layoutMode, Constants.READ)) {
-
+		if (Objects.equals(layoutMode, Constants.READ)) {
 			editURL = HttpComponentsUtil.addParameter(
 				editURL, "p_l_mode", layoutMode);
 		}
@@ -90,6 +83,32 @@ public class EditContentItemStrutsAction implements StrutsAction {
 		return null;
 	}
 
+	private ObjectEntry _getObjectEntry(HttpServletRequest httpServletRequest)
+		throws Exception {
+
+		long objectEntryId = ParamUtil.getLong(
+			httpServletRequest, "objectEntryId");
+
+		if (objectEntryId > 0) {
+			return _objectEntryService.getObjectEntry(objectEntryId);
+		}
+
+		ThemeDisplay themeDisplay =
+			(ThemeDisplay)httpServletRequest.getAttribute(
+				WebKeys.THEME_DISPLAY);
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.getObjectDefinition(
+				themeDisplay.getCompanyId(),
+				ParamUtil.getString(
+					httpServletRequest, "objectDefinitionName"));
+
+		return _objectEntryService.getObjectEntry(
+			ParamUtil.getString(httpServletRequest, "externalReferenceCode"),
+			ParamUtil.getLong(httpServletRequest, "groupId"),
+			objectDefinition.getObjectDefinitionId());
+	}
+
 	@Reference
 	private FormManager _formManager;
 
@@ -110,7 +129,7 @@ public class EditContentItemStrutsAction implements StrutsAction {
 	private InfoSearchClassMapperRegistry _infoSearchClassMapperRegistry;
 
 	@Reference
-	private ObjectDefinitionService _objectDefinitionService;
+	private ObjectDefinitionLocalService _objectDefinitionLocalService;
 
 	@Reference
 	private ObjectEntryService _objectEntryService;

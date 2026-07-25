@@ -15,9 +15,15 @@ import org.osgi.annotation.versioning.ProviderType;
 @ProviderType
 public interface SitemapConfigurationManager {
 
+	public boolean cachedGenerationCompanyEnabled(long companyId)
+		throws ConfigurationException;
+
 	public Long[] getCompanySitemapGroupIds(long companyId) throws Exception;
 
 	public Long[] getCompanySitemapObjectDefinitionIds(long companyId)
+		throws ConfigurationException;
+
+	public long getXMLSitemapRegenerationDelay(long companyId)
 		throws ConfigurationException;
 
 	public boolean includeCategoriesCompanyEnabled(long companyId)
@@ -38,15 +44,23 @@ public interface SitemapConfigurationManager {
 	public boolean includeWebContentGroupEnabled(long companyId, long groupId)
 		throws ConfigurationException;
 
+	public boolean indexModeAssetTypeCompanyEnabled(long companyId)
+		throws ConfigurationException;
+
 	public boolean isObjectDefinitionCompanyIncluded(
 			long companyId, String objectDefinitionId)
 		throws ConfigurationException;
 
 	public void saveSitemapCompanyConfiguration(
-			long companyId, long[] companySitemapGroupIds,
+			boolean cachedGenerationEnabled, long companyId,
+			long[] companySitemapGroupIds,
 			long[] companySitemapObjectDefinitionIds, boolean includeCategories,
 			boolean includePages, boolean includeWebContent,
-			boolean xmlSitemapIndexEnabled)
+			boolean xmlSitemapIndexEnabled, String xmlSitemapIndexMode,
+			String xmlSitemapRegenerationDayOfWeek,
+			String xmlSitemapRegenerationFrequency,
+			String xmlSitemapRegenerationTime,
+			String xmlSitemapRegenerationTimeZoneId)
 		throws ConfigurationException;
 
 	public void saveSitemapGroupConfiguration(
@@ -55,6 +69,21 @@ public interface SitemapConfigurationManager {
 		throws ConfigurationException;
 
 	public boolean xmlSitemapIndexCompanyEnabled(long companyId)
+		throws ConfigurationException;
+
+	public String xmlSitemapIndexMode(long companyId)
+		throws ConfigurationException;
+
+	public String xmlSitemapRegenerationDayOfWeek(long companyId)
+		throws ConfigurationException;
+
+	public String xmlSitemapRegenerationFrequency(long companyId)
+		throws ConfigurationException;
+
+	public String xmlSitemapRegenerationTime(long companyId)
+		throws ConfigurationException;
+
+	public String xmlSitemapRegenerationTimeZoneId(long companyId)
 		throws ConfigurationException;
 
 }

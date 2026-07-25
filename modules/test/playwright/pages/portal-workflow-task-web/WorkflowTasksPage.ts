@@ -10,12 +10,17 @@ import {PORTLET_URLS} from '../../utils/portletUrls';
 import {waitForAlert} from '../../utils/waitForAlert';
 
 export class WorkflowTasksPage {
+	readonly assignedToMeLink: Locator;
 	readonly assignedToMyRolesLink: Locator;
 	readonly performanceTab: Locator;
 	readonly processSingleAprover: Locator;
 	readonly page: Page;
 
 	constructor(page: Page) {
+		this.assignedToMeLink = page.getByRole('link', {
+			name: 'Assigned to me',
+		});
+
 		this.assignedToMyRolesLink = page.getByRole('link', {
 			name: 'Assigned to my roles',
 		});
@@ -118,7 +123,7 @@ export class WorkflowTasksPage {
 			autoClick: true,
 			target: this.page
 				.locator('.dropdown-menu:visible')
-				.getByText('Reject', {exact: true}),
+				.getByRole('menuitem', {name: 'Reject'}),
 			trigger: row.locator('.dropdown-toggle'),
 		});
 
@@ -127,8 +132,8 @@ export class WorkflowTasksPage {
 		await waitForAlert(this.page);
 	}
 
-	async resubmit(articleTitle: string) {
-		await this.goto();
+	async resubmit(articleTitle: string, siteUrl?: Site['friendlyUrlPath']) {
+		await this.goto(siteUrl);
 
 		await this.page.reload();
 
@@ -140,7 +145,7 @@ export class WorkflowTasksPage {
 			autoClick: true,
 			target: this.page
 				.locator('.dropdown-menu:visible')
-				.getByText('Resubmit', {exact: true}),
+				.getByRole('menuitem', {name: 'Resubmit'}),
 			trigger: row.locator('.dropdown-toggle'),
 		});
 

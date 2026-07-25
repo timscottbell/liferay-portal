@@ -13,7 +13,6 @@ import com.liferay.exportimport.kernel.lar.ExportImportHelper;
 import com.liferay.exportimport.kernel.model.ExportImportConfiguration;
 import com.liferay.exportimport.kernel.service.ExportImportConfigurationLocalService;
 import com.liferay.exportimport.kernel.service.ExportImportService;
-import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.portlet.bridges.mvc.BaseMVCActionCommand;
@@ -24,6 +23,7 @@ import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PortletKeys;
 import com.liferay.portal.kernel.util.SessionTreeJSClicks;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
@@ -47,8 +47,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(
 	property = {
-		"jakarta.portlet.name=" + ExportImportPortletKeys.COMPANY_EXPORT,
 		"jakarta.portlet.name=" + ExportImportPortletKeys.EXPORT,
+		"jakarta.portlet.name=" + PortletKeys.COMPANY_EXPORT,
 		"mvc.command.name=/export_import/export_layouts"
 	},
 	service = MVCActionCommand.class
@@ -130,10 +130,6 @@ public class ExportLayoutsMVCActionCommand extends BaseMVCActionCommand {
 
 		String taskName = ParamUtil.getString(actionRequest, "name");
 
-		if (Validator.isNull(taskName)) {
-			taskName = _language.get(actionRequest.getLocale(), "export");
-		}
-
 		return _exportImportConfigurationLocalService.
 			addDraftExportImportConfiguration(
 				themeDisplay.getUserId(), taskName,
@@ -181,9 +177,6 @@ public class ExportLayoutsMVCActionCommand extends BaseMVCActionCommand {
 
 	@Reference
 	private ExportImportService _exportImportService;
-
-	@Reference
-	private Language _language;
 
 	@Reference
 	private Portal _portal;

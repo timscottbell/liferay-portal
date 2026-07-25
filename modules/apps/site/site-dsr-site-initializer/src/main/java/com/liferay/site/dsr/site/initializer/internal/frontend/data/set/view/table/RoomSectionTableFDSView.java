@@ -23,7 +23,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Stefano Motta
  */
 @Component(
-	property = "frontend.data.set.name=" + DSRSiteInitializerFDSNames.DSR_ROOM,
+	property = "frontend.data.set.name=" + DSRSiteInitializerFDSNames.ROOM,
 	service = FDSView.class
 )
 public class RoomSectionTableFDSView extends BaseTableFDSView {
@@ -34,23 +34,26 @@ public class RoomSectionTableFDSView extends BaseTableFDSView {
 			_fdsTableSchemaBuilderFactory.create();
 
 		return fdsTableSchemaBuilder.add(
-			"embedded.name", "name",
+			"name", "name",
 			fdsTableSchemaField -> fdsTableSchemaField.setActionId(
-				"actionLink"
+				"view"
 			).setContentRenderer(
 				"roomNameTableCellRenderer"
 			)
 		).add(
-			"embedded.creator.name", "owner"
+			"creator.name", "owner"
 		).add(
-			_getDateFDSTableSchemaField("embedded.dateCreated", "creation-date")
+			_getDateFDSTableSchemaField("dateCreated", "creation-date")
 		).add(
-			_getDateFDSTableSchemaField(
-				"embedded.dateModified", "last-modified")
+			_getDateFDSTableSchemaField("dateModified", "last-modified")
 		).add(
-			"embedded.trend", "trend"
+			"trend", "trend",
+			fdsTableSchemaField -> fdsTableSchemaField.setContentRenderer(
+				"roomTrendTableCellRenderer")
 		).add(
-			"embedded.status.label_i18n", "status"
+			"roomStatus", "status",
+			fdsTableSchemaField -> fdsTableSchemaField.setContentRenderer(
+				"roomStatusFieldTableCellRenderer")
 		).build();
 	}
 

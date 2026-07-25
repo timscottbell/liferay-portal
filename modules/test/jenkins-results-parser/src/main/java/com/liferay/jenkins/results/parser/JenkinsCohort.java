@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -36,11 +37,7 @@ import org.json.JSONObject;
 public class JenkinsCohort {
 
 	public static synchronized JenkinsCohort getInstance(String cohortName) {
-		if (!_jenkinsCohorts.containsKey(cohortName)) {
-			_jenkinsCohorts.put(cohortName, new JenkinsCohort(cohortName));
-		}
-
-		return _jenkinsCohorts.get(cohortName);
+		return _jenkinsCohorts.computeIfAbsent(cohortName, JenkinsCohort::new);
 	}
 
 	public Set<String> getASGPrimaryLabels() {
@@ -48,6 +45,30 @@ public class JenkinsCohort {
 			_getAWSFleetCloudsMap();
 
 		return awsFleetCloudsMap.keySet();
+	}
+
+	public List<JenkinsMaster> getAvailableJenkinsMasters() {
+		List<JenkinsMaster> availableJenkinsMasters = new ArrayList<>();
+
+		for (JenkinsMaster jenkinsMaster : getJenkinsMasters()) {
+			if (!jenkinsMaster.isBlackListed() && jenkinsMaster.isAvailable()) {
+				availableJenkinsMasters.add(jenkinsMaster);
+			}
+		}
+
+		return availableJenkinsMasters;
+	}
+
+	public List<JenkinsMaster> getBlackListedJenkinsMasters() {
+		List<JenkinsMaster> blackListedJenkinsMasters = new ArrayList<>();
+
+		for (JenkinsMaster jenkinsMaster : getJenkinsMasters()) {
+			if (jenkinsMaster.isBlackListed()) {
+				blackListedJenkinsMasters.add(jenkinsMaster);
+			}
+		}
+
+		return blackListedJenkinsMasters;
 	}
 
 	public int getIdleJenkinsSlaveCount() {
@@ -91,15 +112,41 @@ public class JenkinsCohort {
 	}
 
 	public JenkinsMaster getMostAvailableJenkinsMaster(
-		int invokedBatchSize, String jobName, String labelExpression,
-		int minimumRAM, int maximumSlavesPerHost) {
+		int invokedBatchSize, String jobName) {
+
+		return getMostAvailableJenkinsMaster(null, invokedBatchSize, jobName);
+	}
+
+	public JenkinsMaster getMostAvailableJenkinsMaster(
+		JenkinsMaster excludedJenkinsMaster, int invokedBatchSize,
+		String jobName) {
+
+		List<String> blacklist = new ArrayList<>(_jenkinsMastersBlacklist);
+
+		if (excludedJenkinsMaster != null) {
+			String excludedJenkinsMasterName = excludedJenkinsMaster.getName();
+
+			if (!blacklist.contains(excludedJenkinsMasterName)) {
+				blacklist.add(excludedJenkinsMasterName);
+
+				List<JenkinsMaster> availableJenkinsMasters =
+					_getAvailableJenkinsMasters(blacklist);
+
+				if (availableJenkinsMasters.isEmpty()) {
+					System.out.println(
+						"Unable to exclude Jenkins master " +
+							excludedJenkinsMasterName);
+
+					blacklist.remove(excludedJenkinsMasterName);
+				}
+			}
+		}
 
 		String mostAvailableMasterURL =
 			JenkinsResultsParserUtil.getMostAvailableMasterURL(
 				"http://" + getName() + ".liferay.com",
-				JenkinsResultsParserUtil.join(",", _jenkinsMastersBlacklist),
-				invokedBatchSize, jobName, labelExpression, minimumRAM,
-				maximumSlavesPerHost);
+				JenkinsResultsParserUtil.join(",", blacklist), invokedBatchSize,
+				jobName);
 
 		return JenkinsMaster.getInstance(
 			mostAvailableMasterURL.replaceAll("http://(.+)", "$1"));
@@ -619,6 +666,27 @@ public class JenkinsCohort {
 		return buildCount + " (" + buildPercentage + ")";
 	}
 
+	private List<JenkinsMaster> _getAvailableJenkinsMasters(
+		List<String> blacklist) {
+
+		Properties buildProperties = null;
+
+		try {
+			buildProperties = JenkinsResultsParserUtil.getBuildProperties(
+				false);
+		}
+		catch (IOException ioException) {
+			throw new RuntimeException(
+				"Unable to get build properties", ioException);
+		}
+
+		return LoadBalancerUtil.getAvailableJenkinsMasters(
+			JenkinsResultsParserUtil.join(",", blacklist),
+			LoadBalancerUtil.getMasterPrefix(
+				"http://" + getName() + ".liferay.com"),
+			buildProperties, true);
+	}
+
 	private synchronized Map<String, List<AWSFleetCloud>>
 		_getAWSFleetCloudsMap() {
 
@@ -670,11 +738,9 @@ public class JenkinsCohort {
 			jobName = jobName.replace("-downstream", "");
 		}
 
-		if (!_jenkinsCohortJobsMap.containsKey(jobName)) {
-			_jenkinsCohortJobsMap.put(jobName, new JenkinsCohortJob(jobName));
-		}
-
-		JenkinsCohortJob jenkinsCohortJob = _jenkinsCohortJobsMap.get(jobName);
+		JenkinsCohortJob jenkinsCohortJob =
+			_jenkinsCohortJobsMap.computeIfAbsent(
+				jobName, JenkinsCohortJob::new);
 
 		if (downstreamJobName == null) {
 			jenkinsCohortJob.addTopLevelBuildURL(buildURL);
@@ -714,13 +780,9 @@ public class JenkinsCohort {
 					jobName = jobName.replace("-downstream", "");
 				}
 
-				if (!_jenkinsCohortJobsMap.containsKey(jobName)) {
-					_jenkinsCohortJobsMap.put(
-						jobName, new JenkinsCohortJob(jobName));
-				}
-
-				JenkinsCohortJob jenkinsCohortJob = _jenkinsCohortJobsMap.get(
-					jobName);
+				JenkinsCohortJob jenkinsCohortJob =
+					_jenkinsCohortJobsMap.computeIfAbsent(
+						jobName, JenkinsCohortJob::new);
 
 				if (downstreamJobName == null) {
 					jenkinsCohortJob.addQueuedTopLevelBuildJsonMapEntry(

@@ -44,6 +44,8 @@ export default function buildStructure({
 		id: mainObjectDefinition.id,
 		label: mainObjectDefinition.label,
 		name: mainObjectDefinition.name ?? '',
+		path: mainObjectDefinition.restContextPath ?? '',
+		settings: getSettings(mainObjectDefinition),
 		spaces: getSpaces(mainObjectDefinition),
 		status: isPublished ? 'published' : 'draft',
 		system: mainObjectDefinition.system ?? false,
@@ -74,7 +76,12 @@ export function buildChildren({
 	}
 
 	for (const objectField of objectFields) {
-		if (!isCustomObjectField(objectField)) {
+		if (
+			!isCustomObjectField(
+				objectField,
+				objectDefinition.externalReferenceCode
+			)
+		) {
 			continue;
 		}
 
@@ -114,7 +121,7 @@ export function buildChildren({
 
 			children.set(repeatableGroup.uuid, repeatableGroup);
 		}
-		else if (objectRelationship.deletionType === 'cascade') {
+		else if (objectRelationship.edge) {
 			const referencedStructure = buildReferencedStructure({
 				ancestors: [
 					...ancestors,
@@ -305,19 +312,40 @@ function getFieldSettings(objectField: ObjectField): Field['settings'] {
 		objectFieldSettings[objectFieldSetting.name] = objectFieldSetting.value;
 	}
 
-	if (objectField.businessType === 'Attachment') {
+	if (objectField.businessType === 'EmailAddress') {
+		if (objectFieldSettings.autocompleteDomains) {
+			settings.autocompleteDomains =
+				objectFieldSettings.autocompleteDomains;
+		}
+
+		if (objectFieldSettings.autocompleteEnabled) {
+			settings.autocompleteEnabled =
+				objectFieldSettings.autocompleteEnabled;
+		}
+
+		if (objectFieldSettings.blockedDomains) {
+			settings.blockedDomains = objectFieldSettings.blockedDomains;
+		}
+
+		if (objectFieldSettings.uniqueValues) {
+			settings.uniqueValues = objectFieldSettings.uniqueValues;
+		}
+	}
+	else if (objectField.businessType === 'Attachment') {
 		settings.acceptedFileExtensions =
 			objectFieldSettings.acceptedFileExtensions;
 		settings.fileSource = objectFieldSettings.fileSource;
 		settings.maximumFileSize = objectFieldSettings.maximumFileSize;
+		settings.storageDepotGroup = objectFieldSettings.storageDepotGroup;
 
 		if (
-			objectFieldSettings.fileSource === 'userComputerToDocumentsAndMedia'
+			objectFieldSettings.fileSource === 'userComputerToCMSBasicDocument'
 		) {
 			settings.showFilesInLibrary =
 				objectFieldSettings.showFilesInLibrary;
 			settings.storageDLFolderPath =
 				objectFieldSettings.storageDLFolderPath;
+			settings.storageDepotGroup = objectFieldSettings.storageDepotGroup;
 		}
 	}
 	else if (objectField.businessType === 'DateTime') {
@@ -334,6 +362,17 @@ function getFieldSettings(objectField: ObjectField): Field['settings'] {
 
 		if (objectFieldSettings.showCounter) {
 			settings.showCounter = objectFieldSettings.showCounter;
+		}
+
+		if (objectFieldSettings.uniqueValues) {
+			settings.uniqueValues = objectFieldSettings.uniqueValues;
+		}
+	}
+	else if (objectField.businessType === 'PhoneNumber') {
+		settings.countrySource = objectFieldSettings.countrySource;
+
+		if (objectFieldSettings.country) {
+			settings.country = objectFieldSettings.country;
 		}
 
 		if (objectFieldSettings.uniqueValues) {
@@ -358,13 +397,27 @@ function getFieldType(objectField: ObjectField): FieldType {
 		Date: 'date',
 		DateTime: 'datetime',
 		Decimal: 'decimal',
+		EmailAddress: 'email',
 		Integer: 'integer',
 		LongText: 'long-text',
+		PhoneNumber: 'phone-number',
 		RichText: 'rich-text',
 		Text: 'text',
 	} as const;
 
 	return BUSINESS_TYPE_TO_FIELD_TYPE[objectField.businessType];
+}
+
+export function getSettings(
+	objectDefinition: ObjectDefinition
+): Structure['settings'] {
+	const settings = objectDefinition.objectDefinitionSettings || [];
+
+	const allowStandaloneObjectEntry = settings.find(
+		({name}) => name === 'allowStandaloneObjectEntry'
+	)?.value;
+
+	return {allowStandaloneObjectEntry};
 }
 
 export function getSpaces(objectDefinition: ObjectDefinition) {
@@ -434,20 +487,18 @@ function getRelatedContentObjectRelationships(
 	const relationships: ObjectRelationship[] = [];
 
 	for (const objectDefinition of Object.values(objectDefinitions)) {
-		if (
-			mainObjectDefinition.externalReferenceCode ===
-			objectDefinition.externalReferenceCode
-		) {
-			continue;
-		}
-
 		for (const objectRelationship of objectDefinition.objectRelationships ||
 			[]) {
 			if (
 				objectRelationship.objectDefinitionExternalReferenceCode2 ===
 					mainObjectDefinition.externalReferenceCode &&
 				objectRelationship.type === 'oneToMany' &&
-				objectRelationship.deletionType === 'disassociate'
+				!objectRelationship.edge &&
+				!(
+					objectDefinition.externalReferenceCode ===
+						mainObjectDefinition.externalReferenceCode &&
+					isRepeatableGroup(objectRelationship, objectDefinitions)
+				)
 			) {
 				relationships.push(objectRelationship);
 			}

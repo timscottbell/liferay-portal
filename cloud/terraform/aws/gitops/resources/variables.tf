@@ -1,3 +1,11 @@
+variable "argocd_additional_allowed_cidr_blocks" {
+	default=[]
+	type=list(string)
+	validation {
+		condition=alltrue([for cidr in var.argocd_additional_allowed_cidr_blocks : can(cidrhost(cidr, 0))])
+		error_message="The variable \"argocd_additional_allowed_cidr_blocks\" must contain valid CIDR blocks."
+	}
+}
 variable "argocd_domain_config" {
 	default={}
 	type=object({
@@ -7,14 +15,24 @@ variable "argocd_domain_config" {
 }
 variable "argocd_namespace" {
 	default="argocd-system"
+	type=string
+}
+variable "argocd_sso_config" {
+	default={}
+	type=object({
+		credentials_secret_name=optional(string, "liferay/credentials/argocd-sso")
+		enable_saml_sso=optional(bool, false)
+	})
 }
 variable "crossplane_namespace" {
 	default="crossplane-system"
+	type=string
 }
 variable "deployment_name" {
+	type=string
 	validation {
-		condition=can(regex("^[a-z0-9-]*$", var.deployment_name))
-		error_message="The deployment_name must contain only lowercase letters, numbers, and hyphens."
+		condition=can(regex("^[a-z][a-z0-9-]{2,23}$", var.deployment_name))
+		error_message="The variable \"deployment_name\" must be 3-24 characters, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens."
 	}
 }
 variable "external_secret_store_provider_hcl" {
@@ -23,12 +41,11 @@ variable "external_secret_store_provider_hcl" {
 }
 variable "external_secrets_namespace" {
 	default="external-secrets-system"
-}
-variable "gateway_class_name" {
-	default="liferay-gateway-class"
+	type=string
 }
 variable "gateway_namespace" {
 	default="envoy-gateway-system"
+	type=string
 }
 variable "infrastructure_git_repo_config" {
 	default={
@@ -51,12 +68,16 @@ variable "infrastructure_git_repo_config" {
 				base=optional(string, "liferay/projects/{{path[2]}}/base")
 				environments=optional(string, "liferay/projects/*/environments/*")
 				infrastructure_provider_values_filename=optional(string, "infrastructure-provider.yaml")
+				observability_values_filename=optional(string, "observability.yaml")
+				project_values_filename=optional(string, "project.yaml")
+				projects=optional(string, "liferay/projects/*")
 				system=optional(string, "liferay/system")
 				values_filename=optional(string, "infrastructure.yaml")
 			})
 			target=object({
 				name=optional(string, "{{path[2]}}-{{path[4]}}-infra")
 				namespaceSuffix=optional(string, "{{path[2]}}-{{path[4]}}")
+				resourcesName=optional(string, "{{path[2]}}-resources")
 				slugEnvironmentId=optional(string, "{{path[4]}}")
 				slugProjectId=optional(string, "{{path[2]}}")
 			})
@@ -76,8 +97,11 @@ variable "infrastructure_helm_chart_config" {
 			chart_name=optional(string, "liferay-aws-infrastructure")
 			chart_url=optional(string, "oci://us-central1-docker.pkg.dev/external-assets-prd/liferay-helm-chart/liferay-aws-infrastructure")
 			path=optional(string, null)
-			version=optional(string, "0.4.0")
+			version=optional(string, null)
 		})
+}
+variable "infrastructure_helm_chart_version" {
+	type=string
 }
 variable "infrastructure_provider_helm_chart_config" {
 	default={}
@@ -86,8 +110,19 @@ variable "infrastructure_provider_helm_chart_config" {
 			chart_name=optional(string, "liferay-aws-infrastructure-provider")
 			chart_url=optional(string, "oci://us-central1-docker.pkg.dev/external-assets-prd/liferay-helm-chart/liferay-aws-infrastructure-provider")
 			path=optional(string, null)
-			version=optional(string, "0.3.0")
+			version=optional(string, null)
 		})
+}
+variable "infrastructure_provider_helm_chart_version" {
+	type=string
+}
+variable "keda_enabled" {
+	default=false
+	type=bool
+}
+variable "keda_namespace" {
+	default="keda-system"
+	type=string
 }
 variable "liferay_git_repo_config" {
 	default={
@@ -150,6 +185,28 @@ variable "liferay_helm_chart_name" {
 	}
 }
 variable "liferay_helm_chart_version" {
+	type=string
+}
+variable "observability_config" {
+	default={}
+	type=object(
+		{
+			enabled=optional(bool, false)
+			namespace=optional(string, "observability")
+		}
+	)
+}
+variable "observability_helm_chart_config" {
+	default={}
+	type=object(
+		{
+			chart_name=optional(string, "observability")
+			chart_url=optional(string, "oci://us-central1-docker.pkg.dev/external-assets-prd/liferay-helm-chart/observability")
+			path=optional(string, null)
+			version=optional(string, null)
+		})
+}
+variable "observability_helm_chart_version" {
 	type=string
 }
 variable "region" {

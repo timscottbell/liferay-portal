@@ -6,6 +6,7 @@
 package com.liferay.jenkins.results.parser;
 
 import com.liferay.jenkins.results.parser.failure.message.generator.CIFailureMessageGenerator;
+import com.liferay.jenkins.results.parser.failure.message.generator.ClosedChannelExceptionFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.CompileFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.FailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.GenericFailureMessageGenerator;
@@ -16,7 +17,9 @@ import com.liferay.jenkins.results.parser.failure.message.generator.LocalGitMirr
 import com.liferay.jenkins.results.parser.failure.message.generator.ModulesCompilationFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.PMDFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.PlaywrightCompilationFailureMessageGenerator;
-import com.liferay.jenkins.results.parser.failure.message.generator.PluginGitIDFailureMessageGenerator;
+import com.liferay.jenkins.results.parser.failure.message.generator.PlaywrightTimeoutFailureMessageGenerator;
+import com.liferay.jenkins.results.parser.failure.message.generator.PluginGitIdFailureMessageGenerator;
+import com.liferay.jenkins.results.parser.failure.message.generator.RESTBuilderFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.SemanticVersioningFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.ServiceBuilderFailureMessageGenerator;
 import com.liferay.jenkins.results.parser.failure.message.generator.SourceFormatFailureMessageGenerator;
@@ -46,7 +49,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -506,16 +509,11 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 		for (TestResult testResult : testResults) {
 			String testResultClassName = testResult.getClassName();
 
-			if (untestedTestClassMethodNamesMap.containsKey(
-					testResultClassName)) {
+			List<String> testClassMethodNames =
+				untestedTestClassMethodNamesMap.get(testResultClassName);
 
-				List<String> testClassMethodNames =
-					untestedTestClassMethodNamesMap.get(testResultClassName);
-
+			if (testClassMethodNames != null) {
 				testClassMethodNames.remove(testResult.getTestName());
-
-				untestedTestClassMethodNamesMap.put(
-					testResultClassName, testClassMethodNames);
 			}
 		}
 
@@ -622,6 +620,7 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 		StringBuilder sb = new StringBuilder();
 
 		try (InputStream inputStream = poshiWarningsURL.openStream();
+
 			GZIPInputStream gzipInputStream = new GZIPInputStream(
 				inputStream)) {
 
@@ -643,7 +642,7 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 			for (Element valueElement : rootElement.elements("value")) {
 				String liferayErrorText = "LIFERAY_ERROR: ";
 
-				String valueElementText = StringEscapeUtils.escapeHtml(
+				String valueElementText = StringEscapeUtils.escapeHtml4(
 					valueElement.getText());
 
 				if (valueElementText.startsWith(liferayErrorText)) {
@@ -1210,7 +1209,7 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 			return;
 		}
 
-		String workspace = System.getenv("WORKSPACE");
+		String workspace = Environment.get("WORKSPACE");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(workspace)) {
 			throw new RuntimeException("Please set WORKSPACE");
@@ -1263,7 +1262,9 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 		new JSUnitTestFailureMessageGenerator(),
 		new PMDFailureMessageGenerator(),
 		new PlaywrightCompilationFailureMessageGenerator(),
-		new PluginGitIDFailureMessageGenerator(),
+		new PlaywrightTimeoutFailureMessageGenerator(),
+		new PluginGitIdFailureMessageGenerator(),
+		new RESTBuilderFailureMessageGenerator(),
 		new SemanticVersioningFailureMessageGenerator(),
 		new ServiceBuilderFailureMessageGenerator(),
 		new SourceFormatFailureMessageGenerator(),
@@ -1274,6 +1275,7 @@ public class BaseDownstreamBuild extends BaseBuild implements DownstreamBuild {
 		new LocalGitMirrorFailureMessageGenerator(),
 		//
 		new CIFailureMessageGenerator(),
+		new ClosedChannelExceptionFailureMessageGenerator(),
 		new GenericFailureMessageGenerator()
 	};
 

@@ -19,6 +19,8 @@ import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.model.Role;
+import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -26,9 +28,11 @@ import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DataGuard;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
+import com.liferay.portal.kernel.test.util.RoleTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.FileUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -645,6 +649,22 @@ public class UserResourceTest extends BaseUserResourceTestCase {
 
 		User user = testDeleteV2User_addUser();
 
+		com.liferay.portal.kernel.model.User portalUser =
+			_userLocalService.getUserByExternalReferenceCode(
+				user.getExternalId(), TestPropsValues.getCompanyId());
+
+		Role role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
+
+		_userLocalService.addRoleUsers(
+			role.getRoleId(), new long[] {portalUser.getUserId()});
+
+		portalUser = _userLocalService.updatePortrait(
+			portalUser.getUserId(),
+			FileUtil.getBytes(
+				UserResourceTest.class, "dependencies/liferay.png"));
+
+		long portraitId = portalUser.getPortraitId();
+
 		PatchOp patchOp = new PatchOp();
 
 		patchOp.setOperations(
@@ -673,6 +693,12 @@ public class UserResourceTest extends BaseUserResourceTestCase {
 
 		assertValid(patchUser);
 		unsafeConsumer.accept(patchUser);
+
+		portalUser = _userLocalService.getUser(portalUser.getUserId());
+
+		Assert.assertEquals(portraitId, portalUser.getPortraitId());
+		Assert.assertTrue(
+			ArrayUtil.contains(portalUser.getRoleIds(), role.getRoleId()));
 	}
 
 	private static final String _PREFIX = StringUtil.toLowerCase(

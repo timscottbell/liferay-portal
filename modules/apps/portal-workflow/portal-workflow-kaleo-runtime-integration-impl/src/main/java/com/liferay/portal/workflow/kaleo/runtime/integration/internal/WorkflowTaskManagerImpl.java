@@ -33,7 +33,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserGroupGroupRoleLocalService;
 import com.liferay.portal.kernel.service.UserGroupRoleLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
+import com.liferay.portal.kernel.transaction.TransactionCallbackUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.comparator.UserScreenNameComparator;
@@ -122,6 +122,13 @@ public class WorkflowTaskManagerImpl implements WorkflowTaskManager {
 			throw new PrincipalException.MustHavePermission(
 				userId, WorkflowTask.class.getName(), workflowTaskId,
 				ActionKeys.VIEW);
+		}
+
+		User user = _userLocalService.fetchUser(assigneeUserId);
+
+		if ((user == null) || (user.getCompanyId() != companyId)) {
+			throw new PrincipalException.MustHavePermission(
+				userId, User.class.getName(), assigneeUserId, ActionKeys.VIEW);
 		}
 
 		ServiceContext serviceContext = new ServiceContext();
@@ -223,7 +230,7 @@ public class WorkflowTaskManagerImpl implements WorkflowTaskManager {
 				kaleoInstanceToken, kaleoTaskInstanceToken, workflowContext,
 				serviceContext);
 
-			TransactionCommitCallbackUtil.registerCallback(
+			TransactionCallbackUtil.registerCommitCallback(
 				() -> {
 					try {
 						_kaleoSignaler.signalExit(

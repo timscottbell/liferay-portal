@@ -132,6 +132,7 @@ public class DLFileEntryDataCleanupPreupgradeProcessTest
 		throws Exception {
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select count(*) as count from DLFileEntry where fileEntryId " +
 					"= ?")) {
@@ -141,7 +142,7 @@ public class DLFileEntryDataCleanupPreupgradeProcessTest
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				Assert.assertTrue(resultSet.next());
 
-				Assert.assertEquals(0, resultSet.getInt("count"));
+				Assert.assertEquals(0, resultSet.getLong("count"));
 			}
 		}
 	}

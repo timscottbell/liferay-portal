@@ -35,6 +35,17 @@ create table CacheMissEntry (
 	primary key (cacheMissEntryId, ctCollectionId)
 );
 
+create table CacheReplicatorEntry (
+	cacheReplicatorEntryId LONG not null primary key,
+	companyId LONG,
+	name VARCHAR(75) null
+);
+
+create table ColumnNameEntry (
+	cNameEntryId LONG not null primary key,
+	name VARCHAR(75) null
+);
+
 create table DSLQueryEntry (
 	dslQueryEntryId LONG not null primary key,
 	name VARCHAR(75) null
@@ -43,6 +54,7 @@ create table DSLQueryEntry (
 create table DSLQueryStatusEntry (
 	dslQueryStatusEntryId LONG not null primary key,
 	dslQueryEntryId LONG,
+	weight DOUBLE,
 	status VARCHAR(75) null,
 	statusDate DATE null
 );
@@ -60,6 +72,16 @@ create table DefinedDefaultOrderEntry (
 	definedDefaultOrderEntryId LONG not null primary key,
 	modifiedDate DATE null,
 	name VARCHAR(75) null
+);
+
+create table DynamicQueryEntry (
+	dynamicQueryEntryId LONG not null primary key,
+	createDate DATE null,
+	modifiedDate DATE null,
+	amount LONG,
+	description VARCHAR(75) null,
+	name VARCHAR(75) null,
+	status INTEGER
 );
 
 create table ERCCompanyEntry (
@@ -141,8 +163,8 @@ create table LVEntry (
 	head BOOLEAN,
 	defaultLanguageId VARCHAR(75) null,
 	lvEntryId LONG not null primary key,
-	companyId LONG,
 	groupId LONG,
+	companyId LONG,
 	uniqueGroupKey VARCHAR(75) null
 );
 
@@ -175,12 +197,13 @@ create table LVEntryVersion (
 	uuid_ VARCHAR(75) null,
 	defaultLanguageId VARCHAR(75) null,
 	lvEntryId LONG,
-	companyId LONG,
 	groupId LONG,
+	companyId LONG,
 	uniqueGroupKey VARCHAR(75) null
 );
 
 create table LazyBlobEntry (
+	mvccVersion LONG default 0 not null,
 	uuid_ VARCHAR(75) null,
 	lazyBlobEntryId LONG not null primary key,
 	groupId LONG,
@@ -293,6 +316,11 @@ create table PermissionCheckFinderEntry (
 	type_ VARCHAR(75) null
 );
 
+create table ReassociateEntry (
+	reassociateEntryId LONG not null primary key,
+	name VARCHAR(75) null
+);
+
 create table RedundantIndexEntry (
 	redundantIndexEntryId LONG not null primary key,
 	companyId LONG,
@@ -314,6 +342,12 @@ create table UADPartialEntry (
 
 create table UndefinedDefaultOrderEntry (
 	undefinedDefaultOrderEntryId LONG not null primary key,
+	modifiedDate DATE null,
+	name VARCHAR(75) null
+);
+
+create table UniqueFinderEntry (
+	uniqueFinderEntryId LONG not null primary key,
 	modifiedDate DATE null,
 	name VARCHAR(75) null
 );

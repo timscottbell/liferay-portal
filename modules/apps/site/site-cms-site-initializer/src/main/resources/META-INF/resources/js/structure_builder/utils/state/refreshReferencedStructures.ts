@@ -160,7 +160,10 @@ export default function refreshReferencedStructures({
 		).filter(
 			(objectField) =>
 				!childrenERCs.includes(objectField.externalReferenceCode) &&
-				isCustomObjectField(objectField)
+				isCustomObjectField(
+					objectField,
+					objectDefinition.externalReferenceCode
+				)
 		);
 
 		for (const objectField of newObjectFields) {
@@ -201,7 +204,7 @@ export default function refreshReferencedStructures({
 
 				children.set(repeatableGroup.uuid, repeatableGroup);
 			}
-			else if (objectRelationship.deletionType === 'cascade') {
+			else if (objectRelationship.edge) {
 				const referencedStructure = buildReferencedStructure({
 					ancestors,
 					erc: objectRelationship.objectDefinitionExternalReferenceCode2,

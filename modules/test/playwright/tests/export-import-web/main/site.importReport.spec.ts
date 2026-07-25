@@ -23,7 +23,7 @@ export const test = mergeTests(
 	dataApiHelpersTest,
 	exportImportPagesTest,
 	featureFlagsTest({
-		'LPD-35443': {enabled: true},
+		'LPD-57655': {enabled: false},
 	}),
 	loginTest()
 );
@@ -187,7 +187,7 @@ test(
 			const suggestedFilename = download.suggestedFilename();
 
 			expect(suggestedFilename).toMatch(
-				new RegExp(`^${taskName}-(\\d+)_report_entries\\.zip$`)
+				new RegExp(`^${taskName}_report_entries\\.zip$`)
 			);
 
 			const filePath = getTempFile(suggestedFilename);

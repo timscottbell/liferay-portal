@@ -26,6 +26,7 @@ interface ObjectRelationshipFormBaseProps {
 	errors: FormError<ObjectRelationship>;
 	handleChange: React.ChangeEventHandler<HTMLInputElement>;
 	hasDefinedObjectDefinitionTarget?: boolean;
+	inheritanceCheckboxDisabled?: boolean;
 	learnResources: ILearnResourceContext;
 	objectDefinitionExternalReferenceCode1: string;
 	objectDefinitionExternalReferenceCode2?: string;
@@ -92,6 +93,7 @@ export function ObjectRelationshipFormBase({
 	errors,
 	handleChange,
 	hasDefinedObjectDefinitionTarget,
+	inheritanceCheckboxDisabled,
 	learnResources,
 	objectDefinitionExternalReferenceCode1,
 	objectDefinitionExternalReferenceCode2,
@@ -383,15 +385,14 @@ export function ObjectRelationshipFormBase({
 
 			{children}
 
-			{onChangeInheritanceCheckbox &&
-				values.type === 'oneToMany' &&
-				Liferay.FeatureFlags['LPD-34594'] && (
-					<ObjectRelationshipInheritanceCheckbox
-						learnResources={learnResources}
-						onChange={onChangeInheritanceCheckbox}
-						values={values}
-					/>
-				)}
+			{onChangeInheritanceCheckbox && values.type === 'oneToMany' && (
+				<ObjectRelationshipInheritanceCheckbox
+					disabled={inheritanceCheckboxDisabled}
+					learnResources={learnResources}
+					onChange={onChangeInheritanceCheckbox}
+					values={values}
+				/>
+			)}
 
 			{submitError && (
 				<ClayAlert

@@ -68,9 +68,8 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 
 		PermissionChecker permissionChecker = getPermissionChecker();
 
-		UserGroup userGroup =
-			userGroupLocalService.fetchUserGroupByExternalReferenceCode(
-				externalReferenceCode, permissionChecker.getCompanyId());
+		UserGroup userGroup = userGroupPersistence.fetchByERC_C(
+			externalReferenceCode, permissionChecker.getCompanyId());
 
 		if (userGroup == null) {
 			PortalPermissionUtil.check(
@@ -161,7 +160,8 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 	 */
 	@Override
 	public UserGroup fetchUserGroup(long userGroupId) throws PortalException {
-		UserGroup userGroup = userGroupLocalService.fetchUserGroup(userGroupId);
+		UserGroup userGroup = userGroupPersistence.fetchByPrimaryKey(
+			userGroupId);
 
 		if (userGroup != null) {
 			UserGroupPermissionUtil.check(
@@ -176,9 +176,8 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		UserGroup userGroup =
-			userGroupLocalService.fetchUserGroupByExternalReferenceCode(
-				externalReferenceCode, companyId);
+		UserGroup userGroup = userGroupPersistence.fetchByERC_C(
+			externalReferenceCode, companyId);
 
 		if (userGroup != null) {
 			UserGroupPermissionUtil.check(
@@ -198,6 +197,31 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 			UserGroupIdComparator.getInstance(true));
 	}
 
+	@Override
+	public UserGroup getOrAddEmptyUserGroup(
+			String externalReferenceCode, String name)
+		throws PortalException {
+
+		PermissionChecker permissionChecker = getPermissionChecker();
+
+		UserGroup userGroup = userGroupPersistence.fetchByERC_C(
+			externalReferenceCode, permissionChecker.getCompanyId());
+
+		if (userGroup != null) {
+			UserGroupPermissionUtil.check(
+				permissionChecker, userGroup.getUserGroupId(), ActionKeys.VIEW);
+
+			return userGroup;
+		}
+
+		PortalPermissionUtil.check(
+			permissionChecker, ActionKeys.ADD_USER_GROUP);
+
+		return userGroupLocalService.getOrAddEmptyUserGroup(
+			externalReferenceCode, permissionChecker.getCompanyId(),
+			permissionChecker.getUserId(), name);
+	}
+
 	/**
 	 * Returns the user group with the primary key.
 	 *
@@ -206,7 +230,8 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 	 */
 	@Override
 	public UserGroup getUserGroup(long userGroupId) throws PortalException {
-		UserGroup userGroup = userGroupLocalService.getUserGroup(userGroupId);
+		UserGroup userGroup = userGroupPersistence.findByPrimaryKey(
+			userGroupId);
 
 		UserGroupPermissionUtil.check(
 			getPermissionChecker(), userGroupId, ActionKeys.VIEW);
@@ -224,7 +249,7 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 	public UserGroup getUserGroup(String name) throws PortalException {
 		User user = getUser();
 
-		UserGroup userGroup = userGroupLocalService.getUserGroup(
+		UserGroup userGroup = userGroupPersistence.findByC_N(
 			user.getCompanyId(), name);
 
 		UserGroupPermissionUtil.check(
@@ -239,9 +264,8 @@ public class UserGroupServiceImpl extends UserGroupServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		UserGroup userGroup =
-			userGroupLocalService.getUserGroupByExternalReferenceCode(
-				externalReferenceCode, companyId);
+		UserGroup userGroup = userGroupPersistence.findByERC_C(
+			externalReferenceCode, companyId);
 
 		UserGroupPermissionUtil.check(
 			getPermissionChecker(), userGroup.getUserGroupId(),

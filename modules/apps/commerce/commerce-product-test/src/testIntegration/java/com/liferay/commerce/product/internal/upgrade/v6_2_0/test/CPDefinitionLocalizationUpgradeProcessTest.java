@@ -72,11 +72,12 @@ public class CPDefinitionLocalizationUpgradeProcessTest {
 			cpDefinition);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,
-					"update CPDefinitionLocalization set cProductId = null " +
-						"where cpDefinitionId = ?")) {
+					"update CPDefinitionLocalization set CProductId = null " +
+						"where CPDefinitionId = ?")) {
 
 			preparedStatement.setLong(1, cpDefinition.getCPDefinitionId());
 			preparedStatement.executeUpdate();
@@ -85,9 +86,10 @@ public class CPDefinitionLocalizationUpgradeProcessTest {
 		_runUpgrade();
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
-				"select cProductId from CPDefinitionLocalization where " +
-					"cpDefinitionId = ?")) {
+				"select CProductId from CPDefinitionLocalization where " +
+					"CPDefinitionId = ?")) {
 
 			preparedStatement.setLong(1, cpDefinition.getCPDefinitionId());
 
@@ -115,14 +117,14 @@ public class CPDefinitionLocalizationUpgradeProcessTest {
 			"CPDefinitionLocalizationUpgradeProcess";
 
 	@Inject
-	private static CommerceCatalogLocalService _commerceCatalogLocalService;
+	private CommerceCatalogLocalService _commerceCatalogLocalService;
 
 	@Inject
-	private static CPDefinitionLocalService _cpDefinitionLocalService;
+	private CPDefinitionLocalService _cpDefinitionLocalService;
 
 	@Inject(
 		filter = "(&(component.name=com.liferay.commerce.product.internal.upgrade.registry.CommerceProductServiceUpgradeStepRegistrator))"
 	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

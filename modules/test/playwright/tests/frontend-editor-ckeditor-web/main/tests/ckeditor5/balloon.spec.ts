@@ -7,12 +7,12 @@ import {expect, mergeTests} from '@playwright/test';
 
 import {featureFlagsTest} from '../../../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../../../fixtures/loginTest';
-import {balloonPageTest} from '../../../../frontend-editor-ckeditor-sample-web/fixtures/ckeditor5/balloonPageTest';
+import {balloonPageTest} from '../../../../frontend-editor-ckeditor5-sample-web/fixtures/balloonPageTest';
 
 export const test = mergeTests(
 	balloonPageTest,
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 		'LPS-178052': {enabled: true},
 	}),
 	loginTest()
@@ -34,6 +34,7 @@ test(
 			'Accessibility help',
 			'Undo',
 			'Redo',
+			'Find and replace',
 			'Styles',
 			'Normal',
 			'Bold',
@@ -54,7 +55,6 @@ test(
 			'Video',
 			'Horizontal line',
 			'Text alignment',
-			'AI Creator',
 		];
 
 		const controls = await balloonPage.toolbar

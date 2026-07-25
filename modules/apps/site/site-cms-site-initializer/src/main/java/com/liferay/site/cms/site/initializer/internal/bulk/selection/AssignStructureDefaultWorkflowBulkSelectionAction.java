@@ -43,8 +43,16 @@ public class AssignStructureDefaultWorkflowBulkSelectionAction
 		if (object instanceof ObjectDefinition) {
 			ObjectDefinition objectDefinition = (ObjectDefinition)object;
 
-			List<WorkflowDefinitionLink> workflowDefinitionLinkList =
-				new ArrayList<>();
+			List<WorkflowDefinitionLink> workflowDefinitionLinks =
+				new ArrayList<>(
+					_workflowDefinitionLinkLocalService.
+						getWorkflowDefinitionLinks(
+							objectDefinition.getCompanyId(),
+							objectDefinition.getClassName()));
+
+			workflowDefinitionLinks.removeIf(
+				workflowDefinitionLink ->
+					workflowDefinitionLink.getGroupId() == 0);
 
 			String workflow = (String)inputMap.get("workflow");
 
@@ -53,7 +61,7 @@ public class AssignStructureDefaultWorkflowBulkSelectionAction
 					_workflowDefinitionManager.getLatestWorkflowDefinition(
 						objectDefinition.getCompanyId(), workflow);
 
-				workflowDefinitionLinkList.add(
+				workflowDefinitionLinks.add(
 					_workflowDefinitionLinkLocalService.
 						updateWorkflowDefinitionLink(
 							user.getUserId(), objectDefinition.getCompanyId(),
@@ -63,7 +71,7 @@ public class AssignStructureDefaultWorkflowBulkSelectionAction
 			}
 
 			_objectDefinitionLocalService.addOrUpdateWorkflowDefinitionLinks(
-				objectDefinition, workflowDefinitionLinkList);
+				objectDefinition, workflowDefinitionLinks);
 		}
 		else {
 			throw new IllegalArgumentException("Unsupported object " + object);

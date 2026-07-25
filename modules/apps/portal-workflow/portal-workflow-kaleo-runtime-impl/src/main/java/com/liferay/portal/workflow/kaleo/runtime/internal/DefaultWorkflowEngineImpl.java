@@ -23,7 +23,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.transaction.Isolation;
 import com.liferay.portal.kernel.transaction.Propagation;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
+import com.liferay.portal.kernel.transaction.TransactionCallbackUtil;
 import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
@@ -58,7 +58,7 @@ import com.liferay.portal.workflow.kaleo.runtime.KaleoSignaler;
 import com.liferay.portal.workflow.kaleo.runtime.WorkflowEngine;
 import com.liferay.portal.workflow.kaleo.runtime.action.KaleoActionExecutor;
 import com.liferay.portal.workflow.kaleo.runtime.assignment.AggregateKaleoTaskAssignmentSelector;
-import com.liferay.portal.workflow.kaleo.runtime.notification.NotificationHelper;
+import com.liferay.portal.workflow.kaleo.runtime.notification.KaleoNotificationSender;
 import com.liferay.portal.workflow.kaleo.runtime.util.WorkflowContextUtil;
 import com.liferay.portal.workflow.kaleo.runtime.util.comparator.KaleoInstanceOrderByComparator;
 import com.liferay.portal.workflow.kaleo.service.KaleoInstanceService;
@@ -232,7 +232,7 @@ public class DefaultWorkflowEngineImpl
 					updateKaleoTimerInstanceToken(kaleoTimerInstanceToken);
 			}
 
-			TransactionCommitCallbackUtil.registerCallback(
+			TransactionCallbackUtil.registerCommitCallback(
 				() -> {
 					_kaleoSignaler.signalExecute(
 						kaleoInstanceToken.getCurrentKaleoNode(),
@@ -601,7 +601,7 @@ public class DefaultWorkflowEngineImpl
 			ExecutionContext executionContext = new ExecutionContext(
 				kaleoInstanceToken, workflowContext, serviceContext);
 
-			TransactionCommitCallbackUtil.registerCallback(
+			TransactionCallbackUtil.registerCommitCallback(
 				() -> {
 					try {
 						_kaleoSignaler.signalExit(
@@ -782,7 +782,7 @@ public class DefaultWorkflowEngineImpl
 			_reassignKaleoTask(kaleoTaskReassignments, executionContext);
 		}
 
-		_notificationHelper.sendKaleoNotifications(
+		_kaleoNotificationSender.sendNotifications(
 			KaleoTimer.class.getName(), kaleoTimer.getKaleoTimerId(),
 			ExecutionType.ON_TIMER, executionContext);
 
@@ -945,6 +945,9 @@ public class DefaultWorkflowEngineImpl
 	private KaleoLogLocalService _kaleoLogLocalService;
 
 	@Reference
+	private KaleoNotificationSender _kaleoNotificationSender;
+
+	@Reference
 	private KaleoSignaler _kaleoSignaler;
 
 	@Reference
@@ -953,9 +956,6 @@ public class DefaultWorkflowEngineImpl
 
 	@Reference
 	private KaleoWorkflowModelConverter _kaleoWorkflowModelConverter;
-
-	@Reference
-	private NotificationHelper _notificationHelper;
 
 	@Reference
 	private UserLocalService _userLocalService;

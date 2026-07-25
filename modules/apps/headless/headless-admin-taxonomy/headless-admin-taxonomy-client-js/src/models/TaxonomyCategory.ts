@@ -35,9 +35,11 @@
 			"permissions"?: Array<Permission>;
 			"siteExternalReferenceCode"?: string;
 			"siteId"?: number;
+			"system"?: boolean;
 			"taxonomyCategoryProperties"?: Array<TaxonomyCategoryProperty>;
 			"taxonomyCategoryUsageCount"?: number;
 			"taxonomyVocabularyId"?: number;
+			"uuid"?: string;
 			"viewableBy"?: 'Anyone' | 'Members' | 'Owner';
 
 		static "discriminator": string | undefined = undefined;
@@ -143,6 +145,11 @@
 			type: "number",
 		},
 		{
+			baseName: "system",
+			name: "system",
+			type: "boolean",
+		},
+		{
 			baseName: "taxonomyCategoryProperties",
 			name: "taxonomyCategoryProperties",
 			type: "Array<TaxonomyCategoryProperty>",
@@ -156,6 +163,11 @@
 			baseName: "taxonomyVocabularyId",
 			name: "taxonomyVocabularyId",
 			type: "number",
+		},
+		{
+			baseName: "uuid",
+			name: "uuid",
+			type: "string",
 		},
 		{
 			baseName: "viewableBy",

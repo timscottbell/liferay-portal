@@ -63,6 +63,10 @@ class MockBroadcastChannel {
 
 (globalThis as any).Liferay = {
 	...(globalThis.Liferay || {}),
+	Browser: {
+		...(globalThis.Liferay.Browser || {}),
+		isMac: () => false,
+	},
 	Language: {
 		...(globalThis.Liferay.Language || {}),
 		direction: {en_US: 'rtl'},
@@ -73,7 +77,9 @@ class MockBroadcastChannel {
 		getBCP47LanguageId: () => 'en-US',
 		getDefaultLanguageId: () => 'en_US',
 		getLanguageId: () => 'en_US',
+		getTimeZone: () => 'UTC',
 		getUserId: () => '1',
+		isImpersonated: () => false,
 	},
 	Util: {
 		...(globalThis.Liferay.Util || {}),
@@ -81,4 +87,7 @@ class MockBroadcastChannel {
 		formatStorage: (size: number) => `${size / 1024} KB`,
 	},
 	authToken: 'mocked-auth-token',
+	detach: () => {},
+	fire: () => {},
+	on: () => {},
 };

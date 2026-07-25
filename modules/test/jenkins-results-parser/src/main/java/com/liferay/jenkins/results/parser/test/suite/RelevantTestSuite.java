@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -37,6 +38,7 @@ public class RelevantTestSuite {
 
 		_relevantRuleEngine = RelevantRuleEngine.getInstance(
 			portalAcceptancePullRequestJob);
+		_testSuiteName = portalAcceptancePullRequestJob.getTestSuiteName();
 	}
 
 	public List<TestBatch> getTestBatches(boolean validateAllRules) {
@@ -46,12 +48,12 @@ public class RelevantTestSuite {
 		String testBatchNamesPropertyValue =
 			JenkinsResultsParserUtil.getProperty(
 				JenkinsResultsParserUtil.getProperties(baseTestPropertiesFile),
-				"relevant.batch.names.whitelist");
+				"relevant.batch.names.whitelist", _testSuiteName);
 
 		if (testBatchNamesPropertyValue == null) {
 			testBatchNamesPropertyValue = JenkinsResultsParserUtil.getProperty(
 				JenkinsResultsParserUtil.getProperties(baseTestPropertiesFile),
-				"test.batch.names[relevant]");
+				"test.batch.names", _testSuiteName);
 
 			if (testBatchNamesPropertyValue == null) {
 				throw new RuntimeException(
@@ -90,6 +92,9 @@ public class RelevantTestSuite {
 				_relevantRuleEngine.getRelevantRuleNames(relevantRules));
 
 		for (RelevantRule relevantRule : relevantRules) {
+			boolean stableRule = Objects.equals(
+				relevantRule.getName(), "stable-rule");
+
 			for (TestBatch testBatch : relevantRule.getTestBatches()) {
 				if (testBatches.contains(testBatch)) {
 					TestBatch existingTestBatch = testBatches.get(
@@ -100,7 +105,7 @@ public class RelevantTestSuite {
 					continue;
 				}
 
-				if (!validTestBatchRegexes.isEmpty() &&
+				if (stableRule ||
 					isValidTestBatch(
 						validTestBatchRegexes, testBatch.getName())) {
 
@@ -151,5 +156,6 @@ public class RelevantTestSuite {
 	private final RelevantRuleEngine _relevantRuleEngine;
 	private final Set<JobProperty> _testBatchNamesJobProperties =
 		new HashSet<>();
+	private final String _testSuiteName;
 
 }

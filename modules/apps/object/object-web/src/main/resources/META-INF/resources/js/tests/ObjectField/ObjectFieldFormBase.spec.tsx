@@ -4,7 +4,7 @@
  */
 
 import '@testing-library/jest-dom';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 
 // @ts-ignore
 
@@ -72,84 +72,37 @@ beforeEach(() => {
 	fetchMock.get('http://localhost/url', {});
 });
 
-describe('when the root model feature flag [LPD-34594] is disabled', () => {
-	describe('the mandatory toggle', () => {
-		beforeEach(() => {
-			global.Liferay = {
-				...global.Liferay,
-				FeatureFlags: {
-					...global.Liferay?.FeatureFlags,
-					'LPD-34594': false,
-				},
-			};
+describe('Formula field business type', () => {
+	const formulaProps = {
+		...objectFieldFormBaseDefaultProps,
+		objectField: {
+			businessType: 'Formula' as ObjectFieldBusinessTypeName,
+		},
+		objectRelationshipId: undefined,
+	};
+
+	it('does not render the mandatory toggle', () => {
+		render(<ObjectFieldFormBase {...formulaProps} />);
+
+		expect(
+			screen.queryByRole('switch', {name: 'mandatory'})
+		).not.toBeInTheDocument();
+	});
+
+	it('renders the output field as required', () => {
+		render(<ObjectFieldFormBase {...formulaProps} />);
+
+		const outputLabel = screen.getByText('output', {
+			exact: false,
+			selector: 'label',
 		});
 
-		it('does not render help text', async () => {
-			fetchMock.get(OBJECT_RELATIONSHIPS_URL_REGEX, {
-				...objectRelationship,
-				deletionType: 'cascade',
-				edge: true,
-			});
-
-			render(
-				<ObjectFieldFormBase {...objectFieldFormBaseDefaultProps} />
-			);
-
-			expect(
-				screen.queryByLabelText('help-text')
-			).not.toBeInTheDocument();
-		});
-
-		it('is disabled when deletionType is "disassociate"', async () => {
-			fetchMock.get(OBJECT_RELATIONSHIPS_URL_REGEX, {
-				...objectRelationship,
-				deletionType: 'disassociate',
-				edge: true,
-			});
-
-			render(
-				<ObjectFieldFormBase {...objectFieldFormBaseDefaultProps} />
-			);
-
-			const mandatoryToggle = await screen.findByRole('switch', {
-				name: 'mandatory',
-			});
-
-			expect(mandatoryToggle).toBeDisabled();
-		});
-
-		it('is enabled when deletionType is not "disassociate"', async () => {
-			fetchMock.get(OBJECT_RELATIONSHIPS_URL_REGEX, {
-				...objectRelationship,
-				deletionType: 'cascade',
-				edge: true,
-			});
-
-			render(
-				<ObjectFieldFormBase {...objectFieldFormBaseDefaultProps} />
-			);
-
-			const mandatoryToggle = await screen.findByRole('switch', {
-				name: 'mandatory',
-			});
-
-			expect(mandatoryToggle).toBeEnabled();
-		});
+		expect(within(outputLabel).getByText('mandatory')).toBeInTheDocument();
 	});
 });
 
-describe('when the root model feature flag [LPD-34594] is enabled', () => {
+describe('when the root model feature is enabled', () => {
 	describe('the mandatory toggle', () => {
-		beforeEach(() => {
-			global.Liferay = {
-				...global.Liferay,
-				FeatureFlags: {
-					...global.Liferay?.FeatureFlags,
-					'LPD-34594': true,
-				},
-			};
-		});
-
 		it('does not render help text when relationship does not belong to a root model structure', async () => {
 			fetchMock.get(OBJECT_RELATIONSHIPS_URL_REGEX, {
 				...objectRelationship,

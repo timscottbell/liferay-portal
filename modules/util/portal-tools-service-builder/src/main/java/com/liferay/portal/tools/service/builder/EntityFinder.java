@@ -55,8 +55,16 @@ public class EntityFinder {
 		}
 	}
 
-	public List<EntityColumn> getArrayableColumns() {
-		return _arrayableColumns;
+	public List<EntityColumn> getArrayableOrEntityColumns() {
+		List<EntityColumn> arrayableOrEntityColumns = new ArrayList<>();
+
+		for (EntityColumn arrayableEntityColumn : _arrayableColumns) {
+			if (!arrayableEntityColumn.isArrayableAndOperator()) {
+				arrayableOrEntityColumns.add(arrayableEntityColumn);
+			}
+		}
+
+		return arrayableOrEntityColumns;
 	}
 
 	public String getDBWhere() {
@@ -158,6 +166,14 @@ public class EntityFinder {
 		return false;
 	}
 
+	public boolean isCollectionPersistenceFinderEnabled() {
+		if (_serviceBuilder.isVersionGTE_7_4_0() && isCollection()) {
+			return true;
+		}
+
+		return false;
+	}
+
 	public boolean isDBIndex() {
 		return _dbIndex;
 	}
@@ -168,6 +184,16 @@ public class EntityFinder {
 
 	public boolean isUnique() {
 		return _unique;
+	}
+
+	public boolean isUniquePersistenceFinderEnabled() {
+		if (_serviceBuilder.isVersionGTE_7_4_0() &&
+			(!isCollection() || isUnique())) {
+
+			return true;
+		}
+
+		return false;
 	}
 
 	private final List<EntityColumn> _arrayableColumns = new ArrayList<>();

@@ -20,6 +20,7 @@ import com.liferay.change.tracking.web.internal.display.DisplayContextImpl;
 import com.liferay.change.tracking.web.internal.util.PublicationsPortletURLUtil;
 import com.liferay.diff.DiffHtml;
 import com.liferay.knowledge.base.model.KBArticleModel;
+import com.liferay.petra.io.unsync.UnsyncStringReader;
 import com.liferay.petra.io.unsync.UnsyncStringWriter;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.sql.dsl.DSLQueryFactoryUtil;
@@ -33,7 +34,6 @@ import com.liferay.portal.kernel.comment.CommentManager;
 import com.liferay.portal.kernel.comment.Discussion;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.io.unsync.UnsyncStringReader;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
@@ -208,6 +208,7 @@ public class GetEntryRenderDataMVCResourceCommand
 		JSONObject editInPublicationJSONObject = null;
 		JSONObject localizedTitlesJSONObject = _jsonFactory.createJSONObject();
 		String rightPreview = null;
+		String rightPreviewStyles = null;
 		JSONObject rightLocalizedPreviewJSONObject = null;
 		JSONObject rightLocalizedRenderJSONObject = null;
 		String rightRender = null;
@@ -298,12 +299,19 @@ public class GetEntryRenderDataMVCResourceCommand
 						themeDisplay.getLocale(), rightModel,
 						CTConstants.TYPE_AFTER);
 				}
+
+				rightPreviewStyles = _getPreviewStyles(
+					ctCollectionId, ctDisplayRenderer, ctEntryId, ctSQLMode,
+					httpServletRequest, httpServletResponse,
+					themeDisplay.getLocale(), rightModel);
 			}
 		}
 
 		long leftCtCollectionId = CTConstants.CT_COLLECTION_ID_PRODUCTION;
 
-		if (ctCollection.getStatus() == WorkflowConstants.STATUS_APPROVED) {
+		if ((ctCollection.getStatus() == WorkflowConstants.STATUS_APPROVED) &&
+			(ctEntry.getChangeType() != CTConstants.CT_CHANGE_TYPE_ADDITION)) {
+
 			leftCtCollectionId = ctEntry.getCtCollectionId();
 		}
 
@@ -312,6 +320,7 @@ public class GetEntryRenderDataMVCResourceCommand
 				leftCtCollectionId, ctEntry);
 
 		String leftPreview = null;
+		String leftPreviewStyles = null;
 		JSONObject leftLocalizedPreviewJSONObject = null;
 		JSONObject leftLocalizedRenderJSONObject = null;
 		T leftModel = null;
@@ -400,6 +409,11 @@ public class GetEntryRenderDataMVCResourceCommand
 							leftCTSQLMode, themeDisplay.getLocale(), leftModel,
 							CTConstants.TYPE_LATEST);
 					}
+
+					leftPreviewStyles = _getPreviewStyles(
+						leftCtCollectionId, ctDisplayRenderer, ctEntryId,
+						leftCTSQLMode, httpServletRequest, httpServletResponse,
+						themeDisplay.getLocale(), leftModel);
 				}
 			}
 		}
@@ -482,6 +496,11 @@ public class GetEntryRenderDataMVCResourceCommand
 						leftCTSQLMode, themeDisplay.getLocale(), leftModel,
 						CTConstants.TYPE_BEFORE);
 				}
+
+				leftPreviewStyles = _getPreviewStyles(
+					leftCtCollectionId, ctDisplayRenderer, ctEntryId,
+					leftCTSQLMode, httpServletRequest, httpServletResponse,
+					themeDisplay.getLocale(), leftModel);
 			}
 		}
 
@@ -560,6 +579,11 @@ public class GetEntryRenderDataMVCResourceCommand
 							ctSQLMode, themeDisplay.getLocale(), rightModel,
 							CTConstants.TYPE_LATEST);
 					}
+
+					rightPreviewStyles = _getPreviewStyles(
+						ctCollectionId, ctDisplayRenderer, ctEntryId, ctSQLMode,
+						httpServletRequest, httpServletResponse,
+						themeDisplay.getLocale(), rightModel);
 				}
 			}
 		}
@@ -593,6 +617,10 @@ public class GetEntryRenderDataMVCResourceCommand
 			jsonObject.put("leftPreview", leftPreview);
 		}
 
+		if (leftPreviewStyles != null) {
+			jsonObject.put("leftPreviewStyles", leftPreviewStyles);
+		}
+
 		if (leftRender != null) {
 			jsonObject.put("leftRender", leftRender);
 		}
@@ -603,6 +631,10 @@ public class GetEntryRenderDataMVCResourceCommand
 
 		if (rightPreview != null) {
 			jsonObject.put("rightPreview", rightPreview);
+		}
+
+		if (rightPreviewStyles != null) {
+			jsonObject.put("rightPreviewStyles", rightPreviewStyles);
 		}
 
 		if (rightLocalizedPreviewJSONObject != null) {
@@ -867,6 +899,31 @@ public class GetEntryRenderDataMVCResourceCommand
 					httpServletRequest, httpServletResponse,
 					_classNameLocalService, _ctDisplayRendererRegistry,
 					ctEntryId, locale, model, type));
+		}
+		catch (Exception exception) {
+			_log.error(exception);
+
+			return null;
+		}
+	}
+
+	private <T extends BaseModel<T>> String _getPreviewStyles(
+		long ctCollectionId, CTDisplayRenderer<T> ctDisplayRenderer,
+		long ctEntryId, CTSQLModeThreadLocal.CTSQLMode ctSQLMode,
+		HttpServletRequest httpServletRequest,
+		HttpServletResponse httpServletResponse, Locale locale, T model) {
+
+		try (SafeCloseable safeCloseable1 =
+				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
+					ctCollectionId);
+			SafeCloseable safeCloseable2 =
+				CTSQLModeThreadLocal.setCTSQLModeWithSafeCloseable(ctSQLMode)) {
+
+			return ctDisplayRenderer.renderPreviewStyles(
+				new DisplayContextImpl<>(
+					httpServletRequest, httpServletResponse,
+					_classNameLocalService, _ctDisplayRendererRegistry,
+					ctEntryId, locale, model, null));
 		}
 		catch (Exception exception) {
 			_log.error(exception);

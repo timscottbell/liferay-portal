@@ -14,16 +14,20 @@ import com.liferay.fragment.cache.FragmentEntryLinkCache;
 import com.liferay.fragment.model.FragmentEntryLink;
 import com.liferay.fragment.processor.PortletRegistry;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
+import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
 import com.liferay.friendly.url.model.FriendlyURLEntry;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
 import com.liferay.layout.constants.LayoutTypeSettingsConstants;
+import com.liferay.layout.content.creator.LayoutContentVersionCreator;
 import com.liferay.layout.friendly.url.LayoutFriendlyURLEntryHelper;
 import com.liferay.layout.model.LayoutClassedModelUsage;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateEntryTypeConstants;
 import com.liferay.layout.page.template.model.LayoutPageTemplateEntry;
 import com.liferay.layout.page.template.model.LayoutPageTemplateStructure;
+import com.liferay.layout.page.template.model.LayoutPageTemplateStructureRelElementVariation;
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
+import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelElementVariationLocalService;
 import com.liferay.layout.seo.model.LayoutSEOEntry;
 import com.liferay.layout.seo.service.LayoutSEOEntryLocalService;
 import com.liferay.layout.service.LayoutClassedModelUsageLocalService;
@@ -78,10 +82,13 @@ import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.UnicodePropertiesBuilder;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.uuid.PortalUUIDUtil;
 import com.liferay.portlet.exportimport.staging.StagingAdvicesThreadLocal;
 import com.liferay.segments.constants.SegmentsExperienceConstants;
 import com.liferay.segments.model.SegmentsExperience;
+import com.liferay.segments.model.SegmentsExperienceAudienceEntryRel;
 import com.liferay.segments.model.SegmentsExperienceModel;
+import com.liferay.segments.service.SegmentsExperienceAudienceEntryRelLocalService;
 import com.liferay.segments.service.SegmentsExperienceLocalService;
 import com.liferay.sites.kernel.util.Sites;
 
@@ -135,9 +142,16 @@ public class LayoutLocalServiceWrapper
 					return targetSegmentsExperience.getSegmentsExperienceId();
 				});
 
-		return _copyLayoutContent(
+		Layout layout = _copyLayoutContent(
 			false, sourceLayout, sourceSegmentsExperiencesIds, targetLayout,
 			targetSegmentsExperiencesIds);
+
+		if (sourceLayout.getClassPK() == targetLayout.getPlid()) {
+			_layoutContentVersionCreator.createLayoutContentVersion(
+				sourceLayout);
+		}
+
+		return layout;
 	}
 
 	@Override
@@ -196,6 +210,8 @@ public class LayoutLocalServiceWrapper
 		ServiceContext currentServiceContext =
 			ServiceContextThreadLocal.getServiceContext();
 
+		boolean pushedServiceContext = false;
+
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
 					layout.getCtCollectionId())) {
@@ -213,6 +229,8 @@ public class LayoutLocalServiceWrapper
 				serviceContext.setUserId(user.getUserId());
 
 				ServiceContextThreadLocal.pushServiceContext(serviceContext);
+
+				pushedServiceContext = true;
 			}
 
 			TransactionInvokerUtil.invoke(
@@ -236,7 +254,9 @@ public class LayoutLocalServiceWrapper
 		finally {
 			CopyLayoutThreadLocal.setCopyLayout(copyLayout);
 
-			ServiceContextThreadLocal.pushServiceContext(currentServiceContext);
+			if (pushedServiceContext) {
+				ServiceContextThreadLocal.popServiceContext();
+			}
 		}
 	}
 
@@ -333,6 +353,8 @@ public class LayoutLocalServiceWrapper
 		ServiceContext currentServiceContext =
 			ServiceContextThreadLocal.getServiceContext();
 
+		boolean pushedServiceContext = false;
+
 		long ctCollectionId = sourceLayout.getCtCollectionId();
 
 		if (ctCollectionId == 0) {
@@ -362,6 +384,8 @@ public class LayoutLocalServiceWrapper
 				serviceContext.setUserId(user.getUserId());
 
 				ServiceContextThreadLocal.pushServiceContext(serviceContext);
+
+				pushedServiceContext = true;
 			}
 
 			return TransactionInvokerUtil.invoke(
@@ -381,7 +405,9 @@ public class LayoutLocalServiceWrapper
 		finally {
 			CopyLayoutThreadLocal.setCopyLayout(copyLayout);
 
-			ServiceContextThreadLocal.pushServiceContext(currentServiceContext);
+			if (pushedServiceContext) {
+				ServiceContextThreadLocal.popServiceContext();
+			}
 		}
 	}
 
@@ -491,6 +517,64 @@ public class LayoutLocalServiceWrapper
 			data, instanceIdsMap, masterLayoutCopy, sourceLayout,
 			sourceSegmentsExperienceId, targetLayout,
 			targetSegmentsExperienceId, user);
+	}
+
+	private void _copyLayoutPageTemplateStructureRelElementVariations(
+			Layout sourceLayout, Layout targetLayout, User user)
+		throws Exception {
+
+		for (LayoutPageTemplateStructureRelElementVariation
+				targetLayoutPageTemplateStructureRelElementVariation :
+					_layoutPageTemplateStructureRelElementVariationLocalService.
+						getLayoutPageTemplateStructureRelElementVariations(
+							targetLayout.getPlid())) {
+
+			_layoutPageTemplateStructureRelElementVariationLocalService.
+				deleteLayoutPageTemplateStructureRelElementVariation(
+					targetLayoutPageTemplateStructureRelElementVariation.
+						getExternalReferenceCode(),
+					targetLayout.getGroupId());
+		}
+
+		for (LayoutPageTemplateStructureRelElementVariation
+				sourceLayoutPageTemplateStructureRelElementVariation :
+					_layoutPageTemplateStructureRelElementVariationLocalService.
+						getLayoutPageTemplateStructureRelElementVariations(
+							sourceLayout.getPlid())) {
+
+			String segmentsExperienceERC = _getTargetSegmentsExperienceERC(
+				sourceLayoutPageTemplateStructureRelElementVariation.
+					getSegmentsExperienceERC(),
+				sourceLayout, targetLayout);
+
+			if (segmentsExperienceERC == null) {
+				continue;
+			}
+
+			List<String> audienceEntryERCs =
+				sourceLayoutPageTemplateStructureRelElementVariation.
+					getAudienceEntryERCs();
+
+			_layoutPageTemplateStructureRelElementVariationLocalService.
+				addOrUpdateLayoutPageTemplateStructureRelElementVariation(
+					PortalUUIDUtil.generate(), user.getUserId(),
+					targetLayout.getGroupId(),
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						isActive(),
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						getHide(),
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						getHtmlMap(),
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						getJsMap(),
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						getName(),
+					targetLayout.getPlid(), segmentsExperienceERC,
+					sourceLayoutPageTemplateStructureRelElementVariation.
+						getTargetElement(),
+					audienceEntryERCs.toArray(new String[0]),
+					ServiceContextThreadLocal.getServiceContext());
+		}
 	}
 
 	private void _copyLayoutSEOEntry(
@@ -672,6 +756,41 @@ public class LayoutLocalServiceWrapper
 		}
 	}
 
+	private void _copySegmentsExperienceAudienceEntryRels(
+			Layout sourceLayout, Layout targetLayout, User user)
+		throws Exception {
+
+		for (SegmentsExperience sourceSegmentsExperience :
+				_segmentsExperienceLocalService.getSegmentsExperiences(
+					sourceLayout.getGroupId(), sourceLayout.getPlid())) {
+
+			String segmentsExperienceERC = _getTargetSegmentsExperienceERC(
+				sourceSegmentsExperience.getExternalReferenceCode(),
+				sourceLayout, targetLayout);
+
+			if (segmentsExperienceERC == null) {
+				continue;
+			}
+
+			List<SegmentsExperienceAudienceEntryRel>
+				segmentsExperienceAudienceEntryRels =
+					_segmentsExperienceAudienceEntryRelLocalService.
+						getSegmentsExperienceAudienceEntryRels(
+							sourceLayout.getGroupId(),
+							sourceSegmentsExperience.
+								getExternalReferenceCode());
+
+			_segmentsExperienceAudienceEntryRelLocalService.
+				updateSegmentsExperienceAudienceEntryRels(
+					user.getUserId(), targetLayout.getGroupId(),
+					TransformUtil.transformToArray(
+						segmentsExperienceAudienceEntryRels,
+						SegmentsExperienceAudienceEntryRel::getAudienceEntryERC,
+						String.class),
+					segmentsExperienceERC);
+		}
+	}
+
 	private void _deleteLayoutClassedModelUsages(
 		long[] classNameIds,
 		List<LayoutClassedModelUsage> sourceLayoutLayoutClassedModelUsages,
@@ -721,6 +840,8 @@ public class LayoutLocalServiceWrapper
 			_friendlyURLEntryLocalService.fetchFriendlyURLEntry(
 				groupId,
 				_layoutFriendlyURLEntryHelper.getClassNameId(privateLayout),
+				FriendlyURLEntryConstants.
+					FRIENDLY_URL_ENTRY_PARENT_CLASS_PK_DEFAULT,
 				friendlyURL);
 
 		if (friendlyURLEntry == null) {
@@ -750,7 +871,7 @@ public class LayoutLocalServiceWrapper
 
 			if (fragmentEntryLink.isDeleted()) {
 				FragmentEntryLink targetLayoutFragmentEntryLink =
-					_fragmentEntryLinkLocalService.getFragmentEntryLink(
+					_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 						targetLayout.getGroupId(),
 						fragmentEntryLink.getExternalReferenceCode(),
 						targetLayout.getPlid());
@@ -823,6 +944,8 @@ public class LayoutLocalServiceWrapper
 						sourceSegmentsExperience.getSegmentsEntryERC());
 					targetSegmentsExperience.setSegmentsEntryScopeERC(
 						sourceSegmentsExperience.getSegmentsEntryScopeERC());
+					targetSegmentsExperience.setNameMap(
+						sourceSegmentsExperience.getNameMap());
 					targetSegmentsExperience.setPriority(minPriority++);
 
 					_segmentsExperienceLocalService.updateSegmentsExperience(
@@ -871,6 +994,32 @@ public class LayoutLocalServiceWrapper
 						targetLayout.getGroupId(), segmentsExperiencesIds,
 						targetLayout.getPlid()),
 				FragmentEntryLink.FRAGMENT_ENTRY_LINK_ID_ACCESSOR));
+	}
+
+	private String _getTargetSegmentsExperienceERC(
+		String segmentsExperienceERC, Layout sourceLayout,
+		Layout targetLayout) {
+
+		SegmentsExperience sourceSegmentsExperience =
+			_segmentsExperienceLocalService.
+				fetchSegmentsExperienceByExternalReferenceCode(
+					segmentsExperienceERC, sourceLayout.getGroupId());
+
+		if (sourceSegmentsExperience == null) {
+			return null;
+		}
+
+		SegmentsExperience targetSegmentsExperience =
+			_segmentsExperienceLocalService.fetchSegmentsExperience(
+				targetLayout.getGroupId(),
+				sourceSegmentsExperience.getSegmentsExperienceKey(),
+				targetLayout.getPlid());
+
+		if (targetSegmentsExperience == null) {
+			return null;
+		}
+
+		return targetSegmentsExperience.getExternalReferenceCode();
 	}
 
 	private String _getTypeSettings(Layout sourceLayout, Layout targetLayout) {
@@ -1078,7 +1227,7 @@ public class LayoutLocalServiceWrapper
 					fragmentStyledLayoutStructureItem.getFragmentEntryLinkId());
 
 			FragmentEntryLink targetLayoutFragmentEntryLink =
-				_fragmentEntryLinkLocalService.getFragmentEntryLink(
+				_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 					targetLayout.getGroupId(),
 					originalFragmentEntryLink.getExternalReferenceCode(),
 					targetLayout.getPlid());
@@ -1284,6 +1433,9 @@ public class LayoutLocalServiceWrapper
 		_layoutClassedModelUsageLocalService;
 
 	@Reference
+	private LayoutContentVersionCreator _layoutContentVersionCreator;
+
+	@Reference
 	private LayoutFriendlyURLEntryHelper _layoutFriendlyURLEntryHelper;
 
 	@Reference
@@ -1293,6 +1445,10 @@ public class LayoutLocalServiceWrapper
 	@Reference
 	private LayoutPageTemplateStructureLocalService
 		_layoutPageTemplateStructureLocalService;
+
+	@Reference
+	private LayoutPageTemplateStructureRelElementVariationLocalService
+		_layoutPageTemplateStructureRelElementVariationLocalService;
 
 	@Reference
 	private LayoutSEOEntryLocalService _layoutSEOEntryLocalService;
@@ -1317,6 +1473,10 @@ public class LayoutLocalServiceWrapper
 
 	@Reference
 	private RoleLocalService _roleLocalService;
+
+	@Reference
+	private SegmentsExperienceAudienceEntryRelLocalService
+		_segmentsExperienceAudienceEntryRelLocalService;
 
 	@Reference
 	private SegmentsExperienceLocalService _segmentsExperienceLocalService;
@@ -1359,6 +1519,12 @@ public class LayoutLocalServiceWrapper
 						_targetSegmentsExperiencesIds, _user);
 				}
 
+				_copyLayoutPageTemplateStructureRelElementVariations(
+					_sourceLayout, _targetLayout, _user);
+
+				_copySegmentsExperienceAudienceEntryRels(
+					_sourceLayout, _targetLayout, _user);
+
 				List<String> portletIds = _getLayoutPortletIds(
 					_sourceLayout, _sourceSegmentsExperiencesIds);
 
@@ -1391,7 +1557,7 @@ public class LayoutLocalServiceWrapper
 			_copyLayoutClientExtensions(
 				_sourceLayout, _targetLayout, _user.getUserId());
 
-			Image image = _imageLocalService.getImage(
+			Image image = _imageLocalService.fetchImage(
 				_sourceLayout.getIconImageId());
 
 			byte[] imageBytes = null;
@@ -1405,8 +1571,9 @@ public class LayoutLocalServiceWrapper
 				_targetLayout.getLayoutId(),
 				_getTypeSettings(_sourceLayout, _targetLayout), imageBytes,
 				_sourceLayout.getThemeId(), _sourceLayout.getColorSchemeId(),
-				_sourceLayout.getStyleBookEntryERC(), _sourceLayout.getCss(),
-				_sourceLayout.getFaviconFileEntryERC(),
+				_sourceLayout.getStyleBookEntryERC(),
+				_sourceLayout.getStyleBookEntryScopeERC(),
+				_sourceLayout.getCss(), _sourceLayout.getFaviconFileEntryERC(),
 				_sourceLayout.getFaviconFileEntryScopeERC(),
 				_sourceLayout.getMasterLayoutPageTemplateEntryERC());
 		}

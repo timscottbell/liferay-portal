@@ -80,7 +80,7 @@ public interface AssetVocabularyGroupRelLocalService
 		AssetVocabularyGroupRel assetVocabularyGroupRel);
 
 	public AssetVocabularyGroupRel addAssetVocabularyGroupRel(
-			long groupId, long vocabularyId)
+			long groupId, long vocabularyId, int depotEntryType)
 		throws PortalException;
 
 	/**
@@ -274,6 +274,11 @@ public interface AssetVocabularyGroupRelLocalService
 	public List<AssetVocabularyGroupRel> getAssetVocabularyGroupRelsByGroupId(
 		long groupId);
 
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public List<AssetVocabularyGroupRel>
+		getAssetVocabularyGroupRelsByGroupIdAndDepotEntryType(
+			long groupId, int depotEntryType);
+
 	/**
 	 * Returns all the asset vocabulary group rels matching the UUID and company.
 	 *
@@ -306,6 +311,11 @@ public interface AssetVocabularyGroupRelLocalService
 	public List<AssetVocabularyGroupRel>
 		getAssetVocabularyGroupRelsByVocabularyId(long vocabularyId);
 
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public List<AssetVocabularyGroupRel>
+		getAssetVocabularyGroupRelsByVocabularyIdAndDepotEntryType(
+			long vocabularyId, int depotEntryType);
+
 	/**
 	 * Returns the number of asset vocabulary group rels.
 	 *
@@ -313,6 +323,9 @@ public interface AssetVocabularyGroupRelLocalService
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getAssetVocabularyGroupRelsCount();
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public int getAssetVocabularyGroupRelsCount(long vocabularyId);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public IndexableActionableDynamicQuery getIndexableActionableDynamicQuery();
@@ -332,7 +345,8 @@ public interface AssetVocabularyGroupRelLocalService
 	public PersistedModel getPersistedModel(Serializable primaryKeyObj)
 		throws PortalException;
 
-	public void setAssetVocabularyGroupRels(long vocabularyId, long[] groupIds)
+	public void setAssetVocabularyGroupRels(
+			long vocabularyId, long[] groupIds, int depotEntryType)
 		throws PortalException;
 
 	/**
@@ -365,3 +379,4 @@ public interface AssetVocabularyGroupRelLocalService
 		throws E;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:418658790

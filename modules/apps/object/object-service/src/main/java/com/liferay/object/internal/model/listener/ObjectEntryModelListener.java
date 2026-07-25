@@ -41,7 +41,6 @@ import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.exception.ModelListenerException;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
@@ -54,6 +53,7 @@ import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.security.audit.event.generators.constants.EventTypes;
 import com.liferay.portal.security.audit.event.generators.util.Attribute;
@@ -129,10 +129,7 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 				_objectEntryLocalService.fetchObjectEntry(
 					objectEntry.getRootObjectEntryId());
 
-			if (!FeatureFlagManagerUtil.isEnabled(
-					objectEntry.getCompanyId(), "LPD-34594") ||
-				(rootObjectEntry == null)) {
-
+			if (rootObjectEntry == null) {
 				return;
 			}
 
@@ -239,12 +236,32 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 			user.getUserId());
 	}
 
+	private long _getAccountEntryId(
+		ObjectDefinition objectDefinition, Map<String, Serializable> values) {
+
+		if (!objectDefinition.isAccountEntryRestricted()) {
+			return 0;
+		}
+
+		ObjectField objectField = _objectFieldLocalService.fetchObjectField(
+			objectDefinition.getAccountEntryRestrictedObjectFieldId());
+
+		if (objectField == null) {
+			return 0;
+		}
+
+		return MapUtil.getLong(values, objectField.getName());
+	}
+
 	private AuditMessage _getAuditMessage(
-		String eventType, ObjectDefinition objectDefinition,
-		ObjectEntry objectEntry) {
+		long accountEntryId, String eventType,
+		ObjectDefinition objectDefinition, ObjectEntry objectEntry) {
 
 		AuditMessage auditMessage = AuditMessageBuilder.buildAuditMessage(
-			eventType, objectEntry, null);
+			objectEntry.getGroupId(), accountEntryId,
+			objectEntry.getModelClassName(),
+			String.valueOf(objectEntry.getPrimaryKeyObj()), null, eventType,
+			null);
 
 		JSONObject additionalInfoJSONObject = auditMessage.getAdditionalInfo();
 
@@ -402,17 +419,25 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 			return;
 		}
 
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		long accountEntryId = _getAccountEntryId(objectDefinition, values);
+
 		if (StringUtil.equals(EventTypes.UPDATE, eventType)) {
 			_auditRouter.route(
 				AuditMessageBuilder.buildAuditMessage(
-					EventTypes.UPDATE, objectEntry,
+					objectEntry.getGroupId(), accountEntryId,
+					objectEntry.getModelClassName(),
+					String.valueOf(objectEntry.getPrimaryKeyObj()), null,
+					EventTypes.UPDATE,
 					_getModifiedAttributes(
 						objectDefinition, originalObjectEntry.getValues(),
-						objectEntry.getValues())));
+						values)));
 		}
 		else {
 			_auditRouter.route(
-				_getAuditMessage(eventType, objectDefinition, objectEntry));
+				_getAuditMessage(
+					accountEntryId, eventType, objectDefinition, objectEntry));
 		}
 	}
 
@@ -507,10 +532,7 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 			Date modifiedDate, ObjectEntry objectEntry)
 		throws PortalException {
 
-		if (!FeatureFlagManagerUtil.isEnabled(
-				objectEntry.getCompanyId(), "LPD-34594") ||
-			!objectEntry.isRootDescendantNode()) {
-
+		if (!objectEntry.isRootDescendantNode()) {
 			return;
 		}
 

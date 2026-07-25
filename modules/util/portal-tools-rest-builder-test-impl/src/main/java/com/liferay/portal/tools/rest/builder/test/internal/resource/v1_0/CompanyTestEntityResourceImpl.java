@@ -5,11 +5,13 @@
 
 package com.liferay.portal.tools.rest.builder.test.internal.resource.v1_0;
 
+import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.exception.DuplicateExternalReferenceCodeException;
 import com.liferay.portal.kernel.exception.NoSuchModelException;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LongWrapper;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.tools.rest.builder.test.dto.v1_0.CompanyTestEntity;
@@ -57,24 +59,21 @@ public class CompanyTestEntityResourceImpl
 		CompanyTestEntity companyTestEntity = doGetCompanyTestEntity(
 			companyTestEntityId);
 
-		if (!_permissions.containsKey(companyTestEntity.getId())) {
-			_permissions.put(
-				companyTestEntity.getId(),
-				new Permission[] {
-					new Permission() {
-						{
-							setActionIds(
-								new String[] {
-									"DELETE", "PERMISSIONS", "UPDATE", "VIEW"
-								});
-							setRoleName("Owner");
-						}
+		Permission[] permissions = _permissions.computeIfAbsent(
+			companyTestEntity.getId(),
+			key -> new Permission[] {
+				new Permission() {
+					{
+						setActionIds(
+							new String[] {
+								"DELETE", "PERMISSIONS", "UPDATE", "VIEW"
+							});
+						setRoleName("Owner");
 					}
-				});
-		}
+				}
+			});
 
-		return Page.of(
-			Arrays.asList(_permissions.get(companyTestEntity.getId())));
+		return Page.of(Arrays.asList(permissions));
 	}
 
 	@Override
@@ -104,8 +103,11 @@ public class CompanyTestEntityResourceImpl
 				"createBatch",
 				HashMapBuilder.put(
 					"href",
-					"http://localhost:8080/o/test/v1.0/company-test-entities" +
-						"/batch"
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false),
+						"/o/portal-tools-rest-builder-test/v1.0",
+						"/company-test-entities/batch")
 				).put(
 					"method", "POST"
 				).build()
@@ -222,11 +224,7 @@ public class CompanyTestEntityResourceImpl
 	private CompanyTestEntity _fetchCompanyTestEntity(long id)
 		throws Exception {
 
-		if (_companyTestEntities.containsKey(id)) {
-			return _companyTestEntities.get(id);
-		}
-
-		return null;
+		return _companyTestEntities.get(id);
 	}
 
 	private CompanyTestEntity _fetchCompanyTestEntity(

@@ -435,6 +435,13 @@ public class DDMFormInstanceRecordLocalServiceUtil {
 			ddmFormInstanceId, userId);
 	}
 
+	public static int getFormInstanceRecordsCount(
+		long ddmFormInstanceId, String ipAddress) {
+
+		return getService().getFormInstanceRecordsCount(
+			ddmFormInstanceId, ipAddress);
+	}
+
 	public static
 		com.liferay.portal.kernel.dao.orm.IndexableActionableDynamicQuery
 			getIndexableActionableDynamicQuery() {
@@ -533,3 +540,4 @@ public class DDMFormInstanceRecordLocalServiceUtil {
 			DDMFormInstanceRecordLocalService.class);
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-740446410

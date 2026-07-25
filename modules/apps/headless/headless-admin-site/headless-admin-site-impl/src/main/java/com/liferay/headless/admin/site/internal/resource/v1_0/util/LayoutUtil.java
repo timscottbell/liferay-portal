@@ -9,6 +9,7 @@ import com.liferay.client.extension.constants.ClientExtensionEntryConstants;
 import com.liferay.client.extension.service.ClientExtensionEntryRelLocalServiceUtil;
 import com.liferay.client.extension.type.CET;
 import com.liferay.client.extension.type.manager.CETManager;
+import com.liferay.expando.kernel.util.ExpandoUtil;
 import com.liferay.exportimport.kernel.staging.StagingUtil;
 import com.liferay.fragment.processor.FragmentEntryProcessorRegistry;
 import com.liferay.headless.admin.site.dto.v1_0.BasicWidgetPageWidgetInstance;
@@ -29,6 +30,7 @@ import com.liferay.headless.admin.site.dto.v1_0.WidgetLookAndFeelConfig;
 import com.liferay.headless.admin.site.dto.v1_0.WidgetPageSection;
 import com.liferay.headless.admin.site.dto.v1_0.WidgetPageSpecification;
 import com.liferay.headless.admin.site.dto.v1_0.WidgetPageWidgetInstance;
+import com.liferay.headless.admin.site.dto.v1_0.util.URLUtil;
 import com.liferay.headless.admin.site.internal.dto.v1_0.util.FileEntryUtil;
 import com.liferay.headless.admin.site.internal.dto.v1_0.util.ItemScopeUtil;
 import com.liferay.headless.admin.site.internal.util.LogUtil;
@@ -39,13 +41,13 @@ import com.liferay.layout.importer.util.PortletPreferencesPortletConfigurationIm
 import com.liferay.layout.page.template.constants.LayoutPageTemplateEntryTypeConstants;
 import com.liferay.layout.page.template.model.LayoutPageTemplateEntry;
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalServiceUtil;
-import com.liferay.layout.page.template.service.LayoutPageTemplateEntryServiceUtil;
 import com.liferay.layout.util.LayoutServiceContextHelperUtil;
 import com.liferay.layout.util.UpdateLayoutModifiedDateThreadLocal;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
@@ -80,9 +82,10 @@ import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 import com.liferay.segments.constants.SegmentsExperienceConstants;
 import com.liferay.segments.model.SegmentsExperience;
 import com.liferay.segments.service.SegmentsExperienceLocalServiceUtil;
-import com.liferay.segments.service.SegmentsExperienceServiceUtil;
 import com.liferay.style.book.model.StyleBookEntry;
 import com.liferay.style.book.service.StyleBookEntryLocalServiceUtil;
+
+import java.io.Serializable;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -165,7 +168,8 @@ public class LayoutUtil {
 					serviceContext.getAttribute(
 						"layout.page.template.entry.type"))) {
 
-				throw new UnsupportedOperationException();
+				throw new IllegalArgumentException(
+					"A master page cannot reference another master page");
 			}
 
 			ItemExternalReference itemExternalReference =
@@ -175,7 +179,9 @@ public class LayoutUtil {
 					itemExternalReference.getExternalReferenceCode())) {
 
 				if (itemExternalReference.getScope() != null) {
-					throw new UnsupportedOperationException();
+					throw new IllegalArgumentException(
+						"The master page reference does not belong to the " +
+							"same scope as the target page");
 				}
 
 				LayoutPageTemplateEntry layoutPageTemplateEntry =
@@ -189,7 +195,9 @@ public class LayoutUtil {
 						LayoutPageTemplateEntryTypeConstants.MASTER_LAYOUT,
 						layoutPageTemplateEntry.getType())) {
 
-					throw new UnsupportedOperationException();
+					throw new IllegalArgumentException(
+						"The master page reference does not point to a " +
+							"master page");
 				}
 
 				if (layoutPageTemplateEntry == null) {
@@ -263,7 +271,8 @@ public class LayoutUtil {
 				 PageSpecification.Status.DRAFT)) ||
 			layout.isDraftLayout()) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The draft page specification is not in draft status");
 		}
 
 		Layout draftLayout = layout.fetchDraftLayout();
@@ -276,7 +285,9 @@ public class LayoutUtil {
 			!Objects.equals(
 				draftLayout.getStatus(), WorkflowConstants.STATUS_APPROVED)) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The draft page specification's external reference code does " +
+					"not match the expected value");
 		}
 
 		return updateLayout(
@@ -434,6 +445,7 @@ public class LayoutUtil {
 			return _updateLayout(
 				layout, nameMap, titleMap, descriptionMap, keywordsMap,
 				robotsMap, layout.getStyleBookEntryERC(),
+				layout.getStyleBookEntryScopeERC(),
 				layout.getFaviconFileEntryERC(),
 				layout.getFaviconFileEntryScopeERC(),
 				layout.getMasterLayoutPageTemplateEntryERC(), friendlyURLMap,
@@ -458,7 +470,9 @@ public class LayoutUtil {
 				layout.getExternalReferenceCode(),
 				publishedContentPageSpecification.getExternalReferenceCode())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The published page specification's external reference code " +
+					"does not match the expected value");
 		}
 
 		int draftLayoutStatus = WorkflowConstants.STATUS_APPROVED;
@@ -547,7 +561,7 @@ public class LayoutUtil {
 
 		return _updateLayout(
 			layout, nameMap, null, null, null, null, null, null, null, null,
-			friendlyURLMap, serviceContext);
+			null, friendlyURLMap, serviceContext);
 	}
 
 	public static Layout updatePortletLayout(
@@ -688,7 +702,9 @@ public class LayoutUtil {
 		}
 
 		if (itemExternalReference.getScope() != null) {
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The master page references do not belong to the same scope " +
+					"as the current page");
 		}
 
 		LayoutPageTemplateEntry layoutPageTemplateEntry =
@@ -700,11 +716,12 @@ public class LayoutUtil {
 				LayoutPageTemplateEntryTypeConstants.MASTER_LAYOUT,
 				layoutPageTemplateEntry.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"A master page cannot reference another master page");
 		}
 
 		layoutPageTemplateEntry =
-			LayoutPageTemplateEntryServiceUtil.
+			LayoutPageTemplateEntryLocalServiceUtil.
 				fetchLayoutPageTemplateEntryByExternalReferenceCode(
 					itemExternalReference.getExternalReferenceCode(), groupId);
 
@@ -713,7 +730,8 @@ public class LayoutUtil {
 				LayoutPageTemplateEntryTypeConstants.MASTER_LAYOUT,
 				layoutPageTemplateEntry.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The master page reference does not point to a master page");
 		}
 
 		if (layoutPageTemplateEntry == null) {
@@ -725,11 +743,12 @@ public class LayoutUtil {
 		return itemExternalReference.getExternalReferenceCode();
 	}
 
-	private static String _getStyleBookEntryERC(
-		long companyId, long groupId, Settings settings) {
+	private static StyleBookEntryReference _getStyleBookEntryReference(
+			long companyId, long scopeGroupId, Settings settings)
+		throws Exception {
 
 		if (settings == null) {
-			return null;
+			return new StyleBookEntryReference(null, null);
 		}
 
 		ItemExternalReference itemExternalReference =
@@ -739,22 +758,40 @@ public class LayoutUtil {
 			Validator.isNull(
 				itemExternalReference.getExternalReferenceCode())) {
 
-			return null;
+			return new StyleBookEntryReference(null, null);
 		}
 
-		StyleBookEntry styleBookEntry =
-			StyleBookEntryLocalServiceUtil.
-				fetchStyleBookEntryByExternalReferenceCode(
-					itemExternalReference.getExternalReferenceCode(),
-					StagingUtil.getLiveGroupId(groupId));
+		String styleBookEntryScopeERC =
+			ItemScopeUtil.getItemScopeExternalReferenceCode(
+				itemExternalReference.getScope(), scopeGroupId);
+
+		if (Validator.isNotNull(styleBookEntryScopeERC)) {
+			FeatureFlagManagerUtil.checkEnabled(companyId, "LPD-57283");
+		}
+
+		StyleBookEntry styleBookEntry = null;
+
+		Long groupId = ItemScopeUtil.getItemGroupId(
+			companyId, itemExternalReference.getScope(), scopeGroupId);
+
+		if (groupId != null) {
+			styleBookEntry =
+				StyleBookEntryLocalServiceUtil.
+					fetchStyleBookEntryByExternalReferenceCode(
+						itemExternalReference.getExternalReferenceCode(),
+						StagingUtil.getLiveGroupId(groupId));
+		}
 
 		if (styleBookEntry == null) {
 			LogUtil.logOptionalReference(
-				StyleBookEntry.class,
-				itemExternalReference.getExternalReferenceCode(), companyId);
+				StyleBookEntry.class.getName(),
+				itemExternalReference.getExternalReferenceCode(),
+				itemExternalReference.getScope(), scopeGroupId);
 		}
 
-		return itemExternalReference.getExternalReferenceCode();
+		return new StyleBookEntryReference(
+			itemExternalReference.getExternalReferenceCode(),
+			styleBookEntryScopeERC);
 	}
 
 	private static void _importPortletConfiguration(
@@ -779,7 +816,9 @@ public class LayoutUtil {
 						return null;
 					}))) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The look and feel preferences cannot be modified using " +
+					"widget configuration");
 		}
 
 		if (configurationMap == null) {
@@ -883,10 +922,19 @@ public class LayoutUtil {
 			serviceContext.setExpandoBridgeAttributes(null);
 		}
 		else {
-			serviceContext.setExpandoBridgeAttributes(
+			Map<String, Serializable> expandoBridgeAttributes =
 				CustomFieldsUtil.toMap(
 					Layout.class.getName(), serviceContext.getCompanyId(),
-					pageSpecification.getCustomFields(), null));
+					pageSpecification.getCustomFields(),
+					LocaleUtil.getSiteDefault());
+
+			if (expandoBridgeAttributes != null) {
+				ExpandoUtil.fillMissingDefaultLocaleValues(
+					expandoBridgeAttributes);
+
+				serviceContext.setExpandoBridgeAttributes(
+					expandoBridgeAttributes);
+			}
 		}
 	}
 
@@ -964,7 +1012,8 @@ public class LayoutUtil {
 				Validator.isNotNull(
 					settings.getThemeSpritemapClientExtension())) {
 
-				throw new UnsupportedOperationException();
+				throw new IllegalArgumentException(
+					"Utility pages do not support client extensions");
 			}
 
 			return;
@@ -1047,10 +1096,15 @@ public class LayoutUtil {
 			}
 		}
 
+		StyleBookEntryReference styleBookEntryReference =
+			_getStyleBookEntryReference(
+				layout.getCompanyId(), serviceContext.getScopeGroupId(),
+				settings);
+
 		layout = _updateLayout(
 			layout, nameMap, titleMap, descriptionMap, keywordsMap, robotsMap,
-			_getStyleBookEntryERC(
-				layout.getCompanyId(), layout.getGroupId(), settings),
+			styleBookEntryReference.getStyleBookEntryERC(),
+			styleBookEntryReference.getStyleBookEntryScopeERC(),
 			faviconFileEntryERC, faviconFileEntryScopeERC,
 			_getMasterLayoutPageTemplateEntryERC(
 				serviceContext.getScopeGroupId(), layout, settings),
@@ -1066,8 +1120,8 @@ public class LayoutUtil {
 			Layout layout, Map<Locale, String> nameMap,
 			Map<Locale, String> titleMap, Map<Locale, String> descriptionMap,
 			Map<Locale, String> keywordsMap, Map<Locale, String> robotsMap,
-			String styleBookEntryERC, String faviconFileEntryERC,
-			String faviconFileEntryScopeERC,
+			String styleBookEntryERC, String styleBookEntryScopeERC,
+			String faviconFileEntryERC, String faviconFileEntryScopeERC,
 			String masterLayoutPageTemplateEntryERC,
 			Map<Locale, String> friendlyURLMap, ServiceContext serviceContext)
 		throws Exception {
@@ -1087,8 +1141,9 @@ public class LayoutUtil {
 			GetterUtil.getBoolean(
 				serviceContext.getAttribute("hidden"), layout.isHidden()),
 			friendlyURLMap, layout.getIconImage(), null, styleBookEntryERC,
-			faviconFileEntryERC, faviconFileEntryScopeERC,
-			masterLayoutPageTemplateEntryERC, serviceContext);
+			styleBookEntryScopeERC, faviconFileEntryERC,
+			faviconFileEntryScopeERC, masterLayoutPageTemplateEntryERC,
+			serviceContext);
 	}
 
 	private static Layout _updateLookAndFeel(Layout layout, Settings settings)
@@ -1164,8 +1219,8 @@ public class LayoutUtil {
 				new HashMap<>();
 
 			for (SegmentsExperience segmentsExperience :
-					SegmentsExperienceServiceUtil.getSegmentsExperiences(
-						layout.getGroupId(), layout.getPlid(), true)) {
+					SegmentsExperienceLocalServiceUtil.getSegmentsExperiences(
+						layout.getGroupId(), layout.getPlid())) {
 
 				originalSegmentsExperiencesMap.put(
 					segmentsExperience.getExternalReferenceCode(),
@@ -1222,11 +1277,13 @@ public class LayoutUtil {
 					actualSegmentsExperiencesMap.get(
 						pageExperience.getExternalReferenceCode());
 
-				SegmentsExperienceServiceUtil.updateSegmentsExperiencePriority(
-					actualSegmentsExperience.getSegmentsExperienceId(),
-					SegmentsExperienceUtil.getPriority(
-						pageExperience.getKey(), layout,
-						pageExperience.getPriority()));
+				SegmentsExperienceLocalServiceUtil.
+					updateSegmentsExperiencePriority(
+						serviceContext.getUserId(),
+						actualSegmentsExperience.getSegmentsExperienceId(),
+						SegmentsExperienceUtil.getPriority(
+							pageExperience.getKey(), layout,
+							pageExperience.getPriority()));
 			}
 		}
 	}
@@ -1267,7 +1324,9 @@ public class LayoutUtil {
 			(widgetPageSections.length !=
 				layoutTypePortlet.getNumOfColumns())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The widget layout template columns do not match the widget " +
+					"page columns");
 		}
 
 		List<String> columns = layoutTypePortlet.getColumns();
@@ -1304,7 +1363,9 @@ public class LayoutUtil {
 				if (!columns.contains(widgetPageSection.getId()) ||
 					(!layoutCustomizable && customizable)) {
 
-					throw new UnsupportedOperationException();
+					throw new IllegalArgumentException(
+						"The widget page section is missing, or the page is " +
+							"not customizable");
 				}
 
 				for (WidgetPageWidgetInstance widgetPageWidgetInstance :
@@ -1333,5 +1394,27 @@ public class LayoutUtil {
 		ListUtil.fromArray(
 			"portletSetupUseCustomTitle", "portletSetupPortletDecoratorId",
 			"portletSetupCss");
+
+	private static class StyleBookEntryReference {
+
+		public StyleBookEntryReference(
+			String styleBookEntryERC, String styleBookEntryScopeERC) {
+
+			_styleBookEntryERC = styleBookEntryERC;
+			_styleBookEntryScopeERC = styleBookEntryScopeERC;
+		}
+
+		public String getStyleBookEntryERC() {
+			return _styleBookEntryERC;
+		}
+
+		public String getStyleBookEntryScopeERC() {
+			return _styleBookEntryScopeERC;
+		}
+
+		private final String _styleBookEntryERC;
+		private final String _styleBookEntryScopeERC;
+
+	}
 
 }

@@ -235,3 +235,4 @@ public class DataSourceLiferayAnalyticsURL implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1430618226

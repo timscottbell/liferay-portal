@@ -31,6 +31,7 @@ export default function SaveButtons({
 	selectedLanguageId,
 	showPublishModal,
 	timeZone,
+	use12Hours,
 	workflowEnabled,
 }) {
 	const formId = `${portletNamespace}fm1`;
@@ -118,6 +119,8 @@ export default function SaveButtons({
 	};
 
 	const onClick = async (action, directSubmit = false) => {
+		removeAlert();
+
 		if (!(await validateRequiredFields(formId))) {
 			return;
 		}
@@ -157,8 +160,6 @@ export default function SaveButtons({
 		}
 
 		lockRef.current?.lock();
-
-		removeAlert();
 
 		const workflowActionInput = document.getElementById(
 			`${portletNamespace}workflowAction`
@@ -223,6 +224,12 @@ export default function SaveButtons({
 				}
 			}
 		);
+
+		const form = document.getElementById(formId);
+
+		if (form) {
+			form.requestSubmit();
+		}
 	};
 
 	const validateRequiredFields = async (formId) => {
@@ -238,9 +245,19 @@ export default function SaveButtons({
 			`${portletNamespace}dataEngineLayoutRenderer`
 		);
 
-		const fields = await renderer.reactComponentRef.current.getFields();
+		try {
+			const [, isValid] =
+				await renderer.reactComponentRef.current.validate();
 
-		return fields.every((field) => field.valid === true);
+			return isValid;
+		}
+		catch (error) {
+			if (error?.message && error.name !== 'AbortError') {
+				showAlert(error.message);
+			}
+
+			return false;
+		}
 	};
 
 	useEffect(() => {
@@ -271,7 +288,7 @@ export default function SaveButtons({
 									'save-as-draft-with-permissions'
 								)
 					}
-					type={articleId ? 'submit' : 'button'}
+					type="button"
 				>
 					{saveButtonLabel}
 				</ClayButton>
@@ -288,7 +305,7 @@ export default function SaveButtons({
 						: Liferay.Language.get('publish-x'),
 					Liferay.Language.get('article')
 				)}
-				type="submit"
+				type="button"
 			>
 				{publishButtonLabel}
 			</ClayButton>
@@ -357,6 +374,7 @@ export default function SaveButtons({
 					portletNamespace={portletNamespace}
 					showPermissionsOptions={showPublishModal}
 					timeZone={timeZone}
+					use12Hours={use12Hours}
 					workflowEnabled={workflowEnabled}
 				/>
 			) : null}

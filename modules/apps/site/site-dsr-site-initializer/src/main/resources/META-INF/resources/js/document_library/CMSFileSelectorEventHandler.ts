@@ -19,15 +19,16 @@ interface CMSFileEventData {
 interface CMSFileItem {
 	description: string;
 	embedded: {
-		file: {
+		file?: {
 			link?: {
 				href?: string;
 			};
-			name?: string;
+			mimeType: string;
 			thumbnailURL: string;
 		};
 		id: number;
 		title: string;
+		videoURL?: string;
 	};
 	title: string;
 }
@@ -44,7 +45,7 @@ function uploadCMSFileToDocumentLibrary(
 			return Promise.resolve();
 		}
 
-		const fileName = item.embedded?.file?.name || item.title || 'untitled';
+		const fileName = item.title || 'untitled';
 
 		return Liferay.Util.fetch(fileLink)
 			.then((response: Response) => response.blob())
@@ -68,7 +69,15 @@ function uploadCMSFileToDocumentLibrary(
 					throw new Error(`Failed to upload ${fileName}`);
 				}
 
-				return response.json();
+				return response.json().then((item) => {
+					Liferay.fire('fileEntrySaved', {
+						fileEntryId: item.id,
+						fileName: item.fileName,
+						groupId: Liferay.ThemeDisplay.getScopeGroupId(),
+					});
+
+					return item;
+				});
 			});
 	});
 
@@ -95,6 +104,7 @@ function handleOpenCMSFileSelector(event: {data?: CMSFileEventData}) {
 		config: {
 			multiSelect: true,
 		},
+		folderMemoryKey: `cms-file-selector-document-library:${groupId}`,
 		groupId,
 		onSelect(items: CMSFileItem[]) {
 			if (!items || !items.length) {

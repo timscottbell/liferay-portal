@@ -54,6 +54,7 @@ import com.liferay.portal.kernel.util.CalendarFactoryUtil;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Localization;
 import com.liferay.portal.kernel.util.PrefsPropsUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
@@ -695,10 +696,6 @@ public class LDAPUserImporterImpl implements LDAPUserImporter {
 		}
 
 		return user;
-	}
-
-	protected String escapeLDAPName(String ldapName) {
-		return StringUtil.replace(ldapName, '\\', "\\\\");
 	}
 
 	protected User getUser(long companyId, LDAPUser ldapUser) throws Exception {
@@ -1673,7 +1670,7 @@ public class LDAPUserImporterImpl implements LDAPUserImporter {
 					(value != null)) {
 
 					ExpandoValue existingValue =
-						_expandoValueLocalService.getValue(
+						_expandoValueLocalService.fetchValue(
 							expandoBridge.getCompanyId(),
 							expandoBridge.getClassName(),
 							ExpandoTableConstants.DEFAULT_TABLE_NAME, name,
@@ -1822,14 +1819,12 @@ public class LDAPUserImporterImpl implements LDAPUserImporter {
 			passwordReset = user.isPasswordReset();
 		}
 
-		ServiceContext serviceContext = ldapUser.getServiceContext();
 		boolean updatedCustomMappings = false;
 
 		if (Validator.isNotNull(ldapServerConfiguration.modifiedDate())) {
 			Date serverConfigurationModifiedDate = DateUtil.parseDate(
 				"EEE MMM d HH:mm:ss zzz yyyy",
-				ldapServerConfiguration.modifiedDate(),
-				serviceContext.getLocale());
+				ldapServerConfiguration.modifiedDate(), LocaleUtil.US);
 
 			updatedCustomMappings = serverConfigurationModifiedDate.after(
 				new Date(_lastImportTime));
@@ -1933,6 +1928,8 @@ public class LDAPUserImporterImpl implements LDAPUserImporter {
 		int birthdayDay = birthdayCal.get(Calendar.DAY_OF_MONTH);
 		int birthdayYear = birthdayCal.get(Calendar.YEAR);
 
+		ServiceContext serviceContext = ldapUser.getServiceContext();
+
 		if (modifiedDate != null) {
 			serviceContext.setModifiedDate(modifiedDate);
 		}
@@ -2035,15 +2032,12 @@ public class LDAPUserImporterImpl implements LDAPUserImporter {
 			if (userGroup.isAddedByLDAPImport()) {
 				long userGroupId = userGroup.getUserGroupId();
 
-				if (userGroupIds.contains(userGroupId)) {
-					userGroupIds.remove(userGroupId);
-				}
-				else {
+				if (!userGroupIds.remove(userGroupId)) {
 					ExpandoColumn expandoColumn = _getOrAddExpandoColumn(
 						userGroup.getCompanyId());
 
 					ExpandoValue expandoValue =
-						_expandoValueLocalService.getValue(
+						_expandoValueLocalService.fetchValue(
 							expandoColumn.getTableId(),
 							expandoColumn.getColumnId(), userGroupId);
 

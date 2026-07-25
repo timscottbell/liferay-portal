@@ -55,7 +55,7 @@ import org.osgi.service.component.annotations.ReferenceScope;
  * @generated
  */
 @Component(
-	property = "resource.locator.key=/test/v1.0/SharedInternalModelBatchTestEntity",
+	property = "resource.locator.key=/portal-tools-rest-builder-test/v1.0/SharedInternalModelBatchTestEntity",
 	service = SharedInternalModelBatchTestEntityResource.Factory.class
 )
 @Generated("")
@@ -349,3 +349,4 @@ public class SharedInternalModelBatchTestEntityResourceFactoryImpl
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1590865998

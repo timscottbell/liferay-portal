@@ -31,7 +31,9 @@ import com.liferay.portal.kernel.service.permission.GroupPermissionUtil;
 import com.liferay.portal.kernel.service.permission.OrganizationPermissionUtil;
 import com.liferay.portal.kernel.service.permission.PortalPermissionUtil;
 import com.liferay.portal.kernel.service.permission.UserPermissionUtil;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.comparator.OrganizationIdComparator;
 import com.liferay.portal.service.base.OrganizationServiceBaseImpl;
@@ -42,6 +44,7 @@ import java.io.Serializable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides the remote service for accessing, adding, deleting, and updating
@@ -63,8 +66,7 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 	public void addGroupOrganizations(long groupId, long[] organizationIds)
 		throws PortalException {
 
-		GroupPermissionUtil.check(
-			getPermissionChecker(), groupId, ActionKeys.ASSIGN_MEMBERS);
+		_checkGroupOrganizationsPermission(groupId, organizationIds);
 
 		organizationLocalService.addGroupOrganizations(
 			groupId, organizationIds);
@@ -236,9 +238,8 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 
 		User user = getUser();
 
-		Organization organization =
-			organizationLocalService.fetchOrganizationByExternalReferenceCode(
-				externalReferenceCode, user.getCompanyId());
+		Organization organization = organizationPersistence.fetchByERC_C(
+			externalReferenceCode, user.getCompanyId());
 
 		if (organization == null) {
 			if (parentOrganizationId ==
@@ -393,7 +394,7 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 	public Organization fetchOrganization(long organizationId)
 		throws PortalException {
 
-		Organization organization = organizationLocalService.fetchOrganization(
+		Organization organization = organizationPersistence.fetchByPrimaryKey(
 			organizationId);
 
 		if (organization != null) {
@@ -409,9 +410,8 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		Organization organization =
-			organizationLocalService.fetchOrganizationByExternalReferenceCode(
-				externalReferenceCode, companyId);
+		Organization organization = organizationPersistence.fetchByERC_C(
+			externalReferenceCode, companyId);
 
 		if (organization != null) {
 			OrganizationPermissionUtil.check(
@@ -462,7 +462,7 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 	public Organization getOrganization(long organizationId)
 		throws PortalException {
 
-		Organization organization = organizationLocalService.getOrganization(
+		Organization organization = organizationPersistence.findByPrimaryKey(
 			organizationId);
 
 		OrganizationPermissionUtil.check(
@@ -476,9 +476,8 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		Organization organization =
-			organizationLocalService.getOrganizationByExternalReferenceCode(
-				externalReferenceCode, companyId);
+		Organization organization = organizationPersistence.findByERC_C(
+			externalReferenceCode, companyId);
 
 		OrganizationPermissionUtil.check(
 			getPermissionChecker(), organization, ActionKeys.VIEW);
@@ -700,8 +699,7 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 	public void setGroupOrganizations(long groupId, long[] organizationIds)
 		throws PortalException {
 
-		GroupPermissionUtil.check(
-			getPermissionChecker(), groupId, ActionKeys.ASSIGN_MEMBERS);
+		_checkGroupOrganizationsPermission(groupId, organizationIds);
 
 		organizationLocalService.setGroupOrganizations(
 			groupId, organizationIds);
@@ -717,8 +715,7 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 	public void unsetGroupOrganizations(long groupId, long[] organizationIds)
 		throws PortalException {
 
-		GroupPermissionUtil.check(
-			getPermissionChecker(), groupId, ActionKeys.ASSIGN_MEMBERS);
+		_checkGroupOrganizationsPermission(groupId, organizationIds);
 
 		organizationLocalService.unsetGroupOrganizations(
 			groupId, organizationIds);
@@ -896,6 +893,30 @@ public class OrganizationServiceImpl extends OrganizationServiceBaseImpl {
 			externalReferenceCode, organizationId, parentOrganizationId, name,
 			type, regionId, countryId, statusListTypeId, comments, true, null,
 			site, null, null, null, null, null, serviceContext);
+	}
+
+	private void _checkGroupOrganizationsPermission(
+			long groupId, long[] organizationIds)
+		throws PortalException {
+
+		if (ArrayUtil.isEmpty(organizationIds)) {
+			return;
+		}
+
+		GroupPermissionUtil.check(
+			getPermissionChecker(), groupId, ActionKeys.ASSIGN_MEMBERS);
+
+		Set<Long> userOrganizationIds = SetUtil.fromArray(
+			organizationLocalService.getUserOrganizationIds(getUserId(), true));
+
+		for (long organizationId : organizationIds) {
+			if (userOrganizationIds.contains(organizationId)) {
+				continue;
+			}
+
+			OrganizationPermissionUtil.check(
+				getPermissionChecker(), organizationId, ActionKeys.VIEW);
+		}
 	}
 
 	@BeanReference(type = AssetCategoryLocalService.class)

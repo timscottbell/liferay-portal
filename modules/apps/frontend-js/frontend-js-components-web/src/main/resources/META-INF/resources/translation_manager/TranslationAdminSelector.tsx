@@ -126,6 +126,7 @@ export default function TranslationAdminSelector({
 	const [activeLanguageIds, setActiveLanguageIds] = useState<
 		Liferay.Language.Locale[]
 	>(initialActiveLanguageIds);
+	const isFirstRenderRef = useRef<Liferay.Language.Locale[] | null>(null);
 	const [selectedLanguageId, setSelectedLanguageId] =
 		useState<Liferay.Language.Locale>(initialSelectedLanguageId);
 	const [selectorDropdownActive, setSelectorDropdownActive] = useState(false);
@@ -163,7 +164,14 @@ export default function TranslationAdminSelector({
 	}, [availableLocales, defaultLanguageId, selectedLanguageId]);
 
 	useEffect(() => {
-		onActiveLanguageIdsChange(activeLanguageIds);
+		if (
+			isFirstRenderRef.current === null ||
+			JSON.stringify(isFirstRenderRef.current) !==
+				JSON.stringify(activeLanguageIds)
+		) {
+			onActiveLanguageIdsChange(activeLanguageIds);
+			isFirstRenderRef.current = activeLanguageIds;
+		}
 	}, [activeLanguageIds, onActiveLanguageIdsChange]);
 
 	useEffect(() => {
@@ -171,13 +179,8 @@ export default function TranslationAdminSelector({
 	}, [selectedLanguageId, onSelectedLanguageIdChange]);
 
 	useEffect(() => {
-		if (
-			JSON.stringify(activeLanguageIds) !==
-			JSON.stringify(initialActiveLanguageIds)
-		) {
-			setActiveLanguageIds(initialActiveLanguageIds);
-		}
-	}, [activeLanguageIds, initialActiveLanguageIds]);
+		setActiveLanguageIds(initialActiveLanguageIds);
+	}, [initialActiveLanguageIds]);
 
 	useEffect(() => {
 		setSelectedLanguageId(initialSelectedLanguageId);

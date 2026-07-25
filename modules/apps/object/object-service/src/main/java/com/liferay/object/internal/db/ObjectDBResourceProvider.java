@@ -17,9 +17,9 @@ import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.db.DBResourceProvider;
 import com.liferay.portal.kernel.dao.db.DBInspector;
 import com.liferay.portal.kernel.dao.jdbc.DataAccess;
+import com.liferay.portal.kernel.db.DBResourceProvider;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
@@ -290,13 +290,18 @@ public class ObjectDBResourceProvider implements DBResourceProvider {
 				continue;
 			}
 
+			ObjectDefinition objectDefinition1 = objectDefinitions.get(
+				objectRelationship.getObjectDefinitionId1());
+			ObjectDefinition objectDefinition2 = objectDefinitions.get(
+				objectRelationship.getObjectDefinitionId2());
+
+			if ((objectDefinition1 == null) || (objectDefinition2 == null)) {
+				continue;
+			}
+
 			Map<String, String> pkObjectFieldDBColumnNames =
 				ObjectRelationshipUtil.getPKObjectFieldDBColumnNames(
-					objectDefinitions.get(
-						objectRelationship.getObjectDefinitionId1()),
-					objectDefinitions.get(
-						objectRelationship.getObjectDefinitionId2()),
-					false);
+					objectDefinition1, objectDefinition2, false);
 
 			String pkObjectFieldDBColumnName1 = pkObjectFieldDBColumnNames.get(
 				"pkObjectFieldDBColumnName1");

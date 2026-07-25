@@ -32,6 +32,7 @@ import com.liferay.object.service.ObjectDefinitionLocalServiceUtil;
 import com.liferay.object.service.ObjectEntryLocalServiceUtil;
 import com.liferay.object.service.ObjectRelationshipLocalServiceUtil;
 import com.liferay.object.web.internal.info.item.handler.ObjectEntryInfoItemExceptionRequestHandler;
+import com.liferay.object.web.internal.util.ObjectEntryCMSInfoItemFieldValuesUtil;
 import com.liferay.object.web.internal.util.ObjectEntryUtil;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
@@ -43,6 +44,7 @@ import com.liferay.portal.kernel.util.DateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.vulcan.dto.converter.DTOConverterContext;
@@ -100,10 +102,17 @@ public class ObjectEntryInfoItemFieldValuesUpdater
 
 		ThemeDisplay themeDisplay = serviceContext.getThemeDisplay();
 
-		Map<String, Object> curProperties = _getProperties(
-			objectEntry, infoItemFieldValues);
-
 		try {
+			infoItemFieldValues =
+				ObjectEntryCMSInfoItemFieldValuesUtil.
+					normalizeInfoItemFieldValues(
+						infoItemFieldValues, objectEntry,
+						_objectEntryManagerRegistry,
+						_objectScopeProviderRegistry, serviceContext);
+
+			Map<String, Object> curProperties = _getProperties(
+				objectEntry, infoItemFieldValues);
+
 			String scopeKey = ObjectEntryInfoItemUtil.getScopeKey(
 				objectEntry.getGroupId(), _objectDefinition,
 				_objectScopeProviderRegistry);
@@ -156,19 +165,25 @@ public class ObjectEntryInfoItemFieldValuesUpdater
 
 				dtoObjectEntry.setDisplayDate(
 					() -> {
-						if (curProperties.containsKey("displayDate")) {
+						Map.Entry<String, Object> displayDateEntry =
+							MapUtil.getEntry(curProperties, "displayDate");
+
+						if (displayDateEntry != null) {
 							return GetterUtil.getDate(
-								curProperties.get("displayDate"),
-								_dateTimeFormatter, null);
+								displayDateEntry.getValue(), _dateTimeFormatter,
+								null);
 						}
 
 						return objectEntry.getDisplayDate();
 					});
 				dtoObjectEntry.setExpirationDate(
 					() -> {
-						if (curProperties.containsKey("expirationDate")) {
+						Map.Entry<String, Object> expirationDateEntry =
+							MapUtil.getEntry(curProperties, "expirationDate");
+
+						if (expirationDateEntry != null) {
 							return GetterUtil.getDate(
-								curProperties.get("expirationDate"),
+								expirationDateEntry.getValue(),
 								_dateTimeFormatter, null);
 						}
 
@@ -176,10 +191,13 @@ public class ObjectEntryInfoItemFieldValuesUpdater
 					});
 				dtoObjectEntry.setReviewDate(
 					() -> {
-						if (curProperties.containsKey("reviewDate")) {
+						Map.Entry<String, Object> reviewDateEntry =
+							MapUtil.getEntry(curProperties, "reviewDate");
+
+						if (reviewDateEntry != null) {
 							return GetterUtil.getDate(
-								curProperties.get("reviewDate"),
-								_dateTimeFormatter, null);
+								reviewDateEntry.getValue(), _dateTimeFormatter,
+								null);
 						}
 
 						return objectEntry.getReviewDate();
@@ -264,8 +282,19 @@ public class ObjectEntryInfoItemFieldValuesUpdater
 	private Map<String, Object> _getProperties(
 		ObjectEntry objectEntry, InfoItemFieldValues infoItemFieldValues) {
 
+		for (InfoFieldValue<Object> infoFieldValue :
+				infoItemFieldValues.getInfoFieldValues()) {
+
+			if (infoFieldValue.getValue() instanceof RelatedInfoFieldValue) {
+				return ObjectEntryUtil.toProperties(
+					infoItemFieldValues, _objectDefinition,
+					objectEntry.getValues());
+			}
+		}
+
 		return ObjectEntryUtil.toProperties(
-			infoItemFieldValues, _objectDefinition, objectEntry.getValues());
+			objectEntry.getCompanyId(), infoItemFieldValues,
+			objectEntry.getValues());
 	}
 
 	private void _relateMainObjectEntry(

@@ -15,6 +15,7 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Portlet;
 import com.liferay.portal.kernel.model.ResourceConstants;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.PortletLocalServiceUtil;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.upgrade.UpgradeProcess;
@@ -47,7 +48,7 @@ public class ResourcePermissionPostupgradeDataCleanupProcess
 	@Override
 	public void cleanUp() throws Exception {
 		if (!PostUpgradeDataCleanupProcessUtil.isEveryLiferayBundleResolved()) {
-			if (_log.isWarnEnabled()) {
+			if (_log.isWarnEnabled() && CompanyThreadLocal.isDefaultCompany()) {
 				_log.warn(
 					StringBundler.concat(
 						ResourcePermissionPostupgradeDataCleanupProcess.class.
@@ -78,15 +79,15 @@ public class ResourcePermissionPostupgradeDataCleanupProcess
 
 		try (PreparedStatement preparedStatement = _connection.prepareStatement(
 				StringBundler.concat(
-					"select count(1), name from ResourcePermission where name ",
-					"like 'com\\_liferay\\_%' ", escapeClause,
+					"select count(1) as count, name from ResourcePermission ",
+					"where name like 'com\\_liferay\\_%' ", escapeClause,
 					"and scope = ? group by name"))) {
 
 			preparedStatement.setInt(1, ResourceConstants.SCOPE_INDIVIDUAL);
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				while (resultSet.next()) {
-					String name = resultSet.getString(2);
+					String name = resultSet.getString("name");
 
 					if (portletIds.contains(name)) {
 						continue;
@@ -95,10 +96,8 @@ public class ResourcePermissionPostupgradeDataCleanupProcess
 					_resourcePermissionLocalService.deleteResourcePermissions(
 						name);
 
-					int count = resultSet.getInt(1);
-
 					DataCleanupLoggingUtil.logDelete(
-						_log, count,
+						_log, resultSet.getLong("count"),
 						_dbInspector.normalizeName("ResourcePermission"),
 						StringBundler.concat("\"", name, "\" was not found"));
 				}

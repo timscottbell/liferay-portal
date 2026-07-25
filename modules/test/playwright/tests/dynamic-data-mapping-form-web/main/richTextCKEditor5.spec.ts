@@ -14,7 +14,7 @@ import {deleteItems} from './utils/deleteItems';
 
 const test = mergeTests(
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 	}),
 	formsPagesTest,
 	loginTest()
@@ -23,7 +23,7 @@ const test = mergeTests(
 const xssDisabledTest = mergeTests(
 	test,
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 		'LPD-31212': {enabled: false},
 	})
 );
@@ -224,6 +224,8 @@ const assertRichTextContent = async (content, expected, newTabPage) => {
 			'xpath=//input[starts-with(@name, "_com_liferay_dynamic_data_mapping_form_web_portlet_DDMFormPortlet_ddm$$RichText") and @type="hidden"]'
 		)
 		.first();
+
+	await sourceButton.click();
 
 	await expect(input).toHaveValue(expected);
 

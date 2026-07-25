@@ -1,7 +1,7 @@
 dependencies {
-	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-annotations", version: "2.18.2"
-	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-core", version: "2.18.2"
-	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.18.2"
+	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-annotations", version: "2.18.6"
+	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-core", version: "2.18.6"
+	compileOnly group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.18.6"
 	compileOnly group: "com.liferay", name: "biz.aQute.bnd.annotation", version: "4.2.0.LIFERAY-PATCHED-2"
 	compileOnly group: "com.liferay", name: "jakarta.ws.rs", version: "3.1.0.LIFERAY-PATCHED-1"
 	compileOnly group: "com.liferay", name: "org.apache.felix.gogo.runtime", version: "1.1.2.LIFERAY-PATCHED-1"
@@ -23,6 +23,7 @@ dependencies {
 	compileOnly project(":apps:client-extension:client-extension-api")
 	compileOnly project(":apps:client-extension:client-extension-type-api")
 	compileOnly project(":apps:configuration-admin:configuration-admin-api")
+	compileOnly project(":apps:depot:depot-api")
 	compileOnly project(":apps:document-library:document-library-api")
 	compileOnly project(":apps:dynamic-data-mapping:dynamic-data-mapping-api")
 	compileOnly project(":apps:export-import:export-import-api")
@@ -63,6 +64,7 @@ dependencies {
 	compileOnly project(":apps:xstream:xstream-configurator-api")
 	compileOnly project(":core:osgi-service-tracker-collections")
 	compileOnly project(":core:petra:petra-function")
+	compileOnly project(":core:petra:petra-io")
 	compileOnly project(":core:petra:petra-lang")
 	compileOnly project(":core:petra:petra-reflect")
 	compileOnly project(":core:petra:petra-sql-dsl-api")

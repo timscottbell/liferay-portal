@@ -36,10 +36,13 @@ import com.liferay.object.service.ObjectFieldLocalServiceUtil;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
+import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.UserGroup;
 import com.liferay.portal.kernel.model.role.RoleConstants;
+import com.liferay.portal.kernel.service.GroupLocalServiceUtil;
 import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.UserGroupLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -55,7 +58,6 @@ import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -225,14 +227,21 @@ public abstract class BaseNotificationType implements NotificationType {
 
 		if (FeatureFlagManagerUtil.isEnabled(
 				notificationContext.getCompanyId(), "LPD-17564") &&
+			!FeatureFlagManagerUtil.isEnabled(
+				notificationContext.getCompanyId(), "LPD-62272") &&
 			!notificationTemplate.isSystem() &&
 			StringUtil.startsWith(
 				notificationTemplate.getExternalReferenceCode(),
 				NotificationTemplateConstants.
 					EXTERNAL_REFERENCE_CODE_PREFIX_SYSTEM_NOTIFICATION_TEMPLATE)) {
 
-			throw new NotificationTemplateExternalReferenceCodeException.
-				MustNotStartWithPrefix();
+			Group group = GroupLocalServiceUtil.fetchGroup(
+				notificationContext.getCompanyId(), GroupConstants.DSR);
+
+			if (group == null) {
+				throw new NotificationTemplateExternalReferenceCodeException.
+					MustNotStartWithPrefix();
+			}
 		}
 
 		if (notificationTemplate.getObjectDefinitionId() > 0) {
@@ -517,9 +526,9 @@ public abstract class BaseNotificationType implements NotificationType {
 			notificationRecipientId);
 		notificationRecipientSetting.setName(name);
 
-		if (value instanceof LinkedHashMap) {
+		if (value instanceof Map) {
 			notificationRecipientSetting.setValueMap(
-				LocalizedMapUtil.getLocalizedMap((LinkedHashMap)value));
+				LocalizedMapUtil.getLocalizedMap((Map)value));
 		}
 		else {
 			notificationRecipientSetting.setValue(String.valueOf(value));

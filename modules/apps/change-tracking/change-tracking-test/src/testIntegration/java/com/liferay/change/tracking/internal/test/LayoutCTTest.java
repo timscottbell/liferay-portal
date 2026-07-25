@@ -176,6 +176,7 @@ public class LayoutCTTest {
 		_ctCollectionLocalService.deleteCTCollection(_ctCollection);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select * from Layout where ctCollectionId = ?")) {
 
@@ -206,6 +207,7 @@ public class LayoutCTTest {
 		_ctCollectionLocalService.deleteCTCollection(_ctCollection);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select * from Layout where ctCollectionId = ?")) {
 
@@ -237,6 +239,7 @@ public class LayoutCTTest {
 		_ctCollectionLocalService.deleteCTCollection(_ctCollection);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select * from Layout where ctCollectionId = ?")) {
 
@@ -270,6 +273,7 @@ public class LayoutCTTest {
 		_ctCollectionLocalService.deleteCTCollection(_ctCollection);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select * from Layout where ctCollectionId = ?")) {
 
@@ -602,6 +606,7 @@ public class LayoutCTTest {
 			_ctCollection.getUserId(), _ctCollection.getCtCollectionId());
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				StringBundler.concat(
 					"select changeType from CTEntry inner join Layout on ",
@@ -627,6 +632,7 @@ public class LayoutCTTest {
 		}
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				StringBundler.concat(
 					"select changeType from CTEntry inner join Layout on ",
@@ -657,6 +663,33 @@ public class LayoutCTTest {
 				Assert.assertFalse(resultSet.next());
 			}
 		}
+	}
+
+	@Test
+	public void testPublishDeleteLayoutWithAssetTag() throws Exception {
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		try (SafeCloseable safeCloseable =
+				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
+					_ctCollection.getCtCollectionId())) {
+
+			_layoutLocalService.updateAsset(
+				layout.getUserId(), layout, null,
+				new String[] {RandomTestUtil.randomString()});
+
+			_layoutLocalService.deleteLayout(layout);
+		}
+
+		Assert.assertNotNull(_layoutLocalService.fetchLayout(layout.getPlid()));
+
+		_ctProcessLocalService.addCTProcess(
+			_ctCollection.getUserId(), _ctCollection.getCtCollectionId());
+
+		Assert.assertNull(_layoutLocalService.fetchLayout(layout.getPlid()));
+
+		Assert.assertNull(
+			_assetEntryLocalService.fetchEntry(
+				Layout.class.getName(), layout.getPlid()));
 	}
 
 	@Test
@@ -1167,6 +1200,7 @@ public class LayoutCTTest {
 			Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
 
 			try (Connection connection = DataAccess.getConnection();
+
 				PreparedStatement preparedStatement =
 					connection.prepareStatement(
 						"select ctCollectionId from Layout where plid = ?")) {
@@ -1194,6 +1228,7 @@ public class LayoutCTTest {
 			Assert.assertNull(ctEntry);
 
 			try (Connection connection = DataAccess.getConnection();
+
 				PreparedStatement preparedStatement =
 					connection.prepareStatement(
 						"select * from Layout where plid = ?")) {
@@ -1220,6 +1255,7 @@ public class LayoutCTTest {
 			layout = _layoutLocalService.updateLayout(layout);
 
 			try (Connection connection = DataAccess.getConnection();
+
 				PreparedStatement preparedStatement =
 					connection.prepareStatement(
 						"select count(*) as count from Layout where plid = " +
@@ -1249,6 +1285,7 @@ public class LayoutCTTest {
 				CTConstants.CT_CHANGE_TYPE_DELETION, ctEntry.getChangeType());
 
 			try (Connection connection = DataAccess.getConnection();
+
 				PreparedStatement preparedStatement =
 					connection.prepareStatement(
 						"select ctCollectionId from Layout where plid = ?")) {
@@ -1317,6 +1354,7 @@ public class LayoutCTTest {
 					layout.getRobotsMap(), layout.getType(), layout.isHidden(),
 					layout.getFriendlyURLMap(), false, null,
 					layout.getStyleBookEntryERC(),
+					layout.getStyleBookEntryScopeERC(),
 					layout.getFaviconFileEntryERC(),
 					layout.getFaviconFileEntryScopeERC(),
 					layout.getMasterLayoutPageTemplateEntryERC(),
@@ -1432,45 +1470,45 @@ public class LayoutCTTest {
 	}
 
 	@Inject
-	private static AssetEntryLocalService _assetEntryLocalService;
+	private AssetEntryLocalService _assetEntryLocalService;
 
 	@Inject
-	private static AssetTagLocalService _assetTagLocalService;
-
-	@Inject
-	private static ClassNameLocalService _classNameLocalService;
-
-	@Inject
-	private static CTCollectionLocalService _ctCollectionLocalService;
-
-	@Inject
-	private static CTEntryLocalService _ctEntryLocalService;
-
-	@Inject
-	private static CTProcessLocalService _ctProcessLocalService;
-
-	@Inject
-	private static Language _language;
-
-	private static long _layoutClassNameId;
-
-	@Inject
-	private static LayoutLocalService _layoutLocalService;
-
-	@Inject
-	private static LayoutPermission _layoutPermission;
+	private AssetTagLocalService _assetTagLocalService;
 
 	@Inject
 	private BulkLayoutConverter _bulkLayoutConverter;
 
+	@Inject
+	private ClassNameLocalService _classNameLocalService;
+
 	private CTCollection _ctCollection;
+
+	@Inject
+	private CTCollectionLocalService _ctCollectionLocalService;
 
 	@DeleteAfterTestRun
 	private final List<CTCollection> _ctCollections = new ArrayList<>();
 
+	@Inject
+	private CTEntryLocalService _ctEntryLocalService;
+
+	@Inject
+	private CTProcessLocalService _ctProcessLocalService;
+
 	private Group _group;
 
 	@Inject
+	private Language _language;
+
+	private long _layoutClassNameId;
+
+	@Inject
+	private LayoutLocalService _layoutLocalService;
+
+	@Inject
 	private LayoutLockManager _layoutLockManager;
+
+	@Inject
+	private LayoutPermission _layoutPermission;
 
 }

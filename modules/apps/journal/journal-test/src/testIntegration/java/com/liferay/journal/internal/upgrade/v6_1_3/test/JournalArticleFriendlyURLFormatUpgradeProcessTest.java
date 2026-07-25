@@ -6,6 +6,7 @@
 package com.liferay.journal.internal.upgrade.v6_1_3.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
 import com.liferay.friendly.url.model.FriendlyURLEntryLocalization;
 import com.liferay.friendly.url.test.util.BaseFriendlyURLFormatUpgradeProcessTestCase;
 import com.liferay.journal.model.JournalArticle;
@@ -14,6 +15,7 @@ import com.liferay.journal.service.JournalArticleResourceLocalService;
 import com.liferay.portal.kernel.cache.MultiVMPool;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.upgrade.UpgradeProcess;
+import com.liferay.portal.kernel.util.FriendlyURLNormalizer;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.test.log.LogCapture;
@@ -64,6 +66,35 @@ public class JournalArticleFriendlyURLFormatUpgradeProcessTest
 		_runUpgrade();
 
 		_assertURLTitle("test/test");
+	}
+
+	@Test
+	public void testUpgradeForCapitalSpecialCharacter() throws Exception {
+		_addJournalArticle("test001óóóÓ");
+
+		_runUpgrade();
+
+		_assertURLTitle(
+			_friendlyURLNormalizer.normalizeWithEncoding("test001óóóó"));
+	}
+
+	@Test
+	public void testUpgradeKeepsAlreadyNormalizedURLTitleWithDuplicateSibling()
+		throws Exception {
+
+		_addJournalArticle("test");
+
+		JournalArticle journalArticle = _journalArticle;
+
+		_addJournalArticle("Test");
+
+		_runUpgrade();
+
+		_assertURLTitle("test-1");
+
+		_journalArticle = journalArticle;
+
+		_assertURLTitle("test");
 	}
 
 	@Test
@@ -138,7 +169,10 @@ public class JournalArticleFriendlyURLFormatUpgradeProcessTest
 
 		FriendlyURLEntryLocalization friendlyURLEntryLocalization =
 			friendlyURLEntryLocalService.fetchFriendlyURLEntryLocalization(
-				group.getGroupId(), _classNameId, languageId, urlTitle);
+				group.getGroupId(), _classNameId,
+				FriendlyURLEntryConstants.
+					FRIENDLY_URL_ENTRY_PARENT_CLASS_PK_DEFAULT,
+				languageId, urlTitle);
 
 		Assert.assertEquals(
 			urlTitle, friendlyURLEntryLocalization.getUrlTitle());
@@ -174,22 +208,26 @@ public class JournalArticleFriendlyURLFormatUpgradeProcessTest
 		"com.liferay.journal.internal.upgrade.v6_1_3." +
 			"JournalArticleFriendlyURLFormatUpgradeProcess";
 
-	@Inject
-	private static JournalArticleResourceLocalService
-		_journalArticleResourceLocalService;
-
-	@Inject(
-		filter = "(&(component.name=com.liferay.journal.internal.upgrade.registry.JournalServiceUpgradeStepRegistrator))"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	private long _classNameId;
+
+	@Inject
+	private FriendlyURLNormalizer _friendlyURLNormalizer;
+
 	private JournalArticle _journalArticle;
 
 	@Inject
 	private JournalArticleLocalService _journalArticleLocalService;
 
 	@Inject
+	private JournalArticleResourceLocalService
+		_journalArticleResourceLocalService;
+
+	@Inject
 	private MultiVMPool _multiVMPool;
+
+	@Inject(
+		filter = "(&(component.name=com.liferay.journal.internal.upgrade.registry.JournalServiceUpgradeStepRegistrator))"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

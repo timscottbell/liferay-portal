@@ -7,7 +7,6 @@ package com.liferay.portal.vulcan.util;
 
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
-import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -71,16 +70,23 @@ public class GroupUtil {
 	}
 
 	public static String getScopeKey(Map<String, Serializable> parameters) {
-		if (parameters.containsKey("scopeKey")) {
-			return String.valueOf(parameters.get("scopeKey"));
+		Serializable scopeKey = parameters.get("scopeKey");
+
+		if (scopeKey != null) {
+			return String.valueOf(scopeKey);
 		}
 
-		if (parameters.containsKey("siteExternalReferenceCode")) {
-			return String.valueOf(parameters.get("siteExternalReferenceCode"));
+		Serializable siteExternalReferenceCode = parameters.get(
+			"siteExternalReferenceCode");
+
+		if (siteExternalReferenceCode != null) {
+			return String.valueOf(siteExternalReferenceCode);
 		}
 
-		if (parameters.containsKey("siteId")) {
-			return String.valueOf(parameters.get("siteId"));
+		Serializable siteId = parameters.get("siteId");
+
+		if (siteId != null) {
+			return String.valueOf(siteId);
 		}
 
 		return null;
@@ -105,10 +111,7 @@ public class GroupUtil {
 	private static boolean _checkGroup(Group group) {
 		if ((group != null) &&
 			(_isDepotOrSite(group) || _isDepotOrSite(group.getLiveGroup()) ||
-			 group.isCMS() ||
-			 (group.isLayoutSetPrototype() &&
-			  (ExportImportThreadLocal.isExportInProcess() ||
-			   ExportImportThreadLocal.isImportInProcess())) ||
+			 group.isCMS() || group.isLayoutSetPrototype() ||
 			 group.isUserGroup())) {
 
 			return true;

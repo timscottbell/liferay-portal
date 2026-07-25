@@ -14,6 +14,7 @@ import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.DropdownItem;
 import com.liferay.info.localized.InfoLocalizedValue;
 import com.liferay.layout.test.util.LayoutTestUtil;
+import com.liferay.object.constants.ObjectActionKeys;
 import com.liferay.object.constants.ObjectDefinitionConstants;
 import com.liferay.object.constants.ObjectDefinitionSettingConstants;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
@@ -40,6 +41,7 @@ import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.role.RoleConstants;
@@ -71,8 +73,10 @@ import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.PropsUtil;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
@@ -110,20 +114,27 @@ import org.springframework.mock.web.MockHttpServletRequest;
 public abstract class BaseSectionDisplayContextTestCase
 	extends BaseDisplayContextTestCase {
 
-	public HashMap<String, Object> getAdditionalProps() throws Exception {
+	public Map<String, Object> getAdditionalProps() throws Exception {
 		return ReflectionTestUtil.invoke(
 			getSectionDisplayContext(mockHttpServletRequest),
 			"getAdditionalProps", new Class<?>[0]);
 	}
 
-	public HashMap<String, Object> getBaseAdditionalProps()
-		throws PortalException {
-
+	public Map<String, Object> getBaseAdditionalProps() throws Exception {
 		ThemeDisplay themeDisplay =
 			(ThemeDisplay)mockHttpServletRequest.getAttribute(
 				WebKeys.THEME_DISPLAY);
 
 		return HashMapBuilder.<String, Object>put(
+			"additionalAPIURLParameters",
+			() -> {
+				if (isFolderSearchEnabled()) {
+					return getAdditionalAPIURLParameters();
+				}
+
+				return null;
+			}
+		).put(
 			"assetLibraries", _getDepotEntriesJSONArray()
 		).put(
 			"autocompleteURL",
@@ -139,7 +150,7 @@ public abstract class BaseSectionDisplayContextTestCase
 					getTranslationInfoItemFieldValuesExporters(),
 				this::_getExportFileFormatJSONObject)
 		).put(
-			"availableTargetLocales",
+			"availableLocales",
 			_getLocalesJSONArray(
 				themeDisplay.getLocale(),
 				LanguageUtil.getAvailableLocales(themeDisplay.getSiteGroupId()))
@@ -158,6 +169,8 @@ public abstract class BaseSectionDisplayContextTestCase
 			"brokenLinksCheckerEnabled",
 			GetterUtil.getBoolean(
 				PropsUtil.get(PropsKeys.CMS_BROKEN_LINKS_CHECKER_ENABLED))
+		).put(
+			"candidateAssetLibraries", _getDepotEntriesJSONArray()
 		).put(
 			"cmsGroupId",
 			() -> {
@@ -242,7 +255,7 @@ public abstract class BaseSectionDisplayContextTestCase
 			StringBundler.concat(
 				themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
 				GroupConstants.CMS_FRIENDLY_URL,
-				"/edit_content_item?&p_l_mode=read&p_p_state=",
+				"/edit_content_item?p_l_mode=read&p_p_state=",
 				LiferayWindowState.POP_UP, "&redirect=",
 				themeDisplay.getURLCurrent(), "&objectEntryId={embedded.id}")
 		).put(
@@ -274,7 +287,9 @@ public abstract class BaseSectionDisplayContextTestCase
 			"parentObjectEntryFolderExternalReferenceCode",
 			getRootObjectEntryFolderExternalReferenceCode()
 		).put(
-			"redirect", "http://localhost:8080/currentURL"
+			"redirect",
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/currentURL"
 		).build();
 	}
 
@@ -292,6 +307,17 @@ public abstract class BaseSectionDisplayContextTestCase
 		_objectEntryFolder = null;
 
 		setUser(adminUser);
+	}
+
+	@Test
+	public void testGetAdditionalAPIURLParameters() throws Exception {
+		String additionalAPIURLParameters = ReflectionTestUtil.invoke(
+			getSectionDisplayContext(getMockHttpServletRequest()),
+			"getAdditionalAPIURLParameters", new Class<?>[0]);
+
+		Assert.assertTrue(
+			additionalAPIURLParameters,
+			additionalAPIURLParameters.contains("sort=dateModified:desc"));
 	}
 
 	@Test
@@ -337,33 +363,44 @@ public abstract class BaseSectionDisplayContextTestCase
 		DepotEntry depotEntry1 = addDepotEntry(
 			StringUtil.randomString(), TestPropsValues.getUserId());
 
-		User user = UserTestUtil.addUser(
-			companyLocalService.getCompany(TestPropsValues.getCompanyId()),
-			RoleConstants.CMS_ADMINISTRATOR);
-
 		DepotEntry depotEntry2 = addDepotEntry(
-			StringUtil.randomString(), user.getUserId());
+			StringUtil.randomString(), TestPropsValues.getUserId());
+
+		User regularUser = UserTestUtil.addUser();
+
+		groupLocalService.addUserGroup(
+			regularUser.getUserId(), depotEntry1.getGroupId());
+
+		setUser(regularUser);
 
 		Object displayContext = getSectionDisplayContext(
-			getMockHttpServletRequest(TestPropsValues.getUser()));
+			getMockHttpServletRequest(regularUser));
 
 		String filterString = getCMSSectionFilterString(displayContext);
 
 		Assert.assertTrue(
+			filterString,
 			filterString.contains(
 				"groupIds/any(g:g in (" + depotEntry1.getGroupId() + "))"));
 
+		User cmsAdministratorUser = UserTestUtil.addCompanyUser(
+			companyLocalService.getCompany(TestPropsValues.getCompanyId()),
+			RoleConstants.CMS_ADMINISTRATOR);
+
+		setUser(cmsAdministratorUser);
+
 		displayContext = getSectionDisplayContext(
-			getMockHttpServletRequest(user));
+			getMockHttpServletRequest(cmsAdministratorUser));
 
 		filterString = getCMSSectionFilterString(displayContext);
 
-		Assert.assertFalse(filterString.contains("groupIds/any"));
+		Assert.assertFalse(filterString, filterString.contains("groupIds/any"));
 
 		_depotEntryLocalService.deleteDepotEntry(depotEntry1);
 		_depotEntryLocalService.deleteDepotEntry(depotEntry2);
 
-		_userLocalService.deleteUser(user);
+		_userLocalService.deleteUser(regularUser);
+		_userLocalService.deleteUser(cmsAdministratorUser);
 	}
 
 	@Test
@@ -377,30 +414,43 @@ public abstract class BaseSectionDisplayContextTestCase
 		expectedCreationMenuItems = _getLocalizedKeysMap(
 			expectedCreationMenuItems);
 
-		setUser(adminUser);
+		Map<String, String> objectEntryExpectedCreationMenuItems =
+			new HashMap<>(expectedCreationMenuItems);
 
-		_assertCreationMenu(getCreationMenu(adminUser), Collections.emptyMap());
+		Map<String, String> objectEntryFolderExpectedCreationMenuItems =
+			new HashMap<>();
+
+		if (expectedCreationMenuItems.containsKey("Folder")) {
+			objectEntryExpectedCreationMenuItems.remove("Folder");
+			objectEntryFolderExpectedCreationMenuItems.put(
+				"Folder", StringPool.BLANK);
+		}
+
+		User user1 = UserTestUtil.addUser();
+
+		setUser(user1);
+
+		_assertCreationMenu(getCreationMenu(user1), Collections.emptyMap());
+
+		setUser(adminUser);
 
 		DepotEntry depotEntry1 = addDepotEntry(
 			StringUtil.randomString(), TestPropsValues.getUserId());
-
-		User user1 = UserTestUtil.addUser();
 
 		User user2 = UserTestUtil.addUser();
 
 		groupLocalService.addUserGroup(
 			user2.getUserId(), depotEntry1.getGroup());
 
-		User user3 = UserTestUtil.addUser();
-
-		groupLocalService.addUserGroup(
-			user3.getUserId(), depotEntry1.getGroup());
-
-		Role role = _getRoleWithPermissions(ActionKeys.ADD_ENTRY, depotEntry1);
-
-		_userGroupRoleLocalService.addUserGroupRoles(
-			user3.getUserId(), depotEntry1.getGroupId(),
-			new long[] {role.getRoleId()});
+		User user3 = _addUser(new String[] {ActionKeys.ADD_ENTRY}, depotEntry1);
+		User user4 = _addUser(
+			new String[] {ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER},
+			depotEntry1);
+		User user5 = _addUser(
+			new String[] {
+				ActionKeys.ADD_ENTRY, ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER
+			},
+			depotEntry1);
 
 		_assertCreationMenu(
 			getCreationMenu(adminUser), expectedCreationMenuItems);
@@ -421,7 +471,17 @@ public abstract class BaseSectionDisplayContextTestCase
 
 		setUser(user3);
 
-		_assertCreationMenu(getCreationMenu(user3), expectedCreationMenuItems);
+		_assertCreationMenu(
+			getCreationMenu(user3), objectEntryExpectedCreationMenuItems);
+
+		setUser(user4);
+
+		_assertCreationMenu(
+			getCreationMenu(user4), objectEntryFolderExpectedCreationMenuItems);
+
+		setUser(user5);
+
+		_assertCreationMenu(getCreationMenu(user5), expectedCreationMenuItems);
 
 		// Create menu with custom object definitions
 
@@ -462,10 +522,6 @@ public abstract class BaseSectionDisplayContextTestCase
 			WorkflowConstants.STATUS_APPROVED);
 
 		addCustomObjectDefinition(
-			objectFolder.getObjectFolderId(), true, true,
-			ObjectDefinitionConstants.SCOPE_COMPANY,
-			WorkflowConstants.STATUS_APPROVED);
-		addCustomObjectDefinition(
 			objectFolder.getObjectFolderId(), false, true,
 			ObjectDefinitionConstants.SCOPE_DEPOT,
 			WorkflowConstants.STATUS_APPROVED);
@@ -477,10 +533,6 @@ public abstract class BaseSectionDisplayContextTestCase
 			objectFolder.getObjectFolderId(), true, true,
 			ObjectDefinitionConstants.SCOPE_DEPOT,
 			WorkflowConstants.STATUS_DRAFT);
-		addCustomObjectDefinition(
-			objectFolder.getObjectFolderId(), true, true,
-			ObjectDefinitionConstants.SCOPE_SITE,
-			WorkflowConstants.STATUS_APPROVED);
 
 		_assertCreationMenu(
 			getCreationMenu(adminUser),
@@ -507,22 +559,45 @@ public abstract class BaseSectionDisplayContextTestCase
 				getCreationMenu(objectEntryFolder, adminUser),
 				expectedCreationMenuItems);
 
+			groupLocalService.addUserGroup(
+				user1.getUserId(), depotEntry1.getGroup());
+
+			Role role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
+
+			_userGroupRoleLocalService.addUserGroupRoles(
+				user1.getUserId(), depotEntry1.getGroupId(),
+				new long[] {role.getRoleId()});
+
 			setUser(user1);
 
 			_assertCreationMenu(
 				getCreationMenu(objectEntryFolder, user1),
 				Collections.emptyMap());
 
-			setUser(user2);
+			_setResourcePermissions(
+				new String[] {ActionKeys.ADD_ENTRY}, objectEntryFolder, role);
 
 			_assertCreationMenu(
-				getCreationMenu(objectEntryFolder, user2),
-				Collections.emptyMap());
+				getCreationMenu(objectEntryFolder, user1),
+				objectEntryExpectedCreationMenuItems);
 
-			setUser(user3);
+			_setResourcePermissions(
+				new String[] {ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER},
+				objectEntryFolder, role);
 
 			_assertCreationMenu(
-				getCreationMenu(objectEntryFolder, user3),
+				getCreationMenu(objectEntryFolder, user1),
+				objectEntryFolderExpectedCreationMenuItems);
+
+			_setResourcePermissions(
+				new String[] {
+					ActionKeys.ADD_ENTRY,
+					ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER
+				},
+				objectEntryFolder, role);
+
+			_assertCreationMenu(
+				getCreationMenu(objectEntryFolder, user1),
 				expectedCreationMenuItems);
 		}
 
@@ -532,6 +607,8 @@ public abstract class BaseSectionDisplayContextTestCase
 		_userLocalService.deleteUser(user1);
 		_userLocalService.deleteUser(user2);
 		_userLocalService.deleteUser(user3);
+		_userLocalService.deleteUser(user4);
+		_userLocalService.deleteUser(user5);
 	}
 
 	@Test
@@ -561,7 +638,7 @@ public abstract class BaseSectionDisplayContextTestCase
 		Assert.assertEquals(name, depotGroup.getGroupKey());
 
 		_testGetDepotEntriesJSONArray(
-			depotEntries, null, String.valueOf(depotGroup.getGroupId()));
+			List.of(depotEntry), null, String.valueOf(depotGroup.getGroupId()));
 
 		_testGetDepotEntriesJSONArray(depotEntries, null, null);
 
@@ -626,6 +703,40 @@ public abstract class BaseSectionDisplayContextTestCase
 				group.getGroupId(), userId));
 	}
 
+	protected String appendGroupIds(String filterString) throws Exception {
+		return StringBundler.concat(
+			filterString, " and groupIds/any(g:g in (",
+			com.liferay.petra.string.StringUtil.merge(
+				_depotEntryLocalService.getDepotEntryGroupIds(
+					group.getCompanyId(), TestPropsValues.getUserId(),
+					DepotConstants.TYPE_SPACE),
+				StringPool.COMMA),
+			"))");
+	}
+
+	protected String appendStatus(String filterString) {
+		return filterString + " and status in (0, 2, 3, 1, 7)";
+	}
+
+	protected String getAdditionalAPIURLParameters() throws Exception {
+		return StringBundler.concat(
+			"emptySearch=true&filter=",
+			appendStatus(appendGroupIds(getFilterString())),
+			"&nestedFields=embedded,embeddedTaxonomyCategory,",
+			"file.metadata,file.previewURL,file.thumbnailURL,",
+			"modifiedBy,numberOfObjectEntries,numberOfObjectEntryFolders,",
+			"systemProperties.collaboratorBrief,",
+			"systemProperties.objectDefinitionBrief&sort=dateModified:desc");
+	}
+
+	protected List<FDSActionDropdownItem> getBulkActionDropdownItems()
+		throws Exception {
+
+		return ReflectionTestUtil.invoke(
+			getSectionDisplayContext(getMockHttpServletRequest()),
+			"getBulkActionDropdownItems", new Class<?>[0]);
+	}
+
 	protected String getCMSSectionFilterString(Object displayContext) {
 		return ReflectionTestUtil.invoke(
 			displayContext, "getCMSSectionFilterString", new Class<?>[0],
@@ -663,6 +774,10 @@ public abstract class BaseSectionDisplayContextTestCase
 			"getFDSActionDropdownItems", new Class<?>[0]);
 	}
 
+	protected String getFilterString() {
+		return StringPool.BLANK;
+	}
+
 	@Override
 	protected MockHttpServletRequest getMockHttpServletRequest(
 			ObjectEntryFolder objectEntryFolder)
@@ -690,15 +805,18 @@ public abstract class BaseSectionDisplayContextTestCase
 		ObjectDefinition objectDefinition,
 		String objectEntryFolderExternalReferenceCode) {
 
-		StringBundler sb = new StringBundler(7);
+		StringBundler sb = new StringBundler(10);
 
-		sb.append("http://localhost:8080");
+		sb.append("http://localhost:");
+		sb.append(PortalUtil.getPortalServerPort(false));
 		sb.append(portal.getPathMain());
 		sb.append("/cms/add_structured_content_item?objectDefinitionId=");
 		sb.append(objectDefinition.getObjectDefinitionId());
 		sb.append("&objectEntryFolderExternalReferenceCode=");
 		sb.append(objectEntryFolderExternalReferenceCode);
-		sb.append("&plid=0&redirect=http://localhost:8080/currentURL");
+		sb.append("&plid=0&redirect=http://localhost:");
+		sb.append(PortalUtil.getPortalServerPort(false));
+		sb.append("/currentURL");
 
 		return sb.toString();
 	}
@@ -734,6 +852,10 @@ public abstract class BaseSectionDisplayContextTestCase
 			HttpServletRequest httpServletRequest)
 		throws Exception;
 
+	protected boolean isFolderSearchEnabled() {
+		return false;
+	}
+
 	protected void setUser(User user) {
 		PermissionThreadLocal.setPermissionChecker(
 			PermissionCheckerFactoryUtil.create(user));
@@ -764,6 +886,22 @@ public abstract class BaseSectionDisplayContextTestCase
 			rootObjectEntryFolder.getObjectEntryFolderId(),
 			RandomTestUtil.randomString(), null, StringUtil.randomString(),
 			ServiceContextTestUtil.getServiceContext(group.getGroupId()));
+	}
+
+	private User _addUser(String[] actionIds, DepotEntry depotEntry)
+		throws Exception {
+
+		User user = UserTestUtil.addUser();
+
+		groupLocalService.addUserGroup(user.getUserId(), depotEntry.getGroup());
+
+		Role role = _getRoleWithPermissions(actionIds, depotEntry);
+
+		_userGroupRoleLocalService.addUserGroupRoles(
+			user.getUserId(), depotEntry.getGroupId(),
+			new long[] {role.getRoleId()});
+
+		return user;
 	}
 
 	private void _assertCreationMenu(
@@ -807,7 +945,7 @@ public abstract class BaseSectionDisplayContextTestCase
 
 		for (DropdownItem dropdownItem : dropdownItems) {
 			if (Objects.equals(dropdownItem.get("label"), expectedLabel)) {
-				dropdownItemData = (HashMap<String, Object>)dropdownItem.get(
+				dropdownItemData = (Map<String, Object>)dropdownItem.get(
 					"data");
 
 				break;
@@ -819,10 +957,15 @@ public abstract class BaseSectionDisplayContextTestCase
 		JSONArray assetLibrariesJSONArray = (JSONArray)dropdownItemData.get(
 			"assetLibraries");
 
-		Assert.assertTrue(
-			assetLibrariesJSONArray.toString(),
-			JSONUtil.equals(
-				expectedAssetLibrariesJSONArray, assetLibrariesJSONArray));
+		Assert.assertEquals(
+			assetLibrariesJSONArray.toString() + " does not equal " +
+				expectedAssetLibrariesJSONArray.toString(),
+			SetUtil.fromList(
+				JSONUtil.toList(
+					expectedAssetLibrariesJSONArray, JSONObject::toString)),
+			SetUtil.fromList(
+				JSONUtil.toList(
+					assetLibrariesJSONArray, JSONObject::toString)));
 	}
 
 	private void _assertCreationMenuNotContainsDropdownItem(
@@ -837,7 +980,7 @@ public abstract class BaseSectionDisplayContextTestCase
 
 		for (DropdownItem dropdownItem : dropdownItems) {
 			if (Objects.equals(dropdownItem.get("label"), unexpectedLabel)) {
-				dropdownItemData = (HashMap<String, Object>)dropdownItem.get(
+				dropdownItemData = (Map<String, Object>)dropdownItem.get(
 					"data");
 
 				break;
@@ -848,7 +991,8 @@ public abstract class BaseSectionDisplayContextTestCase
 	}
 
 	private void _assertEquals(
-		Map<String, ?> expectedMap, Map<String, ?> actualMap) {
+			Map<String, ?> expectedMap, Map<String, ?> actualMap)
+		throws Exception {
 
 		Assert.assertEquals(
 			actualMap.toString(), expectedMap.size(), actualMap.size());
@@ -862,7 +1006,7 @@ public abstract class BaseSectionDisplayContextTestCase
 			JSONCompareMode.STRICT);
 	}
 
-	private HashMap<String, Object> _getBreadcrumbProps(
+	private Map<String, Object> _getBreadcrumbProps(
 			HttpServletRequest httpServletRequest)
 		throws Exception {
 
@@ -954,6 +1098,8 @@ public abstract class BaseSectionDisplayContextTestCase
 				}
 			).build()
 		).put(
+			"allowPropagate", false
+		).put(
 			"roles",
 			() -> TransformUtil.transformToArray(
 				RoleLocalServiceUtil.getGroupRolesAndTeamRoles(
@@ -965,7 +1111,8 @@ public abstract class BaseSectionDisplayContextTestCase
 					new int[] {
 						RoleConstants.TYPE_REGULAR, RoleConstants.TYPE_DEPOT
 					},
-					0, 0, QueryUtil.ALL_POS, QueryUtil.ALL_POS),
+					DepotRolesConstants.SUBTYPE_SPACE, 0, 0, QueryUtil.ALL_POS,
+					QueryUtil.ALL_POS),
 				role -> HashMapBuilder.put(
 					"key", role.getName()
 				).put(
@@ -977,7 +1124,7 @@ public abstract class BaseSectionDisplayContextTestCase
 		).build();
 	}
 
-	private JSONArray _getDepotEntriesJSONArray() throws PortalException {
+	private JSONArray _getDepotEntriesJSONArray() throws Exception {
 		return _getDepotEntriesJSONArray(
 			_depotEntryLocalService.getDepotEntryGroupIds(
 				group.getCompanyId(), TestPropsValues.getUserId(),
@@ -1065,13 +1212,26 @@ public abstract class BaseSectionDisplayContextTestCase
 		JSONArray jsonArray = JSONFactoryUtil.createJSONArray();
 
 		locales.forEach(
-			currentLocale -> jsonArray.put(
-				JSONUtil.put(
-					"displayName",
-					LocaleUtil.getLocaleDisplayName(currentLocale, locale)
-				).put(
-					"languageId", LocaleUtil.toLanguageId(currentLocale)
-				)));
+			currentLocale -> {
+				String w3cLanguageId = LocaleUtil.toW3cLanguageId(
+					currentLocale);
+
+				jsonArray.put(
+					JSONUtil.put(
+						"displayName",
+						LocaleUtil.getLocaleDisplayName(currentLocale, locale)
+					).put(
+						"id", LocaleUtil.toLanguageId(currentLocale)
+					).put(
+						"label", w3cLanguageId
+					).put(
+						"languageId", LocaleUtil.toLanguageId(currentLocale)
+					).put(
+						"name", currentLocale.getDisplayName()
+					).put(
+						"symbol", StringUtil.toLowerCase(w3cLanguageId)
+					));
+			});
 
 		return jsonArray;
 	}
@@ -1089,8 +1249,7 @@ public abstract class BaseSectionDisplayContextTestCase
 	}
 
 	private String _getRedirect(DropdownItem dropdownItem) {
-		Map<String, Object> map = (HashMap<String, Object>)dropdownItem.get(
-			"data");
+		Map<String, Object> map = (Map<String, Object>)dropdownItem.get("data");
 
 		if (map == null) {
 			return null;
@@ -1099,14 +1258,15 @@ public abstract class BaseSectionDisplayContextTestCase
 		return (String)map.get("redirect");
 	}
 
-	private Role _getRoleWithPermissions(String actionId, DepotEntry depotEntry)
+	private Role _getRoleWithPermissions(
+			String[] actionIds, DepotEntry depotEntry)
 		throws Exception {
 
 		Role role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
 
 		ModelPermissions modelPermissions = ModelPermissionsFactory.create(
 			HashMapBuilder.put(
-				role.getName(), new String[] {actionId}
+				role.getName(), actionIds
 			).build(),
 			ObjectEntryFolder.class.getName());
 
@@ -1155,6 +1315,18 @@ public abstract class BaseSectionDisplayContextTestCase
 		}
 
 		return new String[] {rootObjectEntryFolderExternalReferenceCode};
+	}
+
+	private void _setResourcePermissions(
+			String[] actionIds, ObjectEntryFolder objectEntryFolder, Role role)
+		throws Exception {
+
+		ResourcePermissionLocalServiceUtil.setResourcePermissions(
+			objectEntryFolder.getCompanyId(),
+			objectEntryFolder.getModelClassName(),
+			ResourceConstants.SCOPE_INDIVIDUAL,
+			String.valueOf(objectEntryFolder.getObjectEntryFolderId()),
+			role.getRoleId(), actionIds);
 	}
 
 	private void _testGetDepotEntriesJSONArray(

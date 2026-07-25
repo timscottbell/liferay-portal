@@ -88,6 +88,9 @@
 						"format": "date-time",
 						"type": "string"
 					},
+					"emailAddress": {
+						"type": "string"
+					},
 					"externalReferenceCode": {
 						"description": "The collaborator external reference code.",
 						"readOnly": true,
@@ -134,8 +137,44 @@
 					"name": "Collaborator"
 				}
 			},
+			"CollaboratorBrief": {
+				"description": "Brief of the collaborator record for the user making the request, present only when this asset is shared with them.",
+				"properties": {
+					"actionIds": {
+						"description": "The sharing actions granted to the user making the request (e.g. VIEW, UPDATE).",
+						"items": {
+							"description": "The sharing actions granted to the user making the request (e.g. VIEW, UPDATE).",
+							"type": "string"
+						},
+						"readOnly": true,
+						"type": "array"
+					},
+					"dateExpired": {
+						"description": "The date when the sharing access expires, or null if it never expires.",
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					},
+					"share": {
+						"description": "Whether the user making the request can reshare this asset with others.",
+						"readOnly": true,
+						"type": "boolean"
+					},
+					"x-class-name": {
+						"default": "com.liferay.object.rest.dto.v1_0.CollaboratorBrief",
+						"readOnly": true,
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"x-filterable": {
+				},
+				"xml": {
+					"name": "CollaboratorBrief"
+				}
+			},
 			"Comment": {
-				"description": "Optional field with the comments associated with this object entry, can be embedded with nestedFields",
+				"description": "Represents a comment. See [Comment](https://www.schema.org/Comment) for more details.",
 				"properties": {
 					"actions": {
 						"additionalProperties": {
@@ -217,7 +256,7 @@
 				}
 			},
 			"Creator": {
-				"description": "The comment's author.",
+				"description": "Represents the user account of the content's creator/author. Properties follow the [creator](https://schema.org/creator) specification.",
 				"properties": {
 					"additionalName": {
 						"description": "The author's additional name (e.g., middle name).",
@@ -321,6 +360,10 @@
 						"readOnly": true,
 						"type": "string"
 					},
+					"extension": {
+						"readOnly": true,
+						"type": "string"
+					},
 					"externalReferenceCode": {
 						"type": "string"
 					},
@@ -365,6 +408,10 @@
 					},
 					"scope": {
 						"$ref": "#/components/schemas/Scope"
+					},
+					"size": {
+						"readOnly": true,
+						"type": "string"
 					},
 					"thumbnailURL": {
 						"description": "optional field that specifies the thumbnail of the file to be used, can be embedded with nestedFields (the format of the nested field must be `<attachment field name>.thumbnailURL`)",
@@ -455,6 +502,19 @@
 					"name": "ListEntry"
 				}
 			},
+			"MultipartBody": {
+				"properties": {
+					"values": {
+						"additionalProperties": {
+							"type": "string"
+						},
+						"type": "object"
+					}
+				},
+				"type": "object",
+				"x-filterable": {
+				}
+			},
 			"Object1": {
 				"description": "Information about the relationship relationship2 can be embedded with \"nestedFields\".",
 				"properties": {
@@ -477,13 +537,6 @@
 						"readOnly": true,
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
-					},
-					"comments": {
-						"description": "Optional field with the comments associated with this object entry, can be embedded with nestedFields",
-						"items": {
-							"$ref": "#/components/schemas/Comment"
-						},
-						"type": "array"
 					},
 					"creator": {
 						"readOnly": true,
@@ -557,6 +610,9 @@
 						},
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
+					},
+					"modifiedBy": {
+						"$ref": "#/components/schemas/Creator"
 					},
 					"objectEntryFolderExternalReferenceCode": {
 						"type": "string"
@@ -1292,13 +1348,6 @@
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
 					},
-					"comments": {
-						"description": "Optional field with the comments associated with this object entry, can be embedded with nestedFields",
-						"items": {
-							"$ref": "#/components/schemas/Comment"
-						},
-						"type": "array"
-					},
 					"creator": {
 						"readOnly": true,
 						"type": "string",
@@ -1368,6 +1417,9 @@
 						},
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
+					},
+					"modifiedBy": {
+						"$ref": "#/components/schemas/Creator"
 					},
 					"multiselectPicklistField": {
 						"items": {
@@ -2237,13 +2289,6 @@
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
 					},
-					"comments": {
-						"description": "Optional field with the comments associated with this object entry, can be embedded with nestedFields",
-						"items": {
-							"$ref": "#/components/schemas/Comment"
-						},
-						"type": "array"
-					},
 					"creator": {
 						"readOnly": true,
 						"type": "string",
@@ -2313,6 +2358,9 @@
 						},
 						"type": "array",
 						"x-batch-unsupported-formats": "CSV"
+					},
+					"modifiedBy": {
+						"$ref": "#/components/schemas/Creator"
 					},
 					"multiselectPicklistField": {
 						"items": {
@@ -3622,6 +3670,30 @@
 					"name": "Permission"
 				}
 			},
+			"PostObjectEntryTranslationRequestBody": {
+				"properties": {
+					"file": {
+						"description": "File",
+						"format": "binary",
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"x-filterable": {
+				}
+			},
+			"PostScopeScopeKeyByExternalReferenceCodeTranslationRequestBody": {
+				"properties": {
+					"file": {
+						"description": "File",
+						"format": "binary",
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"x-filterable": {
+				}
+			},
 			"Scope": {
 				"properties": {
 					"externalReferenceCode": {
@@ -3740,8 +3812,37 @@
 					"name": "TaxonomyCategoryBrief"
 				}
 			},
+			"TranslationResponse": {
+				"properties": {
+					"failureMessagesJSON": {
+						"items": {
+							"type": "string"
+						},
+						"readOnly": true,
+						"type": "array"
+					},
+					"successMessages": {
+						"items": {
+							"type": "string"
+						},
+						"readOnly": true,
+						"type": "array"
+					},
+					"x-class-name": {
+						"default": "com.liferay.object.rest.dto.v1_0.TranslationResponse",
+						"readOnly": true,
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"x-filterable": {
+				},
+				"xml": {
+					"name": "TranslationResponse"
+				}
+			},
 			"UserGroupBrief": {
-				"description": "A list of userGroups information.",
+				"description": "The author's user groups information.",
 				"properties": {
 					"id": {
 						"description": "The ID of the user group.",
@@ -4557,6 +4658,49 @@
 				]
 			}
 		},
+		"/by-external-reference-code/{currentExternalReferenceCode}/relationship1/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postByExternalReferenceCodeObject2Relationship1Object1Disassociate",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object1"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object1"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
 		"/by-external-reference-code/{currentExternalReferenceCode}/relationship3": {
 			"get": {
 				"operationId": "getByExternalReferenceCodeObject2Relationship3Page",
@@ -4876,6 +5020,49 @@
 				]
 			}
 		},
+		"/by-external-reference-code/{currentExternalReferenceCode}/relationship3/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postByExternalReferenceCodeObject2Relationship3Object3Disassociate",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
 		"/by-external-reference-code/{currentExternalReferenceCode}/relationship4": {
 			"get": {
 				"operationId": "getByExternalReferenceCodeObject2Relationship4Page",
@@ -5155,6 +5342,49 @@
 			},
 			"put": {
 				"operationId": "putByExternalReferenceCodeObject2Relationship4Object3",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
+		"/by-external-reference-code/{currentExternalReferenceCode}/relationship4/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postByExternalReferenceCodeObject2Relationship4Object3Disassociate",
 				"parameters": [
 					{
 						"in": "path",
@@ -6393,6 +6623,14 @@
 				"parameters": [
 					{
 						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
 						"name": "currentExternalReferenceCode",
 						"required": true,
 						"schema": {
@@ -6656,6 +6894,57 @@
 				]
 			}
 		},
+		"/scopes/{scopeKey}/by-external-reference-code/{currentExternalReferenceCode}/relationship1/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postScopeScopeKeyByExternalReferenceCodeObject2Relationship1Object1Disassociate",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object1"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object1"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
 		"/scopes/{scopeKey}/by-external-reference-code/{currentExternalReferenceCode}/relationship3": {
 			"get": {
 				"operationId": "getScopeScopeKeyByExternalReferenceCodeObject2Relationship3Page",
@@ -6764,6 +7053,14 @@
 			"post": {
 				"operationId": "postScopeScopeKeyByExternalReferenceCodeObject2Relationship3",
 				"parameters": [
+					{
+						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"in": "path",
 						"name": "currentExternalReferenceCode",
@@ -7029,6 +7326,57 @@
 				]
 			}
 		},
+		"/scopes/{scopeKey}/by-external-reference-code/{currentExternalReferenceCode}/relationship3/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postScopeScopeKeyByExternalReferenceCodeObject2Relationship3Object3Disassociate",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
 		"/scopes/{scopeKey}/by-external-reference-code/{currentExternalReferenceCode}/relationship4": {
 			"get": {
 				"operationId": "getScopeScopeKeyByExternalReferenceCodeObject2Relationship4Page",
@@ -7137,6 +7485,14 @@
 			"post": {
 				"operationId": "postScopeScopeKeyByExternalReferenceCodeObject2Relationship4",
 				"parameters": [
+					{
+						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"in": "path",
 						"name": "currentExternalReferenceCode",
@@ -7380,6 +7736,57 @@
 						}
 					}
 				},
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Object3"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			}
+		},
+		"/scopes/{scopeKey}/by-external-reference-code/{currentExternalReferenceCode}/relationship4/{relatedExternalReferenceCode}/disassociate": {
+			"post": {
+				"operationId": "postScopeScopeKeyByExternalReferenceCodeObject2Relationship4Object3Disassociate",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "scopeKey",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "currentExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "relatedExternalReferenceCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"responses": {
 					"default": {
 						"content": {
@@ -7904,6 +8311,163 @@
 							"application/xml": {
 								"schema": {
 									"$ref": "#/components/schemas/PageCollaborator"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Collaborator"
+				]
+			}
+		},
+		"/{object2Id}/collaborators/by-email-address/{emailAddress}": {
+			"delete": {
+				"description": "Deletes the collaborator for an object entry and returns a 204 if the operation succeeds.",
+				"operationId": "deleteObject2CollaboratorByEmailAddress",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "object2Id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "emailAddress",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+							},
+							"application/xml": {
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Collaborator"
+				]
+			},
+			"get": {
+				"description": "Retrieves the collaborator for an object entry.",
+				"operationId": "getObject2CollaboratorByEmailAddress",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "object2Id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "emailAddress",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "fields",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "nestedFields",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "restrictFields",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Collaborator"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Collaborator"
+								}
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Collaborator"
+				]
+			},
+			"put": {
+				"description": "Add or update a collaborator received in the request.",
+				"operationId": "putObject2CollaboratorByEmailAddress",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "object2Id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "emailAddress",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Collaborator"
+							}
+						},
+						"application/xml": {
+							"schema": {
+								"$ref": "#/components/schemas/Collaborator"
+							}
+						}
+					}
+				},
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Collaborator"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/Collaborator"
 								}
 							}
 						},
@@ -9146,6 +9710,7 @@
 						}
 					},
 					{
+						"description": "The required language ID of the source text (e.g., \"en_US\").",
 						"in": "query",
 						"name": "sourceLanguageId",
 						"schema": {
@@ -9153,6 +9718,7 @@
 						}
 					},
 					{
+						"description": "A required list of language IDs for the target translations (e.g., \"es_ES\", \"fr_FR\").",
 						"in": "query",
 						"name": "targetLanguageIds",
 						"schema": {
@@ -9160,6 +9726,7 @@
 						}
 					},
 					{
+						"description": "The XLIFF specification version to export.",
 						"in": "query",
 						"name": "version",
 						"schema": {
@@ -9171,6 +9738,48 @@
 					"default": {
 						"content": {
 							"application/zip": {
+							}
+						},
+						"description": "default response"
+					}
+				},
+				"tags": [
+					"Object2"
+				]
+			},
+			"post": {
+				"operationId": "postObject2Translation",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "object2Id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"$ref": "#/components/schemas/PostObjectEntryTranslationRequestBody"
+							}
+						}
+					}
+				},
+				"responses": {
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TranslationResponse"
+								}
+							},
+							"application/xml": {
+								"schema": {
+									"$ref": "#/components/schemas/TranslationResponse"
+								}
 							}
 						},
 						"description": "default response"
@@ -9194,6 +9803,7 @@
 						}
 					},
 					{
+						"description": "The required language ID of the source text (e.g., \"en_US\").",
 						"in": "path",
 						"name": "languageId",
 						"required": true,
@@ -9202,6 +9812,7 @@
 						}
 					},
 					{
+						"description": "The required language ID for the target translation (e.g., \"en_US\").",
 						"in": "query",
 						"name": "targetLanguageId",
 						"schema": {
@@ -9228,7 +9839,7 @@
 	},
 	"servers": [
 		{
-			"url": "http://localhost:8080/o/c/object2s/"
+			"url": "http://localhost:[$SERVER_PORT$]/o/c/object2s/"
 		}
 	]
 }

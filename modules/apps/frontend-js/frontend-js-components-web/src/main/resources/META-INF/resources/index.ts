@@ -8,6 +8,13 @@ export {
 	IHTMLElementBuilder,
 } from './ClientExtension';
 
+export {default as ChatPanel} from './ai-assistant-chat';
+export type {ChatPanelProps} from './ai-assistant-chat/ChatPanel';
+export {default as ChatActionButton} from './ai-assistant-chat/components/ChatActionButton';
+export {default as ChatDropdownContainer} from './ai-assistant-chat/containers/ChatDropdownContainer';
+export {default as ChatFloatingContainer} from './ai-assistant-chat/containers/ChatFloatingContainer';
+export {default as ChatSidebarContainer} from './ai-assistant-chat/containers/ChatSidebarContainer';
+
 export {default as CodeMirrorKeyboardMessage} from './code_mirror_keyboard_message/CodeMirrorKeyboardMessage';
 export {default as FeatureIndicator} from './feature_indicator/FeatureIndicator';
 
@@ -26,6 +33,15 @@ export {
 	ILearnResourceContext,
 	LearnResourcesContext,
 } from './learn_message/LearnMessage';
+
+export {ManageMembersList} from './manage_members_modal/ManageMembersList';
+export {default as ManageMembersModal} from './manage_members_modal/ManageMembersModal';
+export {MembersSelectOptions} from './manage_members_modal/MembersSelectOptions';
+export {MemberType} from './manage_members_modal/types';
+export type {
+	AddMembersInputApi,
+	MembersConfig,
+} from './manage_members_modal/types';
 
 export {default as ManagementToolbar} from './management_toolbar/ManagementToolbar';
 
@@ -47,9 +63,37 @@ export {ModalStatus} from './modal/components/Modal';
 export {default as MultipleFileUploader} from './multiple_file_uploader/MultipleFileUploader';
 export {
 	type FileData,
+	type UploadBatchesCallback,
+	type UploadMessages,
 	type UploadRequestCallback,
 } from './multiple_file_uploader/types';
 
+export {default as CollaboratorService} from './share_modal_content/CollaboratorService';
+export type {
+	CollaboratorItem,
+	CollaboratorPayload,
+} from './share_modal_content/CollaboratorService';
+
+export {
+	default as ExpirationDateSelector,
+	formatDateForView,
+	formatDateToISO,
+} from './share_modal_content/ExpirationDateSelector';
+export {default as PermissionSelector} from './share_modal_content/PermissionSelector';
+export {default as ShareModalContent} from './share_modal_content/ShareModalContent';
+export {COLLABORATOR_TYPE} from './share_modal_content/types';
+export type {
+	AutocompleteItem,
+	Collaborator,
+	CollaboratorBadgeProps,
+	CollaboratorIconProps,
+	CollaboratorType,
+	PermissionOption,
+	ShareModalContentProps,
+	ShareModalCreator,
+	ShareModalUserAccount,
+	ShareModalUserGroup,
+} from './share_modal_content/types';
 export {default as openToast} from './toast/openToast';
 export type {OpenToastProps} from './toast/openToast';
 

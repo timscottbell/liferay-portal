@@ -44,12 +44,12 @@ import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.service.GroupLocalService;
-import com.liferay.portal.kernel.service.LayoutSetLocalService;
 import com.liferay.portal.kernel.service.PluginSettingLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.permission.GroupPermissionUtil;
 import com.liferay.portal.kernel.service.permission.LayoutPermissionUtil;
 import com.liferay.portal.kernel.service.permission.PortletPermissionUtil;
+import com.liferay.portal.kernel.service.persistence.LayoutSetPersistence;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
 import com.liferay.portal.kernel.util.DigesterUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -355,13 +355,20 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			InputStream inputStream, String mimeType)
 		throws PortalException {
 
-		GroupPermissionUtil.check(
-			getPermissionChecker(), groupId, ActionKeys.EXPORT_IMPORT_LAYOUTS);
+		Group group = _groupLocalService.getGroup(groupId);
 
-		return TempFileEntryUtil.addTempFileEntry(
-			groupId, getUserId(),
-			DigesterUtil.digestHex(DigesterUtil.SHA_256, folderName), fileName,
-			inputStream, mimeType);
+		GroupPermissionUtil.check(
+			getPermissionChecker(), group, ActionKeys.EXPORT_IMPORT_LAYOUTS);
+
+		try (SafeCloseable safeCloseable =
+				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
+					group.getCtCollectionId())) {
+
+			return TempFileEntryUtil.addTempFileEntry(
+				groupId, getUserId(),
+				DigesterUtil.digestHex(DigesterUtil.SHA_256, folderName),
+				fileName, inputStream, mimeType);
+		}
 	}
 
 	@Override
@@ -499,12 +506,20 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			long groupId, String folderName, String fileName)
 		throws PortalException {
 
-		GroupPermissionUtil.check(
-			getPermissionChecker(), groupId, ActionKeys.EXPORT_IMPORT_LAYOUTS);
+		Group group = _groupLocalService.getGroup(groupId);
 
-		TempFileEntryUtil.deleteTempFileEntry(
-			groupId, getUserId(),
-			DigesterUtil.digestHex(DigesterUtil.SHA_256, folderName), fileName);
+		GroupPermissionUtil.check(
+			getPermissionChecker(), group, ActionKeys.EXPORT_IMPORT_LAYOUTS);
+
+		try (SafeCloseable safeCloseable =
+				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
+					group.getCtCollectionId())) {
+
+			TempFileEntryUtil.deleteTempFileEntry(
+				groupId, getUserId(),
+				DigesterUtil.digestHex(DigesterUtil.SHA_256, folderName),
+				fileName);
+		}
 	}
 
 	@Override
@@ -553,7 +568,7 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			String externalReferenceCode, long groupId)
 		throws PortalException {
 
-		Layout layout = layoutLocalService.fetchLayoutByExternalReferenceCode(
+		Layout layout = layoutPersistence.fetchByERC_G(
 			externalReferenceCode, groupId);
 
 		if (layout != null) {
@@ -939,7 +954,7 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 
 		Group group = _groupLocalService.getGroup(groupId);
 
-		LayoutSet layoutSet = _layoutSetLocalService.getLayoutSet(
+		LayoutSet layoutSet = _layoutSetPersistence.findByG_P(
 			groupId, privateLayout);
 
 		if (!MergeLayoutPrototypesThreadLocal.isInProgress() &&
@@ -1177,7 +1192,7 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 	public boolean hasPortletId(long plid, String portletId)
 		throws PortalException {
 
-		Layout layout = layoutLocalService.fetchLayout(plid);
+		Layout layout = layoutPersistence.fetchByPrimaryKey(plid);
 
 		if (layout == null) {
 			return false;
@@ -1488,7 +1503,8 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			Map<Locale, String> robotsMap, String type, boolean hidden,
 			Map<Locale, String> friendlyURLMap, boolean hasIconImage,
 			byte[] iconBytes, String styleBookEntryERC,
-			String faviconFileEntryERC, String faviconFileEntryScopeERC,
+			String styleBookEntryScopeERC, String faviconFileEntryERC,
+			String faviconFileEntryScopeERC,
 			String masterLayoutPageTemplateEntryERC,
 			ServiceContext serviceContext)
 		throws PortalException {
@@ -1503,8 +1519,9 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			groupId, privateLayout, layoutId, parentLayoutId, localeNamesMap,
 			localeTitlesMap, descriptionMap, keywordsMap, robotsMap, type,
 			hidden, friendlyURLMap, hasIconImage, iconBytes, styleBookEntryERC,
-			faviconFileEntryERC, faviconFileEntryScopeERC,
-			masterLayoutPageTemplateEntryERC, serviceContext);
+			styleBookEntryScopeERC, faviconFileEntryERC,
+			faviconFileEntryScopeERC, masterLayoutPageTemplateEntryERC,
+			serviceContext);
 
 		if (!(layout.getLayoutType() instanceof LayoutTypePortlet)) {
 			checkLayoutTypeSettings(
@@ -1532,13 +1549,15 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 			String colorSchemeId, String css)
 		throws PortalException {
 
+		PermissionChecker permissionChecker = getPermissionChecker();
+
 		LayoutPermissionUtil.checkLayoutUpdatePermission(
-			getPermissionChecker(),
+			permissionChecker,
 			layoutLocalService.getLayout(groupId, privateLayout, layoutId));
 
 		if (Validator.isNotNull(themeId)) {
 			_pluginSettingLocalService.checkPermission(
-				getUserId(), themeId, Plugin.TYPE_THEME);
+				permissionChecker.getUserId(), themeId, Plugin.TYPE_THEME);
 		}
 
 		return layoutLocalService.updateLookAndFeel(
@@ -1895,8 +1914,8 @@ public class LayoutServiceImpl extends LayoutServiceBaseImpl {
 	@BeanReference(type = GroupLocalService.class)
 	private GroupLocalService _groupLocalService;
 
-	@BeanReference(type = LayoutSetLocalService.class)
-	private LayoutSetLocalService _layoutSetLocalService;
+	@BeanReference(type = LayoutSetPersistence.class)
+	private LayoutSetPersistence _layoutSetPersistence;
 
 	@BeanReference(type = PluginSettingLocalService.class)
 	private PluginSettingLocalService _pluginSettingLocalService;

@@ -40,7 +40,6 @@ import com.liferay.portal.kernel.model.SystemEventConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.UserGroup;
 import com.liferay.portal.kernel.model.role.RoleConstants;
-import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -235,7 +234,7 @@ public class AnnouncementsEntryLocalServiceImpl
 		int expirationDateMinute, boolean alert, int flagValue, int start,
 		int end) {
 
-		User user = _userLocalService.fetchUser(userId);
+		User user = _userPersistence.fetchByPrimaryKey(userId);
 
 		if (user == null) {
 			return Collections.emptyList();
@@ -254,8 +253,19 @@ public class AnnouncementsEntryLocalServiceImpl
 		long companyId, long classNameId, long classPK, boolean alert,
 		int start, int end) {
 
+		return getEntries(
+			companyId, classNameId, classPK, alert, start, end, null);
+	}
+
+	@Override
+	public List<AnnouncementsEntry> getEntries(
+		long companyId, long classNameId, long classPK, boolean alert,
+		int start, int end,
+		OrderByComparator<AnnouncementsEntry> orderByComparator) {
+
 		return announcementsEntryPersistence.findByC_C_C_A(
-			companyId, classNameId, classPK, alert, start, end);
+			companyId, classNameId, classPK, alert, start, end,
+			orderByComparator);
 	}
 
 	@Override
@@ -267,7 +277,7 @@ public class AnnouncementsEntryLocalServiceImpl
 		int expirationDateMinute, boolean alert, int flagValue, int start,
 		int end) {
 
-		User user = _userLocalService.fetchUser(userId);
+		User user = _userPersistence.fetchByPrimaryKey(userId);
 
 		if (user == null) {
 			return Collections.emptyList();
@@ -298,7 +308,7 @@ public class AnnouncementsEntryLocalServiceImpl
 		int expirationDateYear, int expirationDateHour,
 		int expirationDateMinute, boolean alert, int flagValue) {
 
-		User user = _userLocalService.fetchUser(userId);
+		User user = _userPersistence.fetchByPrimaryKey(userId);
 
 		if (user == null) {
 			return 0;
@@ -337,7 +347,7 @@ public class AnnouncementsEntryLocalServiceImpl
 		int expirationDateYear, int expirationDateHour,
 		int expirationDateMinute, boolean alert, int flagValue) {
 
-		User user = _userLocalService.fetchUser(userId);
+		User user = _userPersistence.fetchByPrimaryKey(userId);
 
 		if (user == null) {
 			return 0;
@@ -589,7 +599,8 @@ public class AnnouncementsEntryLocalServiceImpl
 				ioException);
 		}
 
-		Company company = _companyLocalService.getCompany(entry.getCompanyId());
+		Company company = _companyPersistence.findByPrimaryKey(
+			entry.getCompanyId());
 
 		_sendNotificationEmail(
 			fromAddress, fromName, toAddress, toName, subject, body, company,
@@ -740,9 +751,6 @@ public class AnnouncementsEntryLocalServiceImpl
 
 	@BeanReference(type = AnnouncementsFlagPersistence.class)
 	private AnnouncementsFlagPersistence _announcementsFlagPersistence;
-
-	@BeanReference(type = CompanyLocalService.class)
-	private CompanyLocalService _companyLocalService;
 
 	@BeanReference(type = CompanyPersistence.class)
 	private CompanyPersistence _companyPersistence;

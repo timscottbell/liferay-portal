@@ -18,7 +18,7 @@
 	<div class="form-group [#if input.errorMessage?has_content]has-error[/#if] mb-0" data-readonly-label="${readonlyLabel}" id="${fragmentElementId}-rich-text-input">
 		<div class="d-flex">
 			<div class="flex-grow-1" id="${fragmentElementId + '-wrapper'}">
-				[@liferay_layout["render-editor"] content=input.value name=fragmentElementId + "-" + input.name label=inputLabel layoutMode=layoutMode required=input.required /]
+				[@liferay_layout["render-editor"] content=htmlUtil.unescape(input.value) name=fragmentElementId + "-" + input.name label=inputLabel layoutMode=layoutMode required=input.required /]
 			</div>
 
 			[#if !input.localizable && input.attributes.unlocalizedFieldsMessage??]
@@ -28,7 +28,7 @@
 			[/#if]
 		</div>
 
-		<p class="font-weight-semi-bold mt-1 text-danger[#if !input.errorMessage?has_content] d-none[/#if]" id="${fragmentElementId}-error-message">
+		<p class="font-weight-semi-bold mt-1 text-3 text-danger[#if !input.errorMessage?has_content] d-none[/#if]" id="${fragmentElementId}-error-message">
 			[@clay["icon"] symbol="info-circle" /]
 
 			<span data-required-error="${languageUtil.get(locale, 'this-field-is-required')}" id="${fragmentElementId}-error-message-text" role="status">

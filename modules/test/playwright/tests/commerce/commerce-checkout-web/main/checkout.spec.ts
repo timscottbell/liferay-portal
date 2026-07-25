@@ -6,16 +6,17 @@
 import {expect, mergeTests} from '@playwright/test';
 
 import {accountsPagesTest} from '../../../../fixtures/accountsPagesTest';
-import {applicationsMenuPageTest} from '../../../../fixtures/applicationsMenuPageTest';
 import {commercePagesTest} from '../../../../fixtures/commercePagesTest';
 import {dataApiHelpersTest} from '../../../../fixtures/dataApiHelpersTest';
 import {displayPageTemplatesPagesTest} from '../../../../fixtures/displayPageTemplatesPagesTest';
 import {featureFlagsTest} from '../../../../fixtures/featureFlagsTest';
+import {globalMenuPagesTest} from '../../../../fixtures/globalMenuPagesTest';
 import {isolatedSiteTest} from '../../../../fixtures/isolatedSiteTest';
 import {loginTest} from '../../../../fixtures/loginTest';
 import {notificationPagesTest} from '../../../../fixtures/notificationPagesTest';
 import {pageEditorPagesTest} from '../../../../fixtures/pageEditorPagesTest';
 import {pageViewModePagesTest} from '../../../../fixtures/pageViewModePagesTest';
+import {productMenuPageTest} from '../../../../fixtures/productMenuPageTest';
 import {systemSettingsPageTest} from '../../../../fixtures/systemSettingsPageTest';
 import {liferayConfig} from '../../../../liferay.config';
 import {getRandomInt} from '../../../../utils/getRandomInt';
@@ -28,24 +29,25 @@ import {waitForAlert} from '../../../../utils/waitForAlert';
 import getFragmentDefinition from '../../../layout-content-page-editor-web/main/utils/getFragmentDefinition';
 import getPageDefinition from '../../../layout-content-page-editor-web/main/utils/getPageDefinition';
 import getWidgetDefinition from '../../../layout-content-page-editor-web/main/utils/getWidgetDefinition';
-import {miniumSetUp} from '../../utils/commerce';
+import {createAccountWithBuyerUser, miniumSetUp} from '../../utils/commerce';
 import {getDateFormatted, setFutureDate} from '../../utils/date';
 
 export const test = mergeTests(
-	applicationsMenuPageTest,
 	accountsPagesTest,
 	commercePagesTest,
 	dataApiHelpersTest,
 	displayPageTemplatesPagesTest,
 	featureFlagsTest({
-		'LPD-20379': {enabled: true},
+		'LPD-89850': {enabled: true},
 		'LPS-178052': {enabled: true},
 	}),
+	globalMenuPagesTest,
 	isolatedSiteTest,
 	loginTest(),
 	notificationPagesTest,
 	pageEditorPagesTest,
 	pageViewModePagesTest,
+	productMenuPageTest,
 	systemSettingsPageTest
 );
 
@@ -399,11 +401,9 @@ test(
 	}) => {
 		test.setTimeout(180000);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const channel =
 			await apiHelpers.headlessCommerceAdminChannel.postChannel({
@@ -1056,7 +1056,7 @@ test(
 			await waitForAlert(page);
 
 			await commerceAdminWarehouseEligibilityPage.linkTab.click();
-			await commerceAdminWarehouseEligibilityPage.specificChannelRadio.click();
+			await commerceAdminWarehouseEligibilityPage.specificChannelsRadio.click();
 			await commerceAdminWarehouseEligibilityPage.addChannels.fill(
 				channel.name
 			);
@@ -1902,19 +1902,19 @@ test(
 	async ({
 		accountsPage,
 		apiHelpers,
-		applicationsMenuPage,
 		checkoutPage,
 		commerceAccountManagementPage,
 		commerceThemeMiniumCatalogPage,
 		commerceThemeMiniumPage,
 		editAccountChannelDefaultsPage,
 		editAccountPage,
+		globalMenuPage,
 		page,
 	}) => {
 		test.setTimeout(120000);
 
 		const initiateCheckout = async (site: string) => {
-			await applicationsMenuPage.goToSite(site);
+			await globalMenuPage.goToSite(site);
 
 			await page.waitForLoadState('networkidle');
 
@@ -2552,5 +2552,38 @@ test(
 				'Success! Your order has been processed.'
 			);
 		});
+	}
+);
+
+test(
+	'Channel-Level Configuration for VAT Validation',
+	{tag: '@LPD-89853'},
+	async ({apiHelpers, checkoutPage, commerceAdminChannelDetailsPage}) => {
+		test.setTimeout(600000);
+
+		const {channel, site} = await miniumSetUp(apiHelpers);
+
+		const {account, buyerUser} = await createAccountWithBuyerUser(
+			apiHelpers,
+			site.id
+		);
+
+		await apiHelpers.headlessCommerceAdminAccount.postAddress(account.id, {
+			countryISOCode: 'IT',
+			defaultBilling: true,
+			defaultShipping: true,
+		});
+
+		for (const validationMode of ['disabled', 'allow-all']) {
+			await commerceAdminChannelDetailsPage.setValidationModeAsAdmin(
+				channel.name,
+				validationMode
+			);
+
+			await checkoutPage.checkoutAsBuyer(
+				site.name,
+				buyerUser.alternateName
+			);
+		}
 	}
 );

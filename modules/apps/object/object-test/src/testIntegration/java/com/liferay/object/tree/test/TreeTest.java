@@ -17,7 +17,6 @@ import com.liferay.object.tree.constants.TreeConstants;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.LinkedHashMapBuilder;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 
@@ -34,7 +33,6 @@ import org.junit.runner.RunWith;
 /**
  * @author Feliphe Marinho
  */
-@FeatureFlag("LPD-34594")
 @RunWith(Arquillian.class)
 public class TreeTest {
 
@@ -145,13 +143,12 @@ public class TreeTest {
 	}
 
 	@Inject
-	private static ObjectDefinitionLocalService _objectDefinitionLocalService;
-
-	@Inject
-	private static ObjectRelationshipLocalService
-		_objectRelationshipLocalService;
+	private ObjectDefinitionLocalService _objectDefinitionLocalService;
 
 	@Inject
 	private ObjectEntryLocalService _objectEntryLocalService;
+
+	@Inject
+	private ObjectRelationshipLocalService _objectRelationshipLocalService;
 
 }

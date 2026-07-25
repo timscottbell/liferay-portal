@@ -6,6 +6,7 @@
 package com.liferay.jenkins.results.parser.testray;
 
 import com.liferay.jenkins.results.parser.Dom4JUtil;
+import com.liferay.jenkins.results.parser.Environment;
 import com.liferay.jenkins.results.parser.JenkinsMaster;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 import com.liferay.jenkins.results.parser.NotificationUtil;
@@ -56,7 +57,7 @@ public class TestrayServer {
 			JSONObject responseJSONObject = new JSONObject(
 				requestPost("/o/c/projects", requestJSONObject.toString()));
 
-			return getTestrayProjectByID(responseJSONObject.getLong("id"));
+			return getTestrayProjectById(responseJSONObject.getLong("id"));
 		}
 		catch (IOException ioException) {
 			throw new RuntimeException(
@@ -68,14 +69,16 @@ public class TestrayServer {
 		return _httpAuthorization;
 	}
 
-	public TestrayBuild getTestrayBuildByID(long buildID) {
-		if (_testrayBuilds.containsKey(buildID)) {
-			return _testrayBuilds.get(buildID);
+	public TestrayBuild getTestrayBuildById(long buildId) {
+		TestrayBuild testrayBuild = _testrayBuilds.get(buildId);
+
+		if (testrayBuild != null) {
+			return testrayBuild;
 		}
 
 		try {
 			Set<JSONObject> entityJSONObjects = requestGraphQL(
-				"builds", TestrayBuild.FIELD_NAMES, "id eq '" + buildID + "'",
+				"builds", TestrayBuild.FIELD_NAMES, "id eq '" + buildId + "'",
 				null, 1, 1);
 
 			if (entityJSONObjects.isEmpty()) {
@@ -89,20 +92,20 @@ public class TestrayServer {
 			JSONObject projectJSONObject = entityJSONObject.getJSONObject(
 				"projectToBuilds");
 
-			TestrayProject testrayProject = getTestrayProjectByID(
+			TestrayProject testrayProject = getTestrayProjectById(
 				projectJSONObject.getLong("id"));
 
 			JSONObject routineJSONObject = entityJSONObject.getJSONObject(
 				"routineToBuilds");
 
 			TestrayRoutine testrayRoutine =
-				testrayProject.getTestrayRoutineByID(
+				testrayProject.getTestrayRoutineById(
 					routineJSONObject.getLong("id"));
 
-			TestrayBuild testrayBuild = TestrayFactory.newTestrayBuild(
+			testrayBuild = TestrayFactory.newTestrayBuild(
 				testrayRoutine, entityJSONObject);
 
-			_testrayBuilds.put(testrayBuild.getID(), testrayBuild);
+			_testrayBuilds.put(testrayBuild.getId(), testrayBuild);
 
 			return testrayBuild;
 		}
@@ -111,83 +114,95 @@ public class TestrayServer {
 		}
 	}
 
-	public TestrayCaseType getTestrayCaseTypeByID(long testrayCaseTypeID) {
-		TestrayCaseType testrayCaseType = _testrayCaseTypesID.get(
-			testrayCaseTypeID);
+	public TestrayCaseType getTestrayCaseTypeById(long testrayCaseTypeId) {
+		synchronized (_testrayCaseTypesId) {
+			TestrayCaseType testrayCaseType = _testrayCaseTypesId.get(
+				testrayCaseTypeId);
 
-		if (testrayCaseType != null) {
-			return testrayCaseType;
-		}
-
-		try {
-			Set<JSONObject> entityJSONObjects = requestGraphQL(
-				"caseTypes", TestrayCaseType.FIELD_NAMES,
-				"id eq '" + testrayCaseTypeID + "'", null, 1, 1);
-
-			if (entityJSONObjects.isEmpty()) {
-				return null;
+			if (testrayCaseType != null) {
+				return testrayCaseType;
 			}
 
-			Iterator<JSONObject> iterator = entityJSONObjects.iterator();
+			try {
+				Set<JSONObject> entityJSONObjects = requestGraphQL(
+					"caseTypes", TestrayCaseType.FIELD_NAMES,
+					"id eq '" + testrayCaseTypeId + "'", null, 1, 1);
 
-			testrayCaseType = TestrayFactory.newTestrayCaseType(
-				this, iterator.next());
+				if (entityJSONObjects.isEmpty()) {
+					return null;
+				}
 
-			_testrayCaseTypesID.put(testrayCaseType.getID(), testrayCaseType);
-			_testrayCaseTypesName.put(
-				testrayCaseType.getName(), testrayCaseType);
+				Iterator<JSONObject> iterator = entityJSONObjects.iterator();
+
+				testrayCaseType = TestrayFactory.newTestrayCaseType(
+					this, iterator.next());
+
+				_testrayCaseTypesId.put(
+					testrayCaseType.getId(), testrayCaseType);
+				_testrayCaseTypesName.put(
+					testrayCaseType.getName(), testrayCaseType);
+			}
+			catch (IOException ioException) {
+				throw new RuntimeException(ioException);
+			}
+
+			return testrayCaseType;
 		}
-		catch (IOException ioException) {
-			throw new RuntimeException(ioException);
-		}
-
-		return _testrayCaseTypesID.get(testrayCaseTypeID);
 	}
 
 	public TestrayCaseType getTestrayCaseTypeByName(
 		String testrayCaseTypeName) {
 
-		TestrayCaseType testrayCaseType = _testrayCaseTypesName.get(
-			testrayCaseTypeName);
-
-		if (testrayCaseType != null) {
-			return testrayCaseType;
+		if (JenkinsResultsParserUtil.isNullOrEmpty(testrayCaseTypeName)) {
+			return null;
 		}
 
-		try {
-			Set<JSONObject> entityJSONObjects = requestGraphQL(
-				"caseTypes", TestrayCaseType.FIELD_NAMES,
-				"name eq '" + testrayCaseTypeName + "'", null, 1, 1);
+		synchronized (_testrayCaseTypesId) {
+			TestrayCaseType testrayCaseType = _testrayCaseTypesName.get(
+				testrayCaseTypeName);
 
-			if (entityJSONObjects.isEmpty()) {
-				return null;
+			if (testrayCaseType != null) {
+				return testrayCaseType;
 			}
 
-			Iterator<JSONObject> iterator = entityJSONObjects.iterator();
+			try {
+				Set<JSONObject> entityJSONObjects = requestGraphQL(
+					"caseTypes", TestrayCaseType.FIELD_NAMES,
+					"name eq '" + testrayCaseTypeName + "'", null, 1, 1);
 
-			testrayCaseType = TestrayFactory.newTestrayCaseType(
-				this, iterator.next());
+				if (entityJSONObjects.isEmpty()) {
+					return null;
+				}
 
-			_testrayCaseTypesID.put(testrayCaseType.getID(), testrayCaseType);
-			_testrayCaseTypesName.put(
-				testrayCaseType.getName(), testrayCaseType);
+				Iterator<JSONObject> iterator = entityJSONObjects.iterator();
+
+				testrayCaseType = TestrayFactory.newTestrayCaseType(
+					this, iterator.next());
+
+				_testrayCaseTypesId.put(
+					testrayCaseType.getId(), testrayCaseType);
+				_testrayCaseTypesName.put(
+					testrayCaseType.getName(), testrayCaseType);
+			}
+			catch (IOException ioException) {
+				throw new RuntimeException(ioException);
+			}
+
+			return testrayCaseType;
 		}
-		catch (IOException ioException) {
-			throw new RuntimeException(ioException);
-		}
-
-		return _testrayCaseTypesName.get(testrayCaseTypeName);
 	}
 
-	public TestrayProject getTestrayProjectByID(long projectID) {
-		if (_testrayProjects.containsKey(projectID)) {
-			return _testrayProjects.get(projectID);
+	public TestrayProject getTestrayProjectById(long projectId) {
+		TestrayProject testrayProject = _testrayProjects.get(projectId);
+
+		if (testrayProject != null) {
+			return testrayProject;
 		}
 
 		try {
 			Set<JSONObject> entityJSONObjects = requestGraphQL(
 				"projects", TestrayProject.FIELD_NAMES,
-				"id eq '" + projectID + "'", null, 1, 1);
+				"id eq '" + projectId + "'", null, 1, 1);
 
 			if (entityJSONObjects.isEmpty()) {
 				return null;
@@ -195,10 +210,10 @@ public class TestrayServer {
 
 			Iterator<JSONObject> iterator = entityJSONObjects.iterator();
 
-			TestrayProject testrayProject = TestrayFactory.newTestrayProject(
+			testrayProject = TestrayFactory.newTestrayProject(
 				this, iterator.next());
 
-			_testrayProjects.put(testrayProject.getID(), testrayProject);
+			_testrayProjects.put(testrayProject.getId(), testrayProject);
 
 			return testrayProject;
 		}
@@ -228,7 +243,7 @@ public class TestrayServer {
 			TestrayProject testrayProject = TestrayFactory.newTestrayProject(
 				this, iterator.next());
 
-			_testrayProjects.put(testrayProject.getID(), testrayProject);
+			_testrayProjects.put(testrayProject.getId(), testrayProject);
 
 			return testrayProject;
 		}
@@ -248,7 +263,7 @@ public class TestrayServer {
 				TestrayProject testrayProject =
 					TestrayFactory.newTestrayProject(this, entityJSONObject);
 
-				_testrayProjects.put(testrayProject.getID(), testrayProject);
+				_testrayProjects.put(testrayProject.getId(), testrayProject);
 
 				testrayProjects.add(testrayProject);
 			}
@@ -260,9 +275,11 @@ public class TestrayServer {
 		return testrayProjects;
 	}
 
-	public TestrayRoutine getTestrayRoutineByID(long routineId) {
-		if (_testrayRoutines.containsKey(routineId)) {
-			return _testrayRoutines.get(routineId);
+	public TestrayRoutine getTestrayRoutineById(long routineId) {
+		TestrayRoutine testrayRoutine = _testrayRoutines.get(routineId);
+
+		if (testrayRoutine != null) {
+			return testrayRoutine;
 		}
 
 		try {
@@ -281,13 +298,13 @@ public class TestrayServer {
 			JSONObject projectJSONObject = entityJSONObject.getJSONObject(
 				"routineToProjects");
 
-			TestrayProject testrayProject = getTestrayProjectByID(
+			TestrayProject testrayProject = getTestrayProjectById(
 				projectJSONObject.getLong("id"));
 
-			TestrayRoutine testrayRoutine = TestrayFactory.newTestrayRoutine(
+			testrayRoutine = TestrayFactory.newTestrayRoutine(
 				testrayProject, entityJSONObject);
 
-			_testrayRoutines.put(testrayRoutine.getID(), testrayRoutine);
+			_testrayRoutines.put(testrayRoutine.getId(), testrayRoutine);
 
 			return testrayRoutine;
 		}
@@ -384,7 +401,7 @@ public class TestrayServer {
 	}
 
 	protected File getResultsDir() {
-		String workspace = System.getenv("WORKSPACE");
+		String workspace = Environment.get("WORKSPACE");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(workspace)) {
 			throw new RuntimeException("Please set WORKSPACE");
@@ -405,7 +422,7 @@ public class TestrayServer {
 
 	protected Set<JSONObject> requestGraphQL(
 			boolean checkCache, String entityName, String[] entityFields,
-			String filter, String sort, long maxCount, int pageSize)
+			String filterString, String sortString, long maxCount, int pageSize)
 		throws IOException {
 
 		if (maxCount <= 0) {
@@ -438,15 +455,15 @@ public class TestrayServer {
 			sb.append(", pageSize: ");
 			sb.append(pageSize);
 
-			if (!JenkinsResultsParserUtil.isNullOrEmpty(filter)) {
+			if (!JenkinsResultsParserUtil.isNullOrEmpty(filterString)) {
 				sb.append(", filter: \"");
-				sb.append(filter);
+				sb.append(filterString);
 				sb.append("\"");
 			}
 
-			if (!JenkinsResultsParserUtil.isNullOrEmpty(sort)) {
+			if (!JenkinsResultsParserUtil.isNullOrEmpty(sortString)) {
 				sb.append(", sort: \"");
-				sb.append(sort);
+				sb.append(sortString);
 				sb.append("\"");
 			}
 
@@ -518,20 +535,22 @@ public class TestrayServer {
 	}
 
 	protected Set<JSONObject> requestGraphQL(
-			String entityName, String[] entityFields, String filter,
-			String sort)
-		throws IOException {
-
-		return requestGraphQL(entityName, entityFields, filter, sort, 0, 0);
-	}
-
-	protected Set<JSONObject> requestGraphQL(
-			String entityName, String[] entityFields, String filter,
-			String sort, long maxCount, int pageSize)
+			String entityName, String[] entityFields, String filterString,
+			String sortString)
 		throws IOException {
 
 		return requestGraphQL(
-			false, entityName, entityFields, filter, sort, maxCount, pageSize);
+			entityName, entityFields, filterString, sortString, 0, 0);
+	}
+
+	protected Set<JSONObject> requestGraphQL(
+			String entityName, String[] entityFields, String filterString,
+			String sortString, long maxCount, int pageSize)
+		throws IOException {
+
+		return requestGraphQL(
+			false, entityName, entityFields, filterString, sortString, maxCount,
+			pageSize);
 	}
 
 	private void _importCaseResultsToGCP(
@@ -637,7 +656,7 @@ public class TestrayServer {
 
 		sb.append(message);
 		sb.append("\n");
-		sb.append(System.getenv("TOP_LEVEL_BUILD_URL"));
+		sb.append(Environment.get("TOP_LEVEL_BUILD_URL"));
 
 		NotificationUtil.sendSlackNotification(
 			sb.toString(), "#ci-notifications", ":testray:",
@@ -658,7 +677,7 @@ public class TestrayServer {
 		"(?<url>https?://.*)/+");
 
 	private JenkinsResultsParserUtil.HTTPAuthorization _httpAuthorization;
-	private final Map<Long, TestrayCaseType> _testrayCaseTypesID =
+	private final Map<Long, TestrayCaseType> _testrayCaseTypesId =
 		new HashMap<>();
 	private final Map<String, TestrayCaseType> _testrayCaseTypesName =
 		new HashMap<>();

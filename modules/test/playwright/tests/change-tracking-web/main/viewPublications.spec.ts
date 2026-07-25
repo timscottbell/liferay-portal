@@ -15,7 +15,6 @@ import {journalPagesTest} from '../../journal-web/main/fixtures/journalPagesTest
 export const test = mergeTests(
 	apiHelpersTest,
 	featureFlagsTest({
-		'LPD-34594': {enabled: true},
 		'LPS-164563': {enabled: true},
 	}),
 	journalPagesTest,
@@ -48,28 +47,14 @@ test.beforeEach(
 	}
 );
 
-test.afterEach(async ({apiHelpers, page, workflowPage}) => {
+test.afterEach(async ({apiHelpers, workflowPage}) => {
 	await apiHelpers.headlessChangeTracking.checkoutCTCollection(0);
 
 	await workflowPage.goto();
 
-	const row = await page
-		.getByRole('row')
-		.filter({hasText: 'Web Content Article'});
-
-	const workflowEnabled = await row
-		.getByTitle('Workflow Definition')
-		.filter({hasText: 'Single Approver'});
-
-	if (workflowEnabled) {
-		await workflowPage.changeWorkflow(
-			'Web Content Article',
-			'No Workflow',
-			{
-				disable: true,
-			}
-		);
-	}
+	await workflowPage.changeWorkflow('Web Content Article', 'No Workflow', {
+		disable: true,
+	});
 });
 
 test('LPD-71138 Add new Pending Approval status', async ({
@@ -149,7 +134,7 @@ test('LPD-71138 Add status filter for ongoing publications', async ({
 	await inProgressCheckbox.check();
 	await pendingApprovalCheckbox.uncheck();
 
-	await addFilterButton.click();
+	await page.getByRole('button', {name: 'Show Results'}).click();
 
 	await expect(
 		page.getByRole('link', {name: inProgressCTCollection.body.name})

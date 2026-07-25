@@ -4,6 +4,7 @@
  */
 
 import {expect, mergeTests} from '@playwright/test';
+import path from 'path';
 
 import {apiHelpersTest} from '../../../fixtures/apiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
@@ -12,10 +13,13 @@ import {knowledgeBasePages} from '../../../fixtures/knowledgeBasePagesTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {liferayConfig} from '../../../liferay.config';
 import {KnowledgeBaseEditArticlePage} from '../../../pages/knowledge-base-web/KnowledgeBaseEditArticlePage';
+import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
 import getLoggedInPage from '../../../utils/getLoggedInPage';
 import getRandomString from '../../../utils/getRandomString';
 import {performLogout} from '../../../utils/performLogin';
 import {waitForAlert} from '../../../utils/waitForAlert';
+import getPageDefinition from '../../layout-content-page-editor-web/main/utils/getPageDefinition';
+import getWidgetDefinition from '../../layout-content-page-editor-web/main/utils/getWidgetDefinition';
 import {KnowledgeBaseUrls} from './utils/knowledgeBaseUrls';
 
 const test = mergeTests(
@@ -24,8 +28,14 @@ const test = mergeTests(
 	knowledgeBasePages,
 	featureFlagsTest({
 		'LPD-11003': {enabled: true},
+		'LPS-178052': {enabled: true},
 	}),
 	loginTest()
+);
+
+const SAMPLE_IMAGE = path.join(
+	__dirname,
+	'../../frontend-js-item-selector-web/main/dependencies/sample_image.png'
 );
 
 test('LPD-27537: Article should be shown to guest users', async ({
@@ -41,7 +51,20 @@ test('LPD-27537: Article should be shown to guest users', async ({
 			articleBody: content,
 			siteId: site.id,
 			title,
+			viewableBy: 'Anyone',
 		});
+
+	await apiHelpers.headlessDelivery.createSitePage({
+		pageDefinition: getPageDefinition([
+			getWidgetDefinition({
+				id: getRandomString(),
+				widgetName:
+					'com_liferay_knowledge_base_web_portlet_DisplayPortlet',
+			}),
+		]),
+		siteId: site.id,
+		title: getRandomString(),
+	});
 
 	await performLogout(page);
 
@@ -55,7 +78,7 @@ test('LPD-27537: Article should be shown to guest users', async ({
 		page.getByText('Error:Your request failed to complete.')
 	).toBeHidden();
 
-	await expect(page.getByText('Knowledge Base Article')).toBeVisible();
+	await expect(page.getByRole('heading', {name: title})).toBeVisible();
 });
 
 test('LPD-23801 error message is shown when an admin user tries to publish an article that an admin is currently editing', async ({
@@ -261,3 +284,75 @@ test(
 		).not.toBeVisible();
 	}
 );
+
+test(
+	'Search bar is not disabled after zero-result search',
+	{tag: '@LPD-86105'},
+	async ({apiHelpers, knowledgeBasePage, page, site}) => {
+		await apiHelpers.headlessDelivery.postSiteKnowledgeBaseArticle({
+			articleBody: getRandomString(),
+			siteId: site.id,
+			title: getRandomString(),
+		});
+
+		await knowledgeBasePage.goto(site.friendlyUrlPath);
+
+		const searchInput = page.getByRole('searchbox');
+
+		await searchInput.fill(getRandomString());
+		await searchInput.press('Enter');
+
+		await expect(searchInput).not.toBeDisabled();
+	}
+);
+
+test('Add an image to an article through the Upload Image tab', async ({
+	apiHelpers,
+	knowledgeBaseEditArticlePage,
+	knowledgeBaseViewArticlePage,
+	page,
+	site,
+}) => {
+	const title = getRandomString();
+
+	const article =
+		await apiHelpers.headlessDelivery.postSiteKnowledgeBaseArticle({
+			articleBody: getRandomString(),
+			siteId: site.id,
+			title,
+		});
+
+	const knowledgeBaseUrls = new KnowledgeBaseUrls(site.friendlyUrlPath);
+
+	// Open the article editor and upload an image into the content field
+
+	await page.goto(knowledgeBaseUrls.getEditKBArticleUrl(article.id));
+
+	await expect(page.getByPlaceholder('Untitled Article')).toHaveValue(title);
+
+	await page.getByRole('button', {name: 'Image'}).click();
+
+	const itemSelector = page.frameLocator('iframe[title="Select Item"]');
+
+	await itemSelector.getByRole('link', {name: 'Upload Image'}).click();
+
+	await itemSelector
+		.locator('input[type="file"]')
+		.setInputFiles(SAMPLE_IMAGE);
+
+	await itemSelector.getByRole('button', {exact: true, name: 'Add'}).click();
+
+	// Publish and verify the uploaded image renders in the article
+
+	await clickAndExpectToBeVisible({
+		autoClick: true,
+		target: knowledgeBaseEditArticlePage.publishMenuItem,
+		trigger: knowledgeBaseEditArticlePage.publishButton,
+	});
+
+	await waitForAlert(page, `Success:${title} was successfully published.`);
+
+	await knowledgeBaseViewArticlePage.goto(site.friendlyUrlPath, title);
+
+	await expect(page.locator('img[src*="sample_image"]')).toBeVisible();
+});

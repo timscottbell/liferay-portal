@@ -60,8 +60,6 @@ if (parentGroupId != GroupConstants.DEFAULT_PARENT_GROUP_ID) {
 <liferay-ui:error exception="<%= RequiredGroupException.MustNotDeleteGroupThatHasChild.class %>" message="you-cannot-delete-sites-that-have-subsites" />
 <liferay-ui:error exception="<%= RequiredGroupException.MustNotDeleteSystemGroup.class %>" message="the-site-cannot-be-deleted-or-deactivated-because-it-is-a-required-system-site" />
 
-<liferay-ui:error key="resetMergeFailCountAndMerge" message="unable-to-reset-the-failure-counter-and-propagate-the-changes" />
-
 <c:if test="<%= liveGroup != null %>">
 	<aui:input name="siteId" type="resource" value="<%= String.valueOf(liveGroup.getGroupId()) %>" />
 
@@ -81,6 +79,34 @@ if (parentGroupId != GroupConstants.DEFAULT_PARENT_GROUP_ID) {
 
 <c:if test="<%= !siteGroup.isCompany() && !siteGroup.isGuest() %>">
 	<aui:input inlineLabel="right" labelCssClass="simple-toggle-switch" name="active" type="toggle-switch" value="<%= liveGroup.isActive() %>" />
+
+	<c:if test='<%= FeatureFlagManagerUtil.isEnabled("LPD-82960") %>'>
+		<aui:input disabled="<%= liveGroup.isActive() %>" helpMessage='<%= liveGroup.isActive() ? LanguageUtil.get(request, "the-site-must-be-deactivated-before-enabling-maintenance-mode") : LanguageUtil.get(request, "when-enabled-nonadmin-users-see-a-maintenance-page-instead-of-the-site-content") %>' inlineLabel="right" label="maintenance-mode" labelCssClass="simple-toggle-switch" name="maintenanceMode" type="toggle-switch" value="<%= liveGroup.isMaintenanceMode() %>" />
+
+		<aui:script>
+			var activeCheckbox = document.getElementById('<portlet:namespace />active');
+			var maintenanceModeCheckbox = document.getElementById(
+				'<portlet:namespace />maintenanceMode'
+			);
+			var maintenanceModeLabel = document.querySelector(
+				'label[for="<portlet:namespace />maintenanceMode"]'
+			);
+
+			if (activeCheckbox && maintenanceModeCheckbox && maintenanceModeLabel) {
+				activeCheckbox.addEventListener('change', function () {
+					if (activeCheckbox.checked) {
+						maintenanceModeCheckbox.checked = false;
+						maintenanceModeCheckbox.disabled = true;
+						maintenanceModeLabel.classList.add('disabled');
+					}
+					else {
+						maintenanceModeCheckbox.disabled = false;
+						maintenanceModeLabel.classList.remove('disabled');
+					}
+				});
+			}
+		</aui:script>
+	</c:if>
 </c:if>
 
 <c:if test="<%= (parentGroupId != GroupConstants.DEFAULT_PARENT_GROUP_ID) && PropsValues.SITES_SHOW_INHERIT_CONTENT_SCOPE_FROM_PARENT_SITE %>">

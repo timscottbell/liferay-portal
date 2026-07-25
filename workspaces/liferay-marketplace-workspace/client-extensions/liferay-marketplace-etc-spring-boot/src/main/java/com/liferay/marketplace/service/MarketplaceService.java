@@ -7,8 +7,12 @@ package com.liferay.marketplace.service;
 
 import com.liferay.client.extension.util.spring.boot3.client.LiferayOAuth2AccessTokenManager;
 import com.liferay.client.extension.util.spring.boot3.service.BaseService;
+import com.liferay.headless.admin.address.client.dto.v1_0.Country;
+import com.liferay.headless.admin.address.client.resource.v1_0.CountryResource;
 import com.liferay.headless.admin.user.client.dto.v1_0.UserAccount;
+import com.liferay.headless.admin.user.client.http.HttpInvoker;
 import com.liferay.headless.admin.user.client.pagination.Page;
+import com.liferay.headless.admin.user.client.resource.v1_0.AccountGroupResource;
 import com.liferay.headless.admin.user.client.resource.v1_0.AccountResource;
 import com.liferay.headless.admin.user.client.resource.v1_0.AccountRoleResource;
 import com.liferay.headless.admin.user.client.resource.v1_0.PostalAddressResource;
@@ -85,6 +89,27 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 public class MarketplaceService extends BaseService {
 
+	public void completeOrder(long orderId, int paymentStatus)
+		throws Exception {
+
+		completeOrder(null, orderId, paymentStatus);
+	}
+
+	public void completeOrder(
+			Map<String, ?> customFields, long orderId, int paymentStatus)
+		throws Exception {
+
+		updateOrder(
+			customFields, orderId, MarketplaceConstants.ORDER_STATUS_PENDING);
+
+		updateOrder(
+			null, orderId, MarketplaceConstants.ORDER_STATUS_PROCESSING);
+
+		updateOrder(
+			null, orderId, MarketplaceConstants.ORDER_STATUS_COMPLETED,
+			paymentStatus);
+	}
+
 	public void deployCloudService(JSONObject jsonObject, Order order)
 		throws Exception {
 
@@ -158,6 +183,17 @@ public class MarketplaceService extends BaseService {
 		updateOrder(customFields, order.getId(), order.getOrderStatus());
 	}
 
+	public AccountGroupResource getAccountGroupResource() throws Exception {
+		return AccountGroupResource.builder(
+		).header(
+			HttpHeaders.AUTHORIZATION,
+			_liferayOAuth2AccessTokenManager.getAuthorization(
+				"liferay-marketplace-etc-spring-boot-oahs")
+		).endpoint(
+			new URL(lxcDXPServerProtocol + "://" + lxcDXPMainDomain)
+		).build();
+	}
+
 	public AccountResource getAccountResource() throws Exception {
 		return AccountResource.builder(
 		).header(
@@ -180,6 +216,21 @@ public class MarketplaceService extends BaseService {
 		).endpoint(
 			new URL(lxcDXPServerProtocol + "://" + lxcDXPMainDomain)
 		).build();
+	}
+
+	public JSONObject getAIHubApplicationJSONObject(
+		String externalReferenceCode) {
+
+		return new JSONObject(
+			get(
+				_liferayOAuth2AccessTokenManager.getAuthorization(
+					"liferay-marketplace-etc-spring-boot-oahs"),
+				UriComponentsBuilder.fromPath(
+					"/o/c/aihubapplications/by-external-reference-code/" +
+						externalReferenceCode +
+							"?nestedFields=orderToAIHubApplication"
+				).build(
+				).toUri()));
 	}
 
 	public AttachmentResource getAttachmentResource() throws Exception {
@@ -226,6 +277,12 @@ public class MarketplaceService extends BaseService {
 		).endpoint(
 			new URL(lxcDXPServerProtocol + "://" + lxcDXPMainDomain)
 		).build();
+	}
+
+	public Country getCountryByA2(String a2) throws Exception {
+		CountryResource countryResource = _getCountryResource();
+
+		return countryResource.getCountryByA2(a2);
 	}
 
 	public CurrencyResource getCurrencyResource() throws Exception {
@@ -325,6 +382,8 @@ public class MarketplaceService extends BaseService {
 				"liferay-marketplace-etc-spring-boot-oahs")
 		).endpoint(
 			new URL(lxcDXPServerProtocol + "://" + lxcDXPMainDomain)
+		).parameters(
+			"nestedFields", "catalog"
 		).build();
 	}
 
@@ -353,6 +412,17 @@ public class MarketplaceService extends BaseService {
 		}
 
 		return map;
+	}
+
+	public String getProductThumbnail(Product product) throws Exception {
+		return new URL(
+			StringBundler.concat(
+				lxcDXPServerProtocol, "://", lxcDXPMainDomain,
+				product.getThumbnail())
+		).toString(
+		).replaceAll(
+			"(?<=accounts/)-?\\d+(?=/images)", "-1"
+		);
 	}
 
 	public String getProductVersion(long skuId) {
@@ -431,7 +501,7 @@ public class MarketplaceService extends BaseService {
 					"/o/c/publisherassetses"
 				).queryParam(
 					"filter",
-					"r_productEntryToPublisherAssets_CProductId eq '" +
+					"r_productEntryToPublisherAssets_CPDefinitionId eq '" +
 						productId + "'"
 				).queryParam(
 					"pageSize", 20
@@ -445,6 +515,12 @@ public class MarketplaceService extends BaseService {
 		SkuResource skuResource = getSkuResource();
 
 		return skuResource.getSku(id);
+	}
+
+	public Sku getSku(String externalReferenceCode) throws Exception {
+		SkuResource skuResource = getSkuResource();
+
+		return skuResource.getSkuByExternalReferenceCode(externalReferenceCode);
 	}
 
 	public SkuResource getSkuResource() throws Exception {
@@ -573,6 +649,18 @@ public class MarketplaceService extends BaseService {
 
 		JSONObject jsonObject = jsonArray.getJSONObject(0);
 
+		if (Validator.isNull(emailAddress)) {
+			emailAddress = _replace(
+				jsonObject.getJSONObject(
+					"to"
+				).getString(
+					"en_US"
+				),
+				map);
+		}
+
+		String finalEmailAddress = emailAddress;
+
 		notificationQueueEntry.setRecipients(
 			() -> new Object[] {
 				new HashMapBuilder<String, Object>().put(
@@ -589,18 +677,7 @@ public class MarketplaceService extends BaseService {
 						"en_US"
 					)
 				).put(
-					"to",
-					() -> {
-						if (Validator.isNotNull(emailAddress)) {
-							return emailAddress;
-						}
-
-						return jsonObject.getJSONObject(
-							"to"
-						).getString(
-							"en_US"
-						);
-					}
+					"to", finalEmailAddress
 				).build()
 			});
 
@@ -621,7 +698,7 @@ public class MarketplaceService extends BaseService {
 				_log.info(
 					StringBundler.concat(
 						"Sent ", externalReferenceCode, " notification to ",
-						emailAddress));
+						finalEmailAddress));
 			}
 		}
 		catch (Exception exception) {
@@ -630,12 +707,6 @@ public class MarketplaceService extends BaseService {
 					externalReferenceCode,
 				exception);
 		}
-	}
-
-	public void postOrder(Order order) throws Exception {
-		OrderResource orderResource = getOrderResource();
-
-		orderResource.postOrder(order);
 	}
 
 	public void postProductAttachment(
@@ -668,6 +739,15 @@ public class MarketplaceService extends BaseService {
 		userAccountResource.postUserAccount(userAccount);
 	}
 
+	public HttpInvoker.HttpResponse postUserAccountHttpResponse(
+			UserAccount userAccount)
+		throws Exception {
+
+		UserAccountResource userAccountResource = getUserAccountResource();
+
+		return userAccountResource.postUserAccountHttpResponse(userAccount);
+	}
+
 	public void postVirtualFileEntry(File file, long productId, String version)
 		throws Exception {
 
@@ -691,6 +771,36 @@ public class MarketplaceService extends BaseService {
 				).build());
 	}
 
+	public JSONObject putAIHubApplication(
+		String externalReferenceCode, JSONObject jsonObject) {
+
+		return new JSONObject(
+			put(
+				_liferayOAuth2AccessTokenManager.getAuthorization(
+					"liferay-marketplace-etc-spring-boot-oahs"),
+				jsonObject.toString(),
+				UriComponentsBuilder.fromPath(
+					"/o/c/aihubapplications/by-external-reference-code/" +
+						externalReferenceCode
+				).build(
+				).toUri()));
+	}
+
+	public JSONObject putSalesforceProject(
+		String externalReferenceCode, JSONObject jsonObject) {
+
+		return new JSONObject(
+			put(
+				_liferayOAuth2AccessTokenManager.getAuthorization(
+					"liferay-marketplace-etc-spring-boot-oahs"),
+				jsonObject.toString(),
+				UriComponentsBuilder.fromPath(
+					"/o/c/salesforceprojects/by-external-reference-code/" +
+						externalReferenceCode
+				).build(
+				).toUri()));
+	}
+
 	public void updateOrder(
 			Map<String, ?> customFields, long orderId, int orderStatus)
 		throws Exception {
@@ -708,6 +818,32 @@ public class MarketplaceService extends BaseService {
 		order.setOrderStatus(() -> orderStatus);
 
 		OrderResource orderResource = getOrderResource();
+
+		orderResource.patchOrder(orderId, order);
+	}
+
+	public void updateOrder(
+			Map<String, ?> customFields, long orderId, int orderStatus,
+			int paymentStatus)
+		throws Exception {
+
+		OrderResource orderResource = getOrderResource();
+
+		Order order = new Order();
+
+		if (_log.isInfoEnabled()) {
+			_log.info(
+				StringBundler.concat(
+					"Updating status for order ", orderId, " to ",
+					MarketplaceConstants.getOrderStatusLabel(orderStatus),
+					" and payment status to ",
+					MarketplaceConstants.getOrderPaymentStatusLabel(
+						paymentStatus)));
+		}
+
+		order.setCustomFields(() -> customFields);
+		order.setOrderStatus(() -> orderStatus);
+		order.setPaymentStatus(() -> paymentStatus);
 
 		orderResource.patchOrder(orderId, order);
 	}
@@ -737,6 +873,17 @@ public class MarketplaceService extends BaseService {
 		}
 
 		return new JSONObject();
+	}
+
+	private CountryResource _getCountryResource() throws Exception {
+		return CountryResource.builder(
+		).header(
+			HttpHeaders.AUTHORIZATION,
+			_liferayOAuth2AccessTokenManager.getAuthorization(
+				"liferay-marketplace-etc-spring-boot-oahs")
+		).endpoint(
+			new URL(lxcDXPServerProtocol + "://" + lxcDXPMainDomain)
+		).build();
 	}
 
 	private ProductSpecificationResource _getProductSpecificationResource()

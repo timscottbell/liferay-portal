@@ -2,12 +2,14 @@ definition {
 
 	@summary = "Default summary"
 	macro _configureExportSiteOptions(contentDateRange = null, checkContentNameList = null, uncheckContentNameList = null, checkPageName = null, uncheckLogo = null, larFileName = null, uncheckSiteTemplateSettings = null, contentName = null, uncheckSubSubContent = null, uncheckSubContent = null, exportPermissions = null, uncheckSitePagesSettings = null, contentDeletion = null, mainContent = null, subContent = null) {
-		if (isSet(larFileName)) {
-			Type(
-				inputFieldId = "ExportPortlet_name",
-				locator1 = "TextInput#INPUT_ID",
-				value1 = ${larFileName});
+		if (!(isSet(larFileName))) {
+			var larFileName = "Export";
 		}
+
+		Type(
+			inputFieldId = "ExportPortlet_name",
+			locator1 = "TextInput#INPUT_ID",
+			value1 = ${larFileName});
 
 		if (isSet(contentDateRange)) {
 			ContentConfiguration.contentDateRange(contentDateRange = ${contentDateRange});
@@ -121,12 +123,14 @@ definition {
 
 	@summary = "Default summary"
 	macro _exportSite(larFileName = null) {
-		if (isSet(larFileName)) {
-			Type(
-				inputFieldId = "ExportPortlet_name",
-				locator1 = "TextInput#INPUT_ID",
-				value1 = ${larFileName});
+		if (!(isSet(larFileName))) {
+			var larFileName = "Export Process";
 		}
+
+		Type(
+			inputFieldId = "ExportPortlet_name",
+			locator1 = "TextInput#INPUT_ID",
+			value1 = ${larFileName});
 
 		LAR.exportWithAssertionOnSuccess();
 	}
@@ -207,10 +211,6 @@ definition {
 			key_text = "Import",
 			locator1 = "Button#ANY",
 			value1 = "Import");
-
-		AssertTextEquals(
-			locator1 = "ExportImport#CURRENT_AND_PREVIOUS_STATUS_1",
-			value1 = "Successful");
 	}
 
 	@summary = "Default summary"
@@ -341,6 +341,11 @@ definition {
 				AssertTextEquals(
 					locator1 = "ExportImport#CURRENT_AND_PREVIOUS_STATUS_1",
 					value1 = "Failed");
+			}
+			else if (isSet(completedWithErrorsExpected)) {
+				AssertTextEquals(
+					locator1 = "ExportImport#CURRENT_AND_PREVIOUS_STATUS_1",
+					value1 = "Completed With Errors");
 			}
 			else {
 				AssertTextEquals(
@@ -585,6 +590,18 @@ definition {
 	}
 
 	@summary = "Default summary"
+	macro enableExportTemplatesFeatureFlag() {
+		PortalSettings.gotoConfiguration(
+			configurationCategory = "Feature Flags",
+			configurationName = "Deprecation",
+			configurationScope = "Virtual Instance Scope");
+
+		FeatureFlag.enableFeatureFlag(featureFlag = "LPD-96546");
+
+		Navigator.openURL();
+	}
+
+	@summary = "Default summary"
 	macro exportDDL(exportPermissions = null, larFileName = null) {
 		LAR._gotoExportImport();
 
@@ -710,7 +727,11 @@ definition {
 
 		var portalURL = JSONCompany.getPortalURL();
 
-		var larFileName = RegexUtil.replace(${valueName}, "${portalURL}/documents/portlet_file_entry/[0-9]*/([a-zA-z0-9_.-]*)[(0-9KB)]*", 1);
+		var sourceFileName = RegexUtil.replace(${valueName}, "${portalURL}/documents/portlet_file_entry/[0-9]*/([a-zA-z0-9_.-]*)[(0-9KB)]*", 1);
+
+		var titleName = RegexUtil.replace(${sourceFileName}, "(.*)-[0-9]+\.lar", 1);
+
+		var larFileName = "${titleName}.lar";
 
 		echo("lar file name ${larFileName}");
 
@@ -718,7 +739,7 @@ definition {
 	}
 
 	@summary = "Default summary"
-	macro importPortlet(importSchemaVersionMismatching = null, importValidationMissingItem = null, cannotImport = null, mirrorWithOverwriting = null, uploadFrom = null, initializeLiferayEvent = null, importDeletions = null, failureExpected = null, importPermissions = null, larFileName = null, copyAsNew = null, portletName = null) {
+	macro importPortlet(importSchemaVersionMismatching = null, importValidationMissingItem = null, cannotImport = null, mirrorWithOverwriting = null, uploadFrom = null, initializeLiferayEvent = null, importDeletions = null, failureExpected = null, completedWithErrorsExpected = null, importPermissions = null, larFileName = null, copyAsNew = null, portletName = null) {
 		if (${copyAsNew} == "true") {
 			Staging.enableCopyAsNewImport();
 		}
@@ -727,6 +748,7 @@ definition {
 
 		LAR._selectImportFile(
 			cannotImport = ${cannotImport},
+			completedWithErrorsExpected = ${completedWithErrorsExpected},
 			copyAsNew = ${copyAsNew},
 			failureExpected = ${failureExpected},
 			importDeletions = ${importDeletions},

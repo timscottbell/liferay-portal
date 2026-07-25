@@ -23,6 +23,22 @@ export default {
 	title: 'Design System/Components/Card',
 };
 
+const cardActions: React.ComponentProps<
+	typeof ClayCardWithHorizontal
+>['actions'] = [
+	{
+		label: 'clickable',
+		onClick: () => {
+			alert('you clicked!');
+		},
+	},
+	{type: 'divider'},
+	{
+		href: '#',
+		label: 'linkable',
+	},
+];
+
 function ClayCheckboxWithState(props: any) {
 	const [value, setValue] = React.useState<boolean>(false);
 	const checked = props.value || value;
@@ -39,7 +55,7 @@ function ClayCheckboxWithState(props: any) {
 		</ClayCheckbox>
 	);
 }
-export function CardWithInfo(args: any) {
+export function CardWithInfo(args: {disabled?: boolean}) {
 	const [value, setValue] = useState<boolean>(false);
 	const [radioValue, setRadioValue] = useState<string>('');
 
@@ -65,19 +81,7 @@ export function CardWithInfo(args: any) {
 
 				<div className="col-md-4">
 					<ClayCardWithInfo
-						actions={[
-							{
-								label: 'clickable',
-								onClick: () => {
-									alert('you clicked!');
-								},
-							},
-							{type: 'divider'},
-							{
-								href: '#',
-								label: 'linkable',
-							},
-						]}
+						actions={cardActions}
 						description="A cool description"
 						disabled={args.disabled}
 						href="#"
@@ -107,6 +111,7 @@ export function CardWithInfo(args: any) {
 					<ClayCard.Group label="Radio Card Group">
 						<ClayCardWithInfo
 							description="A cool description"
+							disabled={args.disabled}
 							labels={[
 								{
 									displayType: 'danger',
@@ -124,6 +129,7 @@ export function CardWithInfo(args: any) {
 
 						<ClayCardWithInfo
 							description="A cool description"
+							disabled={args.disabled}
 							labels={[
 								{
 									displayType: 'success',
@@ -212,6 +218,7 @@ CardWithInfoImage.args = {
 };
 export function CardWithHorizontal(args: any) {
 	const [value, setValue] = useState<boolean>(false);
+	const [longTextValue, setLongTextValue] = useState<boolean>(false);
 	const [radioValue, setRadioValue] = useState<string>('');
 
 	return (
@@ -226,19 +233,7 @@ export function CardWithHorizontal(args: any) {
 
 				<div className="col-md-4">
 					<ClayCardWithHorizontal
-						actions={[
-							{
-								label: 'clickable',
-								onClick: () => {
-									alert('you clicked!');
-								},
-							},
-							{type: 'divider'},
-							{
-								href: '#',
-								label: 'linkable',
-							},
-						]}
+						actions={cardActions}
 						disabled={args.disabled}
 						href="#"
 						onSelectChange={setValue}
@@ -246,24 +241,23 @@ export function CardWithHorizontal(args: any) {
 						title="Selectable Folder"
 					/>
 				</div>
+
+				<div className="col-md-4">
+					<ClayCardWithHorizontal
+						disabled={args.disabled}
+						href="#"
+						onSelectChange={setLongTextValue}
+						selected={longTextValue}
+						title="This Folder Has an Extremely Long Name That Wraps Onto Multiple Lines Instead of Being Truncated With an Ellipsis"
+						truncate={false}
+					/>
+				</div>
 			</div>
 			<div className="row">
 				<div className="col-md-12">
 					<ClayCard.Group label="Radio Card Group">
 						<ClayCardWithHorizontal
-							actions={[
-								{
-									label: 'clickable',
-									onClick: () => {
-										alert('you clicked!');
-									},
-								},
-								{type: 'divider'},
-								{
-									href: '#',
-									label: 'linkable',
-								},
-							]}
+							actions={cardActions}
 							disabled={args.disabled}
 							href="#"
 							onSelectChange={setRadioValue}
@@ -274,19 +268,7 @@ export function CardWithHorizontal(args: any) {
 						/>
 
 						<ClayCardWithHorizontal
-							actions={[
-								{
-									label: 'clickable',
-									onClick: () => {
-										alert('you clicked!');
-									},
-								},
-								{type: 'divider'},
-								{
-									href: '#',
-									label: 'linkable',
-								},
-							]}
+							actions={cardActions}
 							disabled={args.disabled}
 							href="#"
 							onSelectChange={setRadioValue}
@@ -294,6 +276,18 @@ export function CardWithHorizontal(args: any) {
 							selectableType="radio"
 							selected={radioValue === 'radio2'}
 							title="Radio Selectable Folder 2"
+						/>
+
+						<ClayCardWithHorizontal
+							actions={cardActions}
+							disabled={args.disabled}
+							href="#"
+							onSelectChange={setRadioValue}
+							radioProps={{name: 'cards', value: 'radio3'}}
+							selectableType="radio"
+							selected={radioValue === 'radio3'}
+							title="This Radio Folder Has an Extremely Long Name That Wraps Onto Multiple Lines Instead of Being Truncated With an Ellipsis"
+							truncate={false}
 						/>
 					</ClayCard.Group>
 				</div>
@@ -346,19 +340,7 @@ export function CardWithUser(args: any) {
 			<div className="row">
 				<div className="col-md-4">
 					<ClayCardWithUser
-						actions={[
-							{
-								label: 'clickable',
-								onClick: () => {
-									alert('you clicked!');
-								},
-							},
-							{type: 'divider'},
-							{
-								href: '#',
-								label: 'linkable',
-							},
-						]}
+						actions={cardActions}
 						description="Assistant to the regional manager"
 						disabled={args.disabled}
 						href="#"
@@ -372,7 +354,6 @@ export function CardWithUser(args: any) {
 				<div className="col-md-4">
 					<ClayCardWithUser
 						description="Assistant to the regional manager"
-						disabled={args.disabled}
 						name="Abraham Kuyper"
 						stickerTitle="User Icon"
 						userImageSrc="https://via.placeholder.com/256"
@@ -737,5 +718,87 @@ export function ProductCard() {
 				</ClayCard>
 			</div>
 		</div>
+	);
+}
+export function CardPageViews() {
+	const labels = [
+		'One',
+		'Two',
+		'Three',
+		'Four',
+		'Five',
+		'Six',
+		'Seven',
+		'Eight',
+	];
+
+	// The card has no size of its own. .card-page and its dense/horizontal
+	// variants are CSS Grid containers whose column count is derived from the
+	// container width (auto-fill), so resize the preview to see the columns
+	// reflow. The container works the same whether it is a div, ul, or dl.
+
+	const renderCard = (label: string) => (
+		<ClayCard displayType="image" key={label}>
+			<ClayCard.AspectRatio className="card-item-first">
+				<div
+					className="aspect-ratio-item aspect-ratio-item-fluid"
+					style={{backgroundColor: '#e7e7ed'}}
+				/>
+			</ClayCard.AspectRatio>
+
+			<ClayCard.Body>
+				<ClayCard.Description displayType="title">
+					{label}
+				</ClayCard.Description>
+
+				<ClayCard.Description displayType="subtitle">
+					Columns adapt to the container width
+				</ClayCard.Description>
+			</ClayCard.Body>
+		</ClayCard>
+	);
+
+	return (
+		<>
+			<p>card-page (default — min 296px columns)</p>
+
+			<div className="card-page">
+				{labels.map((label) => (
+					<div className="card-page-item-asset" key={label}>
+						{renderCard(label)}
+					</div>
+				))}
+			</div>
+
+			<p className="c-mt-4">card-page as a list (ul / li markup)</p>
+
+			<ul className="card-page">
+				{labels.map((label) => (
+					<li className="card-page-item-asset" key={label}>
+						{renderCard(label)}
+					</li>
+				))}
+			</ul>
+
+			<p className="c-mt-4">card-page-dense (min 190px columns)</p>
+
+			<div className="card-page card-page-dense">
+				{labels.map((label) => renderCard(label))}
+			</div>
+
+			<p className="c-mt-4">
+				card-page-horizontal (min 288px columns, horizontal cards)
+			</p>
+
+			<div className="card-page card-page-horizontal">
+				{labels.map((label) => (
+					<ClayCardWithHorizontal
+						href="#"
+						key={label}
+						title={label}
+					/>
+				))}
+			</div>
+		</>
 	);
 }

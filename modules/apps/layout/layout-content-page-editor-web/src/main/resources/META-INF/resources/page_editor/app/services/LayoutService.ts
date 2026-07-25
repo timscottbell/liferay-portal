@@ -90,13 +90,20 @@ export default {
 	changeStyleBookEntry({
 		onNetworkStatus,
 		styleBookEntryERC,
+		styleBookEntryScopeERC,
 	}: {
 		onNetworkStatus: OnNetworkStatus;
 		styleBookEntryERC: string;
+		styleBookEntryScopeERC?: string;
 	}) {
 		return draftServiceFetch<{tokenValues: StyleBookTokenValueMap}>(
 			config.changeStyleBookEntryURL,
-			{body: {styleBookEntryERC}},
+			{
+				body: {
+					styleBookEntryERC,
+					styleBookEntryScopeERC: styleBookEntryScopeERC || '',
+				},
+			},
 			onNetworkStatus
 		);
 	},
@@ -291,12 +298,14 @@ export default {
 	},
 
 	updateCollectionDisplayConfig({
+		editableValuesChanges,
 		itemConfig,
 		itemId,
 		languageId,
 		onNetworkStatus,
 		segmentsExperienceId,
 	}: {
+		editableValuesChanges: Record<string, unknown>;
 		itemConfig: CollectionItemLayoutDataItem['config'];
 		itemId: string;
 		languageId: Liferay.Language.Locale;
@@ -311,6 +320,9 @@ export default {
 			config.updateCollectionDisplayConfigURL,
 			{
 				body: {
+					editableValuesChanges: JSON.stringify(
+						editableValuesChanges
+					),
 					itemConfig: JSON.stringify(itemConfig),
 					itemId,
 					languageId,

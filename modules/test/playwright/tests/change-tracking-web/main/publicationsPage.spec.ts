@@ -34,6 +34,7 @@ export const test = mergeTests(
 	customFieldsPagesTest,
 	featureFlagsTest({
 		'LPD-39304': {enabled: true},
+		'LPD-76864': {enabled: true},
 	}),
 	isolatedSiteTest,
 	masterPagesPagesTest,
@@ -504,7 +505,7 @@ test('Apply style book layout', async ({
 
 	await styleBooksPage.goto();
 
-	await styleBooksPage.create(styleBookName);
+	await styleBooksPage.create(styleBookName, 'Classic Theme');
 
 	await styleBooksPage.selectTokenCategory('Typography');
 
@@ -918,10 +919,12 @@ test(
 
 		await changeTrackingPage.reviewChange(layoutTitle);
 
-		const view = page.frameLocator('iframe');
-
-		await expect(view.nth(0).getByText('Heading Example')).toBeVisible();
-		await expect(view.nth(1).getByText('Edited Text')).toBeVisible();
+		await expect(page.getByText('Heading Example')).toBeVisible({
+			timeout: 30000,
+		});
+		await expect(page.getByText('Edited Text')).toBeVisible({
+			timeout: 30000,
+		});
 
 		await apiHelpers.jsonWebServicesLayout.deleteLayout(layout.plid);
 	}

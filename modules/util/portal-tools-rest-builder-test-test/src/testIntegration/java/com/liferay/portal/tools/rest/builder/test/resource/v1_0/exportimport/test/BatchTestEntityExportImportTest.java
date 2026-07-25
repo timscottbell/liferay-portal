@@ -23,6 +23,7 @@ import com.liferay.exportimport.report.service.ExportImportReportEntryLocalServi
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.SystemEventConstants;
@@ -38,6 +39,7 @@ import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.uuid.PortalUUIDUtil;
@@ -112,7 +114,8 @@ public class BatchTestEntityExportImportTest {
 			testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).parameters(
@@ -124,7 +127,8 @@ public class BatchTestEntityExportImportTest {
 			testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -134,7 +138,8 @@ public class BatchTestEntityExportImportTest {
 				testCompanyAdminUser.getEmailAddress(),
 				PropsValues.DEFAULT_ADMIN_PASSWORD
 			).endpoint(
-				testCompany.getVirtualHostname(), 8080, "http"
+				testCompany.getVirtualHostname(),
+				PortalUtil.getPortalServerPort(false), "http"
 			).locale(
 				LocaleUtil.getDefault()
 			).build();
@@ -203,6 +208,9 @@ public class BatchTestEntityExportImportTest {
 							RandomTestUtil.randomString());
 					}
 				});
+
+		Assert.assertFalse(batchTestEntity1.getAcceptAllLanguages());
+
 		BatchTestEntity batchTestEntity2 =
 			_batchTestEntityResource.postBatchTestEntity(
 				new BatchTestEntity() {
@@ -230,6 +238,8 @@ public class BatchTestEntityExportImportTest {
 					}
 				});
 
+		Assert.assertFalse(batchTestEntity2.getAcceptAllLanguages());
+
 		batchTestEntitiesPage =
 			_batchTestEntityResource.getBatchTestEntitiesPage();
 
@@ -256,14 +266,21 @@ public class BatchTestEntityExportImportTest {
 		Assert.assertEquals(
 			totalCount + 2, batchTestEntitiesPage.getTotalCount());
 
-		_assertEquals(
-			batchTestEntity1,
+		BatchTestEntity importedBatchTestEntity1 =
 			_batchTestEntityResource.getBatchTestEntityByExternalReferenceCode(
-				batchTestEntity1.getExternalReferenceCode()));
-		_assertEquals(
-			batchTestEntity2,
+				batchTestEntity1.getExternalReferenceCode());
+
+		Assert.assertTrue(importedBatchTestEntity1.getAcceptAllLanguages());
+
+		_assertEquals(batchTestEntity1, importedBatchTestEntity1);
+
+		BatchTestEntity importedBatchTestEntity2 =
 			_batchTestEntityResource.getBatchTestEntityByExternalReferenceCode(
-				batchTestEntity2.getExternalReferenceCode()));
+				batchTestEntity2.getExternalReferenceCode());
+
+		Assert.assertTrue(importedBatchTestEntity2.getAcceptAllLanguages());
+
+		_assertEquals(batchTestEntity2, importedBatchTestEntity2);
 	}
 
 	@Test
@@ -692,13 +709,17 @@ public class BatchTestEntityExportImportTest {
 			batchTestEntities1[0].getExternalReferenceCode(), _CLASS_NAME,
 			RandomTestUtil.nextLong(), PortalUUIDUtil.generate(),
 			StringPool.BLANK, SystemEventConstants.TYPE_DELETE,
-			StringPool.BLANK);
+			JSONUtil.put(
+				"type", "BatchTestEntityKey"
+			).toString());
 		_systemEventLocalService.addSystemEvent(
 			TestPropsValues.getUserId(), _companyGroup.getGroupId(),
 			sharedInternalModelBatchTestEntities[0].getExternalReferenceCode(),
 			_CLASS_NAME, RandomTestUtil.nextLong(), PortalUUIDUtil.generate(),
 			StringPool.BLANK, SystemEventConstants.TYPE_DELETE,
-			StringPool.BLANK);
+			JSONUtil.put(
+				"type", "SharedInternalModelBatchTestEntityKey"
+			).toString());
 
 		File larFile = _exportLayout(true);
 

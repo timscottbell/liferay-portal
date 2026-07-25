@@ -1551,23 +1551,12 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 	}
 
 	private static final String[] _IGNORED_ENTITY_FIELD_NAMES = {
-		"cmpAssignTo", "cmpDueDate", "cmpState", "cmsKind", "cmsRoot",
-		"cmsSection", "extension", "dateDisplay", "dateExpiration",
-		"datePublish", "dateReview", "folderId",
+		"cmpAssignTo", "cmpDueDate", "cmpState", "cmsRoot", "cmsSection",
+		"extension", "dateDisplay", "dateExpiration", "datePublish",
+		"dateReview", "dueDate", "folderId",
 		"objectDefinitionExternalReferenceCode",
-		"objectFolderExternalReferenceCode"
+		"objectFolderExternalReferenceCode", "rootDescendantNode"
 	};
-
-	@Inject
-	private static DTOConverterRegistry _dtoConverterRegistry;
-
-	@Inject
-	private static ObjectDefinitionLocalService _objectDefinitionLocalService;
-
-	@Inject(
-		filter = "object.entry.manager.storage.type=" + ObjectDefinitionConstants.STORAGE_TYPE_DEFAULT
-	)
-	private static ObjectEntryManager _objectEntryManager;
 
 	private AssetCategory _assetCategory;
 
@@ -1584,6 +1573,10 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 
 	private String _baseURI = "search";
 	private DDMStructure _ddmStructure;
+
+	@Inject
+	private DTOConverterRegistry _dtoConverterRegistry;
+
 	private JournalArticle _journalArticle;
 
 	@Inject
@@ -1601,7 +1594,15 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 	private ObjectDefinition _objectDefinition;
 
 	@Inject
+	private ObjectDefinitionLocalService _objectDefinitionLocalService;
+
+	@Inject
 	private ObjectEntryLocalService _objectEntryLocalService;
+
+	@Inject(
+		filter = "object.entry.manager.storage.type=" + ObjectDefinitionConstants.STORAGE_TYPE_DEFAULT
+	)
+	private ObjectEntryManager _objectEntryManager;
 
 	private SearchEngine _searchEngine;
 

@@ -364,7 +364,7 @@ public class ObjectDefinitionUpgradeProcessTest {
 
 			Assert.assertNotNull(resultSet.next());
 
-			Assert.assertEquals(1L, resultSet.getInt("count"));
+			Assert.assertEquals(1L, resultSet.getLong("count"));
 		}
 	}
 
@@ -403,11 +403,6 @@ public class ObjectDefinitionUpgradeProcessTest {
 	private static SystemObjectDefinitionManagerRegistry
 		_systemObjectDefinitionManagerRegistry;
 
-	@Inject(
-		filter = "(&(component.name=com.liferay.commerce.internal.upgrade.registry.CommerceServiceUpgradeStepRegistrator))"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	@Inject
 	private CommerceCatalogLocalService _commerceCatalogLocalService;
 
@@ -440,6 +435,11 @@ public class ObjectDefinitionUpgradeProcessTest {
 
 	@Inject
 	private ObjectRelationshipLocalService _objectRelationshipLocalService;
+
+	@Inject(
+		filter = "(&(component.name=com.liferay.commerce.internal.upgrade.registry.CommerceServiceUpgradeStepRegistrator))"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 	private User _user;
 

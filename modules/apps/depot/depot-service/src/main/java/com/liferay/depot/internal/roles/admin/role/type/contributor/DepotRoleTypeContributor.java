@@ -10,8 +10,11 @@ import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.role.RoleConstants;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.roles.admin.role.type.contributor.RoleTypeContributor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -39,8 +42,10 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 
 	@Override
 	public String getName() {
-		if (FeatureFlagManagerUtil.isEnabled("LPD-17564")) {
-			return "space";
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-17564")) {
+
+			return "depot";
 		}
 
 		return "asset-library";
@@ -48,13 +53,35 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 
 	@Override
 	public String[] getSubtypes() {
-		return new String[0];
+		List<String> subtypes = new ArrayList<>(3);
+
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-57283")) {
+
+			subtypes.add(DepotRolesConstants.SUBTYPE_DESIGN_LIBRARY);
+		}
+
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-58677")) {
+
+			subtypes.add(DepotRolesConstants.SUBTYPE_PROJECT);
+		}
+
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-17564")) {
+
+			subtypes.add(DepotRolesConstants.SUBTYPE_SPACE);
+		}
+
+		return subtypes.toArray(new String[0]);
 	}
 
 	@Override
 	public String getTabTitle(Locale locale) {
-		if (FeatureFlagManagerUtil.isEnabled("LPD-17564")) {
-			return _language.get(locale, "space-roles");
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-17564")) {
+
+			return _language.get(locale, "depot-roles");
 		}
 
 		return _language.get(locale, "asset-library-roles");
@@ -62,8 +89,10 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 
 	@Override
 	public String getTitle(Locale locale) {
-		if (FeatureFlagManagerUtil.isEnabled("LPD-17564")) {
-			return _language.get(locale, "space-role");
+		if (FeatureFlagManagerUtil.isEnabled(
+				CompanyThreadLocal.getCompanyId(), "LPD-17564")) {
+
+			return _language.get(locale, "depot-role");
 		}
 
 		return _language.get(locale, "asset-library-role");
@@ -91,7 +120,18 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 				role.getName(),
 				DepotRolesConstants.ASSET_LIBRARY_CONNECTED_SITE_MEMBER) ||
 			Objects.equals(
-				role.getName(), DepotRolesConstants.ASSET_LIBRARY_OWNER)) {
+				role.getName(), DepotRolesConstants.ASSET_LIBRARY_OWNER) ||
+			Objects.equals(
+				role.getName(),
+				DepotRolesConstants.DESIGN_LIBRARY_ADMINISTRATOR) ||
+			Objects.equals(
+				role.getName(), DepotRolesConstants.DESIGN_LIBRARY_MEMBER) ||
+			Objects.equals(
+				role.getName(), DepotRolesConstants.DESIGN_LIBRARY_OWNER) ||
+			Objects.equals(
+				role.getName(), DepotRolesConstants.PROJECT_MANAGER) ||
+			Objects.equals(
+				role.getName(), DepotRolesConstants.PROJECT_MEMBER)) {
 
 			return false;
 		}
@@ -105,7 +145,9 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 				role.getName(), DepotRolesConstants.ASSET_LIBRARY_MEMBER) ||
 			Objects.equals(
 				role.getName(),
-				DepotRolesConstants.ASSET_LIBRARY_CONNECTED_SITE_MEMBER)) {
+				DepotRolesConstants.ASSET_LIBRARY_CONNECTED_SITE_MEMBER) ||
+			Objects.equals(
+				role.getName(), DepotRolesConstants.DESIGN_LIBRARY_MEMBER)) {
 
 			return true;
 		}
@@ -114,7 +156,8 @@ public class DepotRoleTypeContributor implements RoleTypeContributor {
 	}
 
 	private static final String[] _EXCLUDED_ROLE_NAMES = {
-		DepotRolesConstants.ASSET_LIBRARY_OWNER
+		DepotRolesConstants.ASSET_LIBRARY_OWNER,
+		DepotRolesConstants.DESIGN_LIBRARY_OWNER
 	};
 
 	@Reference

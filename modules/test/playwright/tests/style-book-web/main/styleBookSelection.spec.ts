@@ -5,6 +5,7 @@
 
 import {Page, expect, mergeTests} from '@playwright/test';
 
+import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {masterPagesPagesTest} from '../../../fixtures/masterPagesPagesTest';
@@ -13,7 +14,6 @@ import {pagesAdminPagesTest} from '../../../fixtures/pagesAdminPagesTest';
 import {styleBookPageTest} from '../../../fixtures/styleBookPageTest';
 import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
 import {doAndGoBack} from '../../../utils/doAndGoBack';
-import fillAndClickOutside from '../../../utils/fillAndClickOutside';
 import getRandomString from '../../../utils/getRandomString';
 
 const STYLE_BOOK_NAME = getRandomString();
@@ -40,6 +40,10 @@ async function expectStyleBookToBeSelected({
 }
 
 const test = mergeTests(
+	featureFlagsTest({
+		'LPD-17564': {enabled: true},
+		'LPD-76864': {enabled: true},
+	}),
 	isolatedSiteTest,
 	loginTest(),
 	masterPagesPagesTest,
@@ -48,16 +52,12 @@ const test = mergeTests(
 	styleBookPageTest
 );
 
-test.beforeEach(async ({page, site, styleBooksPage}) => {
+test.beforeEach(async ({site, styleBooksPage}) => {
 	await styleBooksPage.goto(site.friendlyUrlPath);
 
 	await styleBooksPage.create(STYLE_BOOK_NAME);
 
-	await fillAndClickOutside(
-		page,
-		page.getByLabel('Brand Color 4', {exact: true}).getByRole('textbox'),
-		TEST_COLOR
-	);
+	await styleBooksPage.updateTokenInput('Brand Color 4', TEST_COLOR);
 
 	await styleBooksPage.waitForAutoSave();
 
@@ -204,13 +204,13 @@ test(
 
 		const textbox = page.getByRole('textbox', {name: 'Style Book'});
 
-		await test.step('Assert only Dialect style books are available when it is the selected theme', async () => {
-			await pagesAdminPage.changeTheme('Dialect');
+		await test.step('Assert only CMS style books are available when it is the selected theme', async () => {
+			await pagesAdminPage.changeTheme('CMS');
 
 			await clickAndExpectToBeVisible({target: frame, trigger: textbox});
 
 			await expect(frame.getByRole('button')).toHaveCount(1);
-			await expect(textbox).toHaveValue('Styles from Dialect Theme');
+			await expect(textbox).toHaveValue('Styles from CMS Theme');
 
 			await page.getByRole('button', {name: 'Close'}).click();
 		});

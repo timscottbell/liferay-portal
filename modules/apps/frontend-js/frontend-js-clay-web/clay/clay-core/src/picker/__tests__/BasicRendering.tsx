@@ -237,6 +237,42 @@ describe('Picker basic rendering', () => {
 		);
 	});
 
+	it('renders option buttons with type="button"', () => {
+		const {getAllByRole, getByRole} = render(
+			<Picker defaultActive items={['Apple', 'Banana', 'Blueberry']}>
+				{(item) => <Option key={item}>{item}</Option>}
+			</Picker>
+		);
+
+		expect(getByRole('combobox').getAttribute('type')).toBe('button');
+
+		const options = getAllByRole('option');
+
+		expect(options).toHaveLength(3);
+
+		options.forEach((option) => {
+			expect(option.tagName).toBe('BUTTON');
+			expect(option.getAttribute('type')).toBe('button');
+		});
+	});
+
+	it('does not submit a wrapping form when an option is clicked', () => {
+		const onSubmit = jest.fn((event) => event.preventDefault());
+
+		const {getAllByRole, getByRole} = render(
+			<form onSubmit={onSubmit}>
+				<Picker defaultActive items={['Apple', 'Banana', 'Blueberry']}>
+					{(item) => <Option key={item}>{item}</Option>}
+				</Picker>
+			</form>
+		);
+
+		userEvent.click(getAllByRole('option')[1]!);
+
+		expect(onSubmit).not.toHaveBeenCalled();
+		expect(getByRole('combobox').textContent).toBe('Banana');
+	});
+
 	it('render option a link when item has href', () => {
 		const items = [
 			{
@@ -277,5 +313,63 @@ describe('Picker basic rendering', () => {
 
 		expect(getByText('2').closest('a')).toBeNull();
 		expect(getByText('4').closest('a')).toBeNull();
+	});
+
+	it('does not render the keyboard arrows indicator by default', async () => {
+		const {getByRole} = render(
+			<Picker>
+				<Option key="apple">Apple</Option>
+
+				<Option key="banana">Banana</Option>
+			</Picker>
+		);
+
+		await userEvent.click(getByRole('combobox'));
+
+		expect(
+			document.querySelector('.clay-keyboard-arrows-indicator')
+		).not.toBeInTheDocument();
+	});
+
+	it('renders the keyboard arrows indicator alongside the menu when enabled', async () => {
+		const {getByRole} = render(
+			<Picker displayKeyboardArrowsIndicator>
+				<Option key="apple">Apple</Option>
+
+				<Option key="banana">Banana</Option>
+			</Picker>
+		);
+
+		await userEvent.click(getByRole('combobox'));
+
+		const indicator = document.querySelector(
+			'.clay-keyboard-arrows-indicator'
+		);
+
+		expect(indicator).toBeInTheDocument();
+		expect(indicator).toHaveClass('clay-keyboard-arrows-vertical');
+		expect(indicator).toHaveClass(
+			'clay-keyboard-arrows-indicator-floating'
+		);
+	});
+
+	it('sets tabindex 0 on the trigger by default', () => {
+		const {getByRole} = render(
+			<Picker items={['Apple', 'Banana', 'Blueberry']}>
+				{(item) => <Option key={item}>{item}</Option>}
+			</Picker>
+		);
+
+		expect(getByRole('combobox').getAttribute('tabindex')).toBe('0');
+	});
+
+	it('honors the tabIndex prop on the trigger', () => {
+		const {getByRole} = render(
+			<Picker items={['Apple', 'Banana', 'Blueberry']} tabIndex={-1}>
+				{(item) => <Option key={item}>{item}</Option>}
+			</Picker>
+		);
+
+		expect(getByRole('combobox').getAttribute('tabindex')).toBe('-1');
 	});
 });

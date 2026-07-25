@@ -36,7 +36,9 @@ public class FriendlyURLUpgradeProcess extends UpgradeProcess {
 					connection.prepareStatement(
 						"select ctCollectionId, categoryId, name from " +
 							"MBCategory order by name, categoryId asc");
+
 				ResultSet resultSet = preparedStatement1.executeQuery();
+
 				PreparedStatement preparedStatement2 =
 					AutoBatchPreparedStatementUtil.autoBatch(
 						connection,

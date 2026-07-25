@@ -319,6 +319,16 @@ public abstract class BaseScanCodePipeline implements ScanCodePipeline {
 		return _simpleDateFormat;
 	}
 
+	public boolean hasFailedScan() {
+		for (String projectStatus : _projectStatuses) {
+			if (!projectStatus.equals("success")) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	public void invokeScan(JSONObject jsonObject)
 		throws IOException, TimeoutException {
 
@@ -353,7 +363,7 @@ public abstract class BaseScanCodePipeline implements ScanCodePipeline {
 			JSONObject outputJSONObject = new JSONObject(output);
 
 			_projectAPIURL = outputJSONObject.getString("url");
-			_projectID = outputJSONObject.getString("uuid");
+			_projectId = outputJSONObject.getString("uuid");
 			_projectName = outputJSONObject.getString("name");
 		}
 		catch (IOException ioException) {
@@ -366,7 +376,10 @@ public abstract class BaseScanCodePipeline implements ScanCodePipeline {
 
 		String subject = "ScanCode pipeline is complete";
 
-		if (_hasErrors()) {
+		if (hasFailedScan()) {
+			subject = "ScanCode pipeline has failed :red_circle:";
+		}
+		else if (_hasErrors()) {
 			subject = ":red-alert: Release blocker :red-alert:";
 		}
 
@@ -551,7 +564,7 @@ public abstract class BaseScanCodePipeline implements ScanCodePipeline {
 			}
 		}
 
-		setProjectURL(_projectID, _projectName);
+		setProjectURL(_projectId, _projectName);
 	}
 
 	public static enum ComplianceAlertType {
@@ -640,7 +653,7 @@ public abstract class BaseScanCodePipeline implements ScanCodePipeline {
 	private String _cloudBucketURL;
 	private final List<String> _pipelineNames = new ArrayList<>();
 	private String _projectAPIURL;
-	private String _projectID;
+	private String _projectId;
 	private String _projectName;
 	private String _projectNameFromURL;
 	private final List<String> _projectStatuses = new ArrayList<>();

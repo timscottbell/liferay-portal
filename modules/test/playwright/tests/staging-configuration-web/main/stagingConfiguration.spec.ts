@@ -8,9 +8,9 @@ import {createReadStream} from 'fs';
 import path from 'path';
 
 import {apiHelpersTest} from '../../../fixtures/apiHelpersTest';
-import {applicationsMenuPageTest} from '../../../fixtures/applicationsMenuPageTest';
 import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
+import {globalMenuPagesTest} from '../../../fixtures/globalMenuPagesTest';
 import {instanceSettingsPagesTest} from '../../../fixtures/instanceSettingsPagesTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {pageEditorPagesTest} from '../../../fixtures/pageEditorPagesTest';
@@ -18,6 +18,7 @@ import {pageViewModePagesTest} from '../../../fixtures/pageViewModePagesTest';
 import {pagesAdminPagesTest} from '../../../fixtures/pagesAdminPagesTest';
 import {portletConfigurationPermissionsPageTest} from '../../../fixtures/portletConfigurationPermissionsPagesTest';
 import {productMenuPageTest} from '../../../fixtures/productMenuPageTest';
+import {sitesPageTest} from '../../../fixtures/sitesPageTest';
 import {systemSettingsPageTest} from '../../../fixtures/systemSettingsPageTest';
 import {uiElementsPageTest} from '../../../fixtures/uiElementsTest';
 import {webContentDisplayPageTest} from '../../../fixtures/webContentDisplayPageTest';
@@ -33,9 +34,9 @@ import {portletPublishToLivePageTest} from './fixtures/portletPublishToLivePageT
 import {stagingConfigurationPageTest} from './fixtures/stagingConfigurationPageTest';
 
 export const test = mergeTests(
-	applicationsMenuPageTest,
 	dataApiHelpersTest,
 	exportImportPagesTest,
+	globalMenuPagesTest,
 	loginTest(),
 	instanceSettingsPagesTest,
 	pageViewModePagesTest,
@@ -43,6 +44,7 @@ export const test = mergeTests(
 	pageEditorPagesTest,
 	productMenuPageTest,
 	portletPublishToLivePageTest,
+	sitesPageTest,
 	stagingConfigurationPageTest,
 	webContentDisplayPageTest,
 	uiElementsPageTest,
@@ -66,20 +68,23 @@ export const testFlagsEnabled = mergeTests(
 	webContentDisplayPageTest
 );
 
+export const testWithSitePagesAPI = mergeTests(
+	test,
+	featureFlagsTest({'LPD-35443': {enabled: true}})
+);
+
 test(
 	'Verify there is advanced staging configuration checkbox with description in Instance Setting,the configuration checkbox can be enabled',
-	{tag: ['@LPS-189238']},
+	{tag: ['@LPS-189238', '@LPD-88913']},
 	async ({
 		apiHelpers,
 		exportImportStagingInstanceSettingsPage,
 		page,
 		portletPublishToLivePage,
 	}) => {
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.jsonWebServicesLayout.addLayout({
 			groupId: site.id,
@@ -112,6 +117,14 @@ test(
 			});
 			await portletPublishToLivePage.publishToLiveButton.click();
 
+			await test.step('LPD-88913 - Publish to Live modal must keep the cadmin wrapper', async () => {
+				await expect(
+					page.locator(
+						'div.cadmin > [id$="publishLatestChangesDialog"]'
+					)
+				).toBeVisible();
+			});
+
 			await expect(
 				portletPublishToLivePage.publishToLiveIframe.getByRole('link', {
 					name: 'Switch to Simple Publish Process',
@@ -134,11 +147,9 @@ test(
 		page,
 		portletPublishToLivePage,
 	}) => {
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.jsonWebServicesLayout.addLayout({
 			groupId: site.id,
@@ -184,14 +195,14 @@ test(
 
 test('Check if local staging can be enabled', async ({
 	apiHelpers,
-	applicationsMenuPage,
+	globalMenuPage,
 	stagingConfigurationPage,
 }) => {
 	const siteName: string = getRandomString();
 
-	await applicationsMenuPage.goToSites();
+	await globalMenuPage.goToControlPanel('Sites');
 
-	const site = await apiHelpers.headlessSite.createSite({
+	const site = await apiHelpers.headlessAdminSite.postSite({
 		name: siteName,
 	});
 
@@ -207,20 +218,18 @@ test(
 	{tag: ['@LPS-89116']},
 	async ({
 		apiHelpers,
-		applicationsMenuPage,
+		globalMenuPage,
 		journalPage,
 		page,
 		pagesAdminPage,
 		productMenuPage,
 		stagingConfigurationPage,
 	}) => {
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
 
-		apiHelpers.data.push({id: site.id, type: 'site'});
-
-		await applicationsMenuPage.goToSite(site.name);
+		await globalMenuPage.goToSite(site.name);
 		await productMenuPage.goToPages();
 
 		await pagesAdminPage.createNewPage({
@@ -275,11 +284,9 @@ test(
 		page,
 		portletPublishToLivePage,
 	}) => {
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.jsonWebServicesLayout.addLayout({
 			groupId: site.id,
@@ -394,11 +401,9 @@ testFlagsEnabled(
 		const layoutName = getRandomString();
 		const webContentName = getRandomString();
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: siteName,
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.jsonWebServicesLayout.addLayout({
 			groupId: site.id,
@@ -454,5 +459,67 @@ testFlagsEnabled(
 
 		await webContentDisplayPage.gotoWebContentAdmin(layout.plid);
 		await page.getByText(webContentName).waitFor({state: 'visible'});
+	}
+);
+
+testWithSitePagesAPI(
+	'Staging is blocked for a Site linked to a Site Template with propagation enabled',
+	{tag: '@LPD-87027'},
+	async ({
+		apiHelpers,
+		globalMenuPage,
+		sitesPage,
+		stagingConfigurationPage,
+	}) => {
+		const siteTemplateName = 'SiteTemplate-' + getRandomString();
+
+		const layoutSetPrototype =
+			await apiHelpers.jsonWebServicesLayoutSetPrototype.addLayoutSetPrototypes(
+				{
+					name: siteTemplateName,
+				}
+			);
+
+		apiHelpers.data.push({
+			id: layoutSetPrototype.layoutSetPrototypeId,
+			type: 'layoutSetPrototype',
+		});
+
+		await globalMenuPage.goToControlPanel('Sites');
+
+		const siteName = 'Site-' + getRandomString();
+
+		const {externalReferenceCode} = await sitesPage.createSite({
+			isCustom: true,
+			siteName,
+			templateName: siteTemplateName,
+		});
+
+		apiHelpers.data.push({id: externalReferenceCode, type: 'site'});
+
+		// Wait until the Site Template pages propagate to the linked Site so the
+		// propagation background task completes before the cleanup deletes it
+
+		await expect(async () => {
+			const sitePages = await apiHelpers.headlessAdminSite.getPages(
+				externalReferenceCode,
+				'pageSize=100&privateLayout=false'
+			);
+
+			expect(sitePages.items.length).toBeGreaterThan(0);
+		}).toPass();
+
+		await stagingConfigurationPage.gotoStagingConfiguration(
+			'/' + siteName.toLowerCase()
+		);
+
+		await expect(
+			stagingConfigurationPage.page.getByText(
+				'Staging cannot be used for this site because the propagation ' +
+					'of changes from the site template is enabled.'
+			)
+		).toBeVisible();
+
+		await expect(stagingConfigurationPage.localLiveRadio).toBeHidden();
 	}
 );

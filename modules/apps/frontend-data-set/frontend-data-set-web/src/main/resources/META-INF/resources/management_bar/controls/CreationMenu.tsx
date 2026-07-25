@@ -61,6 +61,11 @@ const DropdownTrigger = React.forwardRef(
 					aria-label={Liferay.Language.get('new')}
 					className="nav-btn nav-btn-monospaced"
 					data-testid="fdsCreationActionButton"
+					displayType={
+						inEmptyState && hideManagementBarInEmptyState
+							? 'primary'
+							: 'secondary'
+					}
 					ref={ref}
 					title={Liferay.Language.get('new')}
 				>
@@ -107,6 +112,7 @@ const DropDown = ({
 			<ClayDropDown.ItemList>
 				{primaryItems.map((item, i) => (
 					<ClayDropDown.Item
+						className={item.className}
 						key={i}
 						onClick={(event) => {
 							event.preventDefault();
@@ -189,7 +195,10 @@ function CreationButton({
 	}
 
 	return inEmptyState ? (
-		<LinkOrButton {...sharedProps} className="btn btn-secondary">
+		<LinkOrButton
+			{...sharedProps}
+			className={classNames('btn btn-secondary', firstItem.className)}
+		>
 			{firstItem.label}
 
 			{newTabIcon}
@@ -205,17 +214,17 @@ function CreationButton({
 						)
 					: firstItem.label
 			}
-			className={classNames('btn btn-primary nav-btn', {
-				['nav-btn-monospaced']: isMobile,
-				['px-3']: !isMobile,
-			})}
+			className={classNames(
+				'btn btn-primary nav-btn',
+				firstItem.className,
+				{
+					['nav-btn-monospaced']: isMobile,
+					['px-3']: !isMobile,
+				}
+			)}
 			title={firstItem.label}
 		>
-			{isMobile ? (
-				<ClayIcon symbol="plus" />
-			) : (
-				Liferay.Language.get('new')
-			)}
+			{isMobile ? <ClayIcon symbol="plus" /> : firstItem.label}
 
 			{newTabIcon}
 		</LinkOrButton>

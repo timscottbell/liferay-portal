@@ -78,6 +78,16 @@ public class CompanyServiceWrapper
 	}
 
 	@Override
+	public com.liferay.portal.kernel.model.Company addDBPartitionCompany(
+			java.lang.String schemaName, java.lang.String name,
+			java.lang.String virtualHost, java.lang.String webId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _companyService.addDBPartitionCompany(
+			schemaName, name, virtualHost, webId);
+	}
+
+	@Override
 	public com.liferay.portal.kernel.model.Company deleteCompany(long companyId)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
@@ -175,7 +185,7 @@ public class CompanyServiceWrapper
 	 *
 	 * This method is called by {@link
 	 * com.liferay.portlet.portalsettings.action.EditLDAPServerAction} remotely
-	 * through {@link CompanyService}.
+	 * through {@link com.liferay.portal.kernel.service.CompanyService}.
 	 *
 	 * @param companyId the primary key of the company
 	 * @param keys the company's preferences keys to be remove
@@ -415,3 +425,4 @@ public class CompanyServiceWrapper
 	private CompanyService _companyService;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-1278552199

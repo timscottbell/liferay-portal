@@ -58,6 +58,7 @@ import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -175,7 +176,8 @@ public abstract class BaseDocumentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -185,7 +187,8 @@ public abstract class BaseDocumentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -333,6 +336,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document1 =
 			testGraphQLDeleteAssetLibraryDocumentByExternalReferenceCode_addDocument();
 
@@ -382,6 +386,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document2 =
 			testGraphQLDeleteAssetLibraryDocumentByExternalReferenceCode_addDocument();
 
@@ -474,6 +479,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document1 = testGraphQLDeleteDocument_addDocument();
 
 		Assert.assertTrue(
@@ -504,6 +510,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document2 = testGraphQLDeleteDocument_addDocument();
 
 		Assert.assertTrue(
@@ -608,6 +615,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document1 = testGraphQLDeleteDocumentMyRating_addDocument();
 
 		Assert.assertTrue(
@@ -638,6 +646,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document2 = testGraphQLDeleteDocumentMyRating_addDocument();
 
 		Assert.assertTrue(
@@ -716,6 +725,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document1 =
 			testGraphQLDeleteSiteDocumentByExternalReferenceCode_addDocument();
 
@@ -759,6 +769,7 @@ public abstract class BaseDocumentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Document document2 =
 			testGraphQLDeleteSiteDocumentByExternalReferenceCode_addDocument();
 
@@ -1116,8 +1127,10 @@ public abstract class BaseDocumentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/asset-libraries/{assetLibraryId}/documents/batch".
-				replace("{assetLibraryId}", String.valueOf(assetLibraryId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/asset-libraries/{assetLibraryId}/documents/batch").
+					replace(
+						"{assetLibraryId}", String.valueOf(assetLibraryId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -1479,18 +1492,9 @@ public abstract class BaseDocumentResourceTestCase {
 		Long assetLibraryId =
 			testGetAssetLibraryDocumentsPage_getAssetLibraryId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"assetLibraryDocuments",
-			new HashMap<String, Object>() {
-				{
-					put("assetLibraryId", "\"" + assetLibraryId + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAssetLibraryDocumentsPageAssetLibraryDocument_getGraphQLField(
+				assetLibraryId);
 
 		// No namespace
 
@@ -1548,6 +1552,25 @@ public abstract class BaseDocumentResourceTestCase {
 			Arrays.asList(
 				DocumentSerDes.toDTOs(
 					assetLibraryDocumentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAssetLibraryDocumentsPageAssetLibraryDocument_getGraphQLField(
+				Long assetLibraryId)
+		throws Exception {
+
+		return new GraphQLField(
+			"assetLibraryDocuments",
+			new HashMap<String, Object>() {
+				{
+					put("assetLibraryId", "\"" + assetLibraryId + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -1733,17 +1756,9 @@ public abstract class BaseDocumentResourceTestCase {
 		Long assetLibraryId =
 			testGetAssetLibraryDocumentsRatedByMePage_getAssetLibraryId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"assetLibraryDocumentsRatedByMe",
-			new HashMap<String, Object>() {
-				{
-					put("assetLibraryId", "\"" + assetLibraryId + "\"");
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAssetLibraryDocumentsRatedByMePageAssetLibraryDocument_getGraphQLField(
+				assetLibraryId);
 
 		// No namespace
 
@@ -1808,6 +1823,24 @@ public abstract class BaseDocumentResourceTestCase {
 				DocumentSerDes.toDTOs(
 					assetLibraryDocumentsRatedByMeJSONObject.getString(
 						"items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAssetLibraryDocumentsRatedByMePageAssetLibraryDocument_getGraphQLField(
+				Long assetLibraryId)
+		throws Exception {
+
+		return new GraphQLField(
+			"assetLibraryDocumentsRatedByMe",
+			new HashMap<String, Object>() {
+				{
+					put("assetLibraryId", "\"" + assetLibraryId + "\"");
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -1884,8 +1917,9 @@ public abstract class BaseDocumentResourceTestCase {
 			public StringBuffer getRequestURL() {
 				return new StringBuffer(
 					StringBundler.concat(
-						"http://localhost:8080/o/v1.0/",
-						RandomTestUtil.randomString(), "/",
+						"http://localhost:",
+						String.valueOf(PortalUtil.getPortalServerPort(false)),
+						"/o/v1.0/", RandomTestUtil.randomString(), "/",
 						RandomTestUtil.randomString()));
 			}
 
@@ -1921,8 +1955,10 @@ public abstract class BaseDocumentResourceTestCase {
 			@Override
 			public URI getRequestUri() {
 				return URI.create(
-					"http://localhost:8080/o/" + applicationPath +
-						resourcePath);
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath, resourcePath));
 			}
 
 			@Override
@@ -1942,7 +1978,11 @@ public abstract class BaseDocumentResourceTestCase {
 
 			@Override
 			public URI getBaseUri() {
-				return URI.create("http://localhost:8080/o/" + applicationPath);
+				return URI.create(
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath));
 			}
 
 			@Override
@@ -2168,9 +2208,11 @@ public abstract class BaseDocumentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/document-folders/{documentFolderId}/documents/batch".
-				replace(
-					"{documentFolderId}", String.valueOf(documentFolderId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/document-folders/{documentFolderId}/documents/batch").
+					replace(
+						"{documentFolderId}",
+						String.valueOf(documentFolderId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -2535,18 +2577,9 @@ public abstract class BaseDocumentResourceTestCase {
 		Long documentFolderId =
 			testGetDocumentFolderDocumentsPage_getDocumentFolderId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"documentFolderDocuments",
-			new HashMap<String, Object>() {
-				{
-					put("documentFolderId", documentFolderId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetDocumentFolderDocumentsPageDocumentFolderDocument_getGraphQLField(
+				documentFolderId);
 
 		// No namespace
 
@@ -2605,6 +2638,25 @@ public abstract class BaseDocumentResourceTestCase {
 			Arrays.asList(
 				DocumentSerDes.toDTOs(
 					documentFolderDocumentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetDocumentFolderDocumentsPageDocumentFolderDocument_getGraphQLField(
+				Long documentFolderId)
+		throws Exception {
+
+		return new GraphQLField(
+			"documentFolderDocuments",
+			new HashMap<String, Object>() {
+				{
+					put("documentFolderId", documentFolderId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -2913,8 +2965,9 @@ public abstract class BaseDocumentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/sites/{siteId}/documents/batch".
-				replace("{siteId}", String.valueOf(siteId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/sites/{siteId}/documents/batch").
+					replace("{siteId}", String.valueOf(siteId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -3243,18 +3296,8 @@ public abstract class BaseDocumentResourceTestCase {
 	public void testGraphQLGetSiteDocumentsPage() throws Exception {
 		Long siteId = testGetSiteDocumentsPage_getSiteId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"documents",
-			new HashMap<String, Object>() {
-				{
-					put("siteKey", "\"" + siteId + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetSiteDocumentsPageSiteDocument_getGraphQLField(siteId);
 
 		// No namespace
 
@@ -3305,6 +3348,25 @@ public abstract class BaseDocumentResourceTestCase {
 			document2,
 			Arrays.asList(
 				DocumentSerDes.toDTOs(documentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetSiteDocumentsPageSiteDocument_getGraphQLField(
+				Long siteId)
+		throws Exception {
+
+		return new GraphQLField(
+			"documents",
+			new HashMap<String, Object>() {
+				{
+					put("siteKey", "\"" + siteId + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -3473,17 +3535,9 @@ public abstract class BaseDocumentResourceTestCase {
 	public void testGraphQLGetSiteDocumentsRatedByMePage() throws Exception {
 		Long siteId = testGetSiteDocumentsRatedByMePage_getSiteId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"documentsRatedByMe",
-			new HashMap<String, Object>() {
-				{
-					put("siteKey", "\"" + siteId + "\"");
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetSiteDocumentsRatedByMePageSiteDocument_getGraphQLField(
+				siteId);
 
 		// No namespace
 
@@ -3538,6 +3592,24 @@ public abstract class BaseDocumentResourceTestCase {
 			Arrays.asList(
 				DocumentSerDes.toDTOs(
 					documentsRatedByMeJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetSiteDocumentsRatedByMePageSiteDocument_getGraphQLField(
+				Long siteId)
+		throws Exception {
+
+		return new GraphQLField(
+			"documentsRatedByMe",
+			new HashMap<String, Object>() {
+				{
+					put("siteKey", "\"" + siteId + "\"");
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -4040,7 +4112,8 @@ public abstract class BaseDocumentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -4329,16 +4402,22 @@ public abstract class BaseDocumentResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -4351,7 +4430,9 @@ public abstract class BaseDocumentResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -6196,7 +6277,9 @@ public abstract class BaseDocumentResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -6549,3 +6632,4 @@ public abstract class BaseDocumentResourceTestCase {
 		_vulcanCRUDItemDelegateBuilderRegistry;
 
 }
+// LIFERAY-REST-BUILDER-HASH:993960568

@@ -4,7 +4,6 @@
  */
 
 import {useMemo} from 'react';
-import {useAppPropertiesContext} from '~/contexts/AppPropertiesContext';
 import i18n from '~/utils/I18n';
 import Skeleton from '~/components/Skeleton';
 import {PRODUCT_TYPES} from '~/features/project/utils/constants/productTypes';
@@ -27,7 +26,7 @@ const getManagedContactURL = (manageContactsURL, activationProductName) => {
 	}
 };
 
-const ManageProductUsers = ({koroneikiAccount, loading}) => {
+const ManageProductUsers = ({hasPaaSExperience, koroneikiAccount, loading}) => {
 	const {
 		data,
 		loading: accountSubscriptionGroupsLoading,
@@ -39,9 +38,22 @@ const ManageProductUsers = ({koroneikiAccount, loading}) => {
 			PRODUCT_TYPES.liferayCloud,
 		]
 	);
-	const {featureFlags} = useAppPropertiesContext();
 
 	const accountSubscriptionGroups = data?.c.accountSubscriptionGroups.items;
+
+	const visibleAccountSubscriptionGroups = useMemo(() => {
+		if (!hasPaaSExperience) {
+			return accountSubscriptionGroups;
+		}
+
+		return accountSubscriptionGroups?.filter(
+			({activationProductName}) =>
+				!activationProductName
+					?.split(',')
+					.includes(PRODUCT_TYPES.dxpCloud)
+		);
+	}, [accountSubscriptionGroups, hasPaaSExperience]);
+
 	const accountSubscriptionGroupLiferayExperienceCloud = useMemo(
 		() =>
 			accountSubscriptionGroups?.find(
@@ -74,7 +86,7 @@ const ManageProductUsers = ({koroneikiAccount, loading}) => {
 
 		return (
 			<div className="d-flex">
-				{accountSubscriptionGroups?.map(
+				{visibleAccountSubscriptionGroups?.map(
 					({activationProductName, manageContactsURL, name}, index) => {
 						if (activationProductName.split(',')
 								.includes(PRODUCT_TYPES.dxpCloud)) {
@@ -114,7 +126,7 @@ const ManageProductUsers = ({koroneikiAccount, loading}) => {
 	return (
 		(accountSubscriptionGroupsLoading ||
 			Boolean(accountSubscriptionGroupLiferayExperienceCloud) ||
-			Boolean(accountSubscriptionGroups?.length)) && (
+			Boolean(visibleAccountSubscriptionGroups?.length)) && (
 			<div className="bg-brand-primary-lighten-6 cp-manage-product-users mt-4 p-4 rounded-lg">
 				{accountSubscriptionGroupsLoading ? (
 					<Skeleton height={25} width={224} />

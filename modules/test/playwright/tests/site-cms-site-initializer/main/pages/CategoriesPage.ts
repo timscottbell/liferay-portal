@@ -70,6 +70,13 @@ export class CategoriesPage {
 		await this.closePermissionsModalButton.click();
 	}
 
+	async clearSearch() {
+		await this.page
+			.locator('.search-resume')
+			.getByRole('button', {name: 'Clear Search'})
+			.click();
+	}
+
 	async clickCreateNewCategoryButton() {
 		await this.createNewCategoryButton.click();
 
@@ -89,8 +96,22 @@ export class CategoriesPage {
 		});
 	}
 
+	async expectItemActionHidden({
+		action,
+		filter,
+	}: {
+		action: string;
+		filter: string;
+	}) {
+		await this.dataSetFragmentPage.expectItemActionHidden({action, filter});
+	}
+
 	getItem(filter: string) {
 		return this.dataSetFragmentPage.getRow(filter);
+	}
+
+	getItemSystemIcon(filter: string) {
+		return this.getItem(filter).getByText('System Category', {exact: true});
 	}
 
 	async goto(vocabularyId: string | number, vocabularyName: string) {
@@ -131,5 +152,9 @@ export class CategoriesPage {
 			: await this.deleteConfirmationModal
 					.getByRole('button', {name: 'Cancel'})
 					.click();
+	}
+
+	async search(value: string) {
+		await this.dataSetFragmentPage.search(value);
 	}
 }

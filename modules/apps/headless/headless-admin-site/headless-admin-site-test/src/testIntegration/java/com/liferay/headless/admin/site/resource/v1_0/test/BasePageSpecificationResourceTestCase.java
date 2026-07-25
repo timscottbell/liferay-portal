@@ -41,6 +41,7 @@ import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.odata.entity.EntityField;
@@ -113,7 +114,8 @@ public abstract class BasePageSpecificationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -123,7 +125,8 @@ public abstract class BasePageSpecificationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -646,6 +649,55 @@ public abstract class BasePageSpecificationResourceTestCase {
 	}
 
 	@Test
+	public void testGetSiteSitePagePageSpecificationVersionPageSpecification()
+		throws Exception {
+
+		PageSpecification postPageSpecification =
+			testGetSiteSitePagePageSpecificationVersionPageSpecification_addPageSpecification();
+
+		PageSpecification getPageSpecification =
+			pageSpecificationResource.
+				getSiteSitePagePageSpecificationVersionPageSpecification(
+					testGetSiteSitePagePageSpecificationVersionPageSpecification_getSiteExternalReferenceCode(),
+					testGetSiteSitePagePageSpecificationVersionPageSpecification_getSitePageExternalReferenceCode(),
+					testGetSiteSitePagePageSpecificationVersionPageSpecification_getPageSpecificationVersionExternalReferenceCode());
+
+		assertEquals(postPageSpecification, getPageSpecification);
+		assertValid(getPageSpecification);
+	}
+
+	protected PageSpecification
+			testGetSiteSitePagePageSpecificationVersionPageSpecification_addPageSpecification()
+		throws Exception {
+
+		throw new UnsupportedOperationException(
+			"This method needs to be implemented");
+	}
+
+	protected String
+			testGetSiteSitePagePageSpecificationVersionPageSpecification_getSiteExternalReferenceCode()
+		throws Exception {
+
+		return testGroup.getExternalReferenceCode();
+	}
+
+	protected String
+			testGetSiteSitePagePageSpecificationVersionPageSpecification_getSitePageExternalReferenceCode()
+		throws Exception {
+
+		throw new UnsupportedOperationException(
+			"This method needs to be implemented");
+	}
+
+	protected String
+			testGetSiteSitePagePageSpecificationVersionPageSpecification_getPageSpecificationVersionExternalReferenceCode()
+		throws Exception {
+
+		throw new UnsupportedOperationException(
+			"This method needs to be implemented");
+	}
+
+	@Test
 	public void testGetSiteSitePagePageSpecificationsPage() throws Exception {
 		String siteExternalReferenceCode =
 			testGetSiteSitePagePageSpecificationsPage_getSiteExternalReferenceCode();
@@ -1120,7 +1172,8 @@ public abstract class BasePageSpecificationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -1873,7 +1926,9 @@ public abstract class BasePageSpecificationResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -2256,3 +2311,4 @@ public abstract class BasePageSpecificationResourceTestCase {
 			_pageSpecificationResource;
 
 }
+// LIFERAY-REST-BUILDER-HASH:1693648751

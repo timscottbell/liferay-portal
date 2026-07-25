@@ -15,6 +15,8 @@ import com.liferay.info.field.type.ActionInfoFieldType;
 import com.liferay.info.field.type.ImageInfoFieldType;
 import com.liferay.info.field.type.TextInfoFieldType;
 import com.liferay.info.field.type.URLInfoFieldType;
+import com.liferay.info.item.ClassPKInfoItemIdentifier;
+import com.liferay.info.item.InfoItemReference;
 import com.liferay.info.localized.InfoLocalizedValue;
 import com.liferay.info.type.KeyLocalizedLabelPair;
 import com.liferay.info.type.WebImage;
@@ -27,7 +29,6 @@ import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.field.setting.util.ObjectFieldSettingUtil;
 import com.liferay.object.field.util.ObjectFieldUtil;
 import com.liferay.object.info.field.converter.ObjectFieldInfoFieldConverter;
-import com.liferay.object.info.field.type.util.ObjectFieldInfoFieldTypeUtil;
 import com.liferay.object.info.item.ObjectEntryInfoItemFields;
 import com.liferay.object.info.item.util.ObjectEntryInfoItemUtil;
 import com.liferay.object.model.ObjectAction;
@@ -43,17 +44,17 @@ import com.liferay.object.scope.ObjectScopeProviderRegistry;
 import com.liferay.object.service.ObjectActionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
+import com.liferay.object.service.ObjectEntryService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.json.JSONFactoryUtil;
-import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.BaseModel;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -64,6 +65,7 @@ import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -76,7 +78,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author Carolina Barbosa
@@ -111,7 +112,8 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 	}
 
 	public static List<InfoFieldValue<Object>> getInfoFieldValues(
-			DLAppLocalService dlAppLocalService, DLURLHelper dlURLHelper,
+			String defaultLanguageId, DLAppLocalService dlAppLocalService,
+			DLURLHelper dlURLHelper,
 			FriendlyURLEntryLocalService friendlyURLEntryLocalService,
 			ListTypeEntryLocalService listTypeEntryLocalService,
 			ObjectActionLocalService objectActionLocalService,
@@ -119,13 +121,15 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 			ObjectDefinitionLocalService objectDefinitionLocalService,
 			ObjectEntryLocalService objectEntryLocalService,
 			ObjectEntryManagerRegistry objectEntryManagerRegistry,
+			ObjectEntryService objectEntryService,
 			ObjectFieldInfoFieldConverter objectFieldInfoFieldConverter,
 			ObjectFieldLocalService objectFieldLocalService,
 			List<ObjectField> objectFields,
 			ObjectRelationshipLocalService objectRelationshipLocalService,
 			ObjectScopeProviderRegistry objectScopeProviderRegistry,
-			Portal portal, ThemeDisplay themeDisplay,
-			Map<String, Object> values)
+			Portal portal,
+			com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry,
+			ThemeDisplay themeDisplay, Map<String, Object> values)
 		throws Exception {
 
 		List<InfoFieldValue<Object>> infoFieldValues = new ArrayList<>();
@@ -142,19 +146,19 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 			}
 
 			_addInfoFieldValue(
-				dlAppLocalService, dlURLHelper, infoFieldValues,
-				listTypeEntryLocalService, objectEntryLocalService, objectField,
+				defaultLanguageId, dlAppLocalService, dlURLHelper,
+				infoFieldValues, listTypeEntryLocalService, objectDefinition,
+				objectEntryLocalService, objectEntryService, objectField,
 				objectFieldInfoFieldConverter,
 				ObjectField.class.getSimpleName(),
-				objectRelationshipLocalService, themeDisplay, value);
+				objectRelationshipLocalService, serviceBuilderObjectEntry,
+				themeDisplay, value);
 
 			if (!objectField.compareBusinessType(
 					ObjectFieldConstants.BUSINESS_TYPE_RELATIONSHIP)) {
 
 				continue;
 			}
-
-			Map<String, Object> properties = new HashMap<>();
 
 			ObjectRelationship objectRelationship =
 				objectRelationshipLocalService.
@@ -165,15 +169,23 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 				objectDefinitionLocalService.getObjectDefinition(
 					objectRelationship.getObjectDefinitionId1());
 
+			com.liferay.object.model.ObjectEntry
+				serviceBuilderRelatedObjectEntry =
+					objectEntryLocalService.fetchObjectEntry(
+						GetterUtil.getLong(values.get(objectField.getName())));
+
 			ObjectEntry objectEntry = ObjectEntryInfoItemUtil.getObjectEntry(
 				parentObjectDefinition, objectEntryManagerRegistry,
-				objectScopeProviderRegistry,
-				objectEntryLocalService.fetchObjectEntry(
-					GetterUtil.getLong(values.get(objectField.getName()))),
+				objectScopeProviderRegistry, serviceBuilderRelatedObjectEntry,
 				themeDisplay);
+
+			Map<String, Object> properties = new HashMap<>();
+			String relatedObjectEntryDefaultLanguageId = defaultLanguageId;
 
 			if (objectEntry != null) {
 				properties = objectEntry.getProperties();
+				relatedObjectEntryDefaultLanguageId =
+					objectEntry.getDefaultLanguageId();
 			}
 
 			for (ObjectField relatedObjectField :
@@ -196,11 +208,13 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 				}
 
 				_addInfoFieldValue(
-					dlAppLocalService, dlURLHelper, infoFieldValues,
-					listTypeEntryLocalService, objectEntryLocalService,
-					relatedObjectField, objectFieldInfoFieldConverter,
-					namespace, objectRelationshipLocalService, themeDisplay,
-					value);
+					relatedObjectEntryDefaultLanguageId, dlAppLocalService,
+					dlURLHelper, infoFieldValues, listTypeEntryLocalService,
+					parentObjectDefinition, objectEntryLocalService,
+					objectEntryService, relatedObjectField,
+					objectFieldInfoFieldConverter, namespace,
+					objectRelationshipLocalService,
+					serviceBuilderRelatedObjectEntry, themeDisplay, value);
 
 				infoFieldValues.add(
 					new InfoFieldValue<>(
@@ -304,14 +318,17 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 	}
 
 	private static void _addInfoFieldValue(
-			DLAppLocalService dlAppLocalService, DLURLHelper dlURLHelper,
+			String defaultLanguageId, DLAppLocalService dlAppLocalService,
+			DLURLHelper dlURLHelper,
 			List<InfoFieldValue<Object>> infoFieldValues,
 			ListTypeEntryLocalService listTypeEntryLocalService,
+			ObjectDefinition objectDefinition,
 			ObjectEntryLocalService objectEntryLocalService,
-			ObjectField objectField,
+			ObjectEntryService objectEntryService, ObjectField objectField,
 			ObjectFieldInfoFieldConverter objectFieldInfoFieldConverter,
 			String objectFieldNamespace,
 			ObjectRelationshipLocalService objectRelationshipLocalService,
+			com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry,
 			ThemeDisplay themeDisplay, Object value)
 		throws Exception {
 
@@ -336,9 +353,15 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 		if (objectField.isLocalized() && (value instanceof Map)) {
 			Map<String, Object> map = (Map<String, Object>)value;
 
+			Locale defaultLocale = null;
+
+			if (Validator.isNotNull(defaultLanguageId)) {
+				defaultLocale = LocaleUtil.fromLanguageId(defaultLanguageId);
+			}
+
 			infoFieldValue = InfoLocalizedValue.builder(
 			).defaultLocale(
-				LocaleUtil.fromLanguageId(objectField.getDefaultLanguageId())
+				defaultLocale
 			).value(
 				consumer -> {
 					for (Map.Entry<String, Object> entry : map.entrySet()) {
@@ -379,6 +402,7 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 			try {
 				Object downloadURLInfoFieldValue = null;
 				Object fileNameInfoFieldValue = null;
+				Object fileURLInfoFieldValue = null;
 				Object mimeTypeInfoFieldValue = null;
 				Object previewURLInfoFieldValue = null;
 				Object sizeInfoFieldValue = null;
@@ -389,27 +413,45 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 					FileEntry fileEntry = dlAppLocalService.getFileEntry(
 						GetterUtil.getLong(fileEntryId));
 
-					downloadURLInfoFieldValue = dlURLHelper.getDownloadURL(
-						fileEntry, fileEntry.getFileVersion(), themeDisplay,
-						StringPool.BLANK);
-
+					downloadURLInfoFieldValue = _getAttachmentDownloadURL(
+						dlURLHelper, fileEntry, objectDefinition,
+						objectEntryService, objectField,
+						serviceBuilderObjectEntry, themeDisplay);
 					fileNameInfoFieldValue = fileEntry.getFileName();
-					mimeTypeInfoFieldValue = fileEntry.getMimeType();
-					previewURLInfoFieldValue = dlURLHelper.getPreviewURL(
-						fileEntry, fileEntry.getFileVersion(), themeDisplay,
-						StringPool.BLANK);
+
+					String mimeType = fileEntry.getMimeType();
+
+					mimeTypeInfoFieldValue = mimeType;
+
+					WebImage fileURLWebImage = new WebImage(
+						dlURLHelper.getPreviewURL(
+							fileEntry, fileEntry.getFileVersion(), themeDisplay,
+							StringPool.BLANK),
+						new InfoItemReference(
+							FileEntry.class.getName(),
+							new ClassPKInfoItemIdentifier(
+								fileEntry.getFileEntryId())));
+
+					fileURLWebImage.setAlt(fileEntry.getDescription());
+
+					if (mimeType.startsWith("image")) {
+						fileURLInfoFieldValue = fileURLWebImage;
+					}
+
+					previewURLInfoFieldValue = fileURLWebImage;
 					sizeInfoFieldValue = fileEntry.getSize();
 				}
 				else if (infoFieldValue instanceof InfoLocalizedValue) {
-					InfoLocalizedValue<Object> infoLocalizedValue =
-						(InfoLocalizedValue<Object>)infoFieldValue;
-
 					InfoLocalizedValue.Builder<Object>
 						downloadURLInfoFieldValueBuilder =
 							InfoLocalizedValue.builder();
 					InfoLocalizedValue.Builder<Object>
 						fileNameInfoFieldValueBuilder =
 							InfoLocalizedValue.builder();
+					InfoLocalizedValue.Builder<Object>
+						fileURLInfoFieldValueBuilder =
+							InfoLocalizedValue.builder();
+					boolean hasImage = false;
 					InfoLocalizedValue.Builder<Object>
 						mimeTypeInfoFieldValueBuilder =
 							InfoLocalizedValue.builder();
@@ -420,28 +462,52 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 						sizeInfoFieldValueBuilder =
 							InfoLocalizedValue.builder();
 
+					InfoLocalizedValue<Object> infoLocalizedValue =
+						(InfoLocalizedValue<Object>)infoFieldValue;
+
 					Map<Locale, Object> values = infoLocalizedValue.getValues();
 
 					for (Map.Entry<Locale, Object> entry : values.entrySet()) {
-						Long fileEntryId = (Long)entry.getValue();
+						FileEntry fileEntry = dlAppLocalService.fetchFileEntry(
+							GetterUtil.getLong(entry.getValue()));
 
-						FileEntry fileEntry = dlAppLocalService.getFileEntry(
-							GetterUtil.getLong(fileEntryId));
+						if (fileEntry == null) {
+							continue;
+						}
 
 						downloadURLInfoFieldValueBuilder.value(
 							entry.getKey(),
-							dlURLHelper.getDownloadURL(
-								fileEntry, fileEntry.getFileVersion(),
-								themeDisplay, StringPool.BLANK));
+							_getAttachmentDownloadURL(
+								dlURLHelper, fileEntry, objectDefinition,
+								objectEntryService, objectField,
+								serviceBuilderObjectEntry, themeDisplay));
 						fileNameInfoFieldValueBuilder.value(
 							entry.getKey(), fileEntry.getFileName());
 						mimeTypeInfoFieldValueBuilder.value(
 							entry.getKey(), fileEntry.getMimeType());
-						previewURLInfoFieldValueBuilder.value(
-							entry.getKey(),
+
+						String mimeType = fileEntry.getMimeType();
+
+						WebImage fileURLWebImage = new WebImage(
 							dlURLHelper.getPreviewURL(
 								fileEntry, fileEntry.getFileVersion(),
-								themeDisplay, StringPool.BLANK));
+								themeDisplay, StringPool.BLANK),
+							new InfoItemReference(
+								FileEntry.class.getName(),
+								new ClassPKInfoItemIdentifier(
+									fileEntry.getFileEntryId())));
+
+						fileURLWebImage.setAlt(fileEntry.getDescription());
+
+						if (mimeType.startsWith("image")) {
+							fileURLInfoFieldValueBuilder.value(
+								entry.getKey(), fileURLWebImage);
+
+							hasImage = true;
+						}
+
+						previewURLInfoFieldValueBuilder.value(
+							entry.getKey(), fileURLWebImage);
 						sizeInfoFieldValueBuilder.value(
 							entry.getKey(), fileEntry.getSize());
 					}
@@ -451,11 +517,34 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 
 					fileNameInfoFieldValue =
 						fileNameInfoFieldValueBuilder.build();
+
+					if (hasImage) {
+						fileURLInfoFieldValue =
+							fileURLInfoFieldValueBuilder.build();
+					}
+
 					mimeTypeInfoFieldValue =
 						mimeTypeInfoFieldValueBuilder.build();
 					previewURLInfoFieldValue =
 						previewURLInfoFieldValueBuilder.build();
 					sizeInfoFieldValue = sizeInfoFieldValueBuilder.build();
+				}
+
+				if (fileURLInfoFieldValue != null) {
+					infoFieldValues.add(
+						new InfoFieldValue<>(
+							InfoField.builder(
+							).infoFieldType(
+								ImageInfoFieldType.INSTANCE
+							).namespace(
+								objectFieldNamespace
+							).name(
+								objectField.getObjectFieldId() + "#fileURL"
+							).labelInfoLocalizedValue(
+								InfoLocalizedValue.localize(
+									ObjectEntryInfoItemFields.class, "file-url")
+							).build(),
+							fileURLInfoFieldValue));
 				}
 
 				infoFieldValues.add(
@@ -543,6 +632,27 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 				GetterUtil.getObject(infoFieldValue, StringPool.BLANK)));
 	}
 
+	private static String _getAttachmentDownloadURL(
+			DLURLHelper dlURLHelper, FileEntry fileEntry,
+			ObjectDefinition objectDefinition,
+			ObjectEntryService objectEntryService, ObjectField objectField,
+			com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry,
+			ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		if (serviceBuilderObjectEntry == null) {
+			return dlURLHelper.getDownloadURL(
+				fileEntry, fileEntry.getFileVersion(), themeDisplay,
+				StringPool.BLANK);
+		}
+
+		return ObjectFieldUtil.getAttachmentDownloadURL(
+			dlURLHelper, fileEntry, serviceBuilderObjectEntry.getGroupId(),
+			objectDefinition.getExternalReferenceCode(),
+			serviceBuilderObjectEntry, objectEntryService, objectField,
+			PermissionThreadLocal.getPermissionChecker(), themeDisplay);
+	}
+
 	private static KeyLocalizedLabelPair _getKeyLocalizedLabelPair(
 		ListTypeEntryLocalService listTypeEntryLocalService, Object object,
 		ObjectField objectField) {
@@ -590,30 +700,8 @@ public class ObjectEntryInfoItemValuesProviderUtil {
 			return null;
 		}
 
-		if (Objects.equals(
-				ObjectFieldInfoFieldTypeUtil.getInfoFieldType(objectField),
-				ImageInfoFieldType.INSTANCE)) {
-
-			try {
-				JSONObject jsonObject = JSONFactoryUtil.createJSONObject(
-					new String((byte[])value));
-
-				WebImage webImage = new WebImage(jsonObject.getString("url"));
-
-				webImage.setAlt(jsonObject.getString("alt"));
-
-				return webImage;
-			}
-			catch (Exception exception) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(exception);
-
-					return null;
-				}
-			}
-		}
-		else if (objectField.compareBusinessType(
-					ObjectFieldConstants.BUSINESS_TYPE_ATTACHMENT)) {
+		if (objectField.compareBusinessType(
+				ObjectFieldConstants.BUSINESS_TYPE_ATTACHMENT)) {
 
 			if (value instanceof Long) {
 				return value;

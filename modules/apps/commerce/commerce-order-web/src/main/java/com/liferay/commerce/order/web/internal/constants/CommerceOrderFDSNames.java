@@ -13,8 +13,14 @@ import com.liferay.commerce.constants.CommercePortletKeys;
  */
 public class CommerceOrderFDSNames {
 
+	public static final String ACCOUNT_VALIDATIONS =
+		CommercePortletKeys.COMMERCE_ORDER + "-accountValidations";
+
 	public static final String ALL_ORDERS =
 		CommercePortletKeys.COMMERCE_ORDER + "-allOrders";
+
+	public static final String ATTACHMENTS =
+		CommercePortletKeys.COMMERCE_ORDER + "-attachments";
 
 	public static final String BILLING_ADDRESSES =
 		CommercePortletKeys.COMMERCE_ORDER + "-billingAddresses";

@@ -21,7 +21,7 @@ export class TagsPage {
 	constructor(page: Page) {
 		this.page = page;
 		this.dataSetFragmentPage = new DataSetPage(page);
-		this.newTagButton = this.page.getByLabel('New');
+		this.newTagButton = this.page.getByRole('button', {name: 'New'});
 		this.saveAndAddAnotherButton = this.page.getByText(
 			'Save and Add Another'
 		);
@@ -79,6 +79,10 @@ export class TagsPage {
 		await expect(
 			this.page.getByRole('heading', {name: `Delete Tag`})
 		).toBeVisible();
+
+		await expect(
+			this.page.locator('.liferay-modal .modal-dialog')
+		).toHaveClass(/modal-dialog-centered/);
 
 		await clickAndExpectToBeVisible({
 			target: this.page.getByText(

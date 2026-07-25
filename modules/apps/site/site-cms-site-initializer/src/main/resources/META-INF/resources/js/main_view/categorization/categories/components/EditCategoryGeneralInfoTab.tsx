@@ -103,7 +103,7 @@ const EditCategoryGeneralInfoTab = ({
 				role="group"
 			>
 				<ClayForm.Group className="c-gap-4 d-flex flex-column p-4">
-					<ClayLayout.Row className="form-title" justify="between">
+					<ClayLayout.Row className="mx-0" justify="between">
 						<h2 className="mb-0 py-2 text-6 text-dark">
 							{Liferay.Language.get('basic-info')}
 						</h2>
@@ -143,6 +143,7 @@ const EditCategoryGeneralInfoTab = ({
 						<ClayInput
 							aria-label={Liferay.Language.get('name')}
 							data-testid="name-input"
+							disabled={category.system}
 							id="name"
 							onBlur={handleNameBlur}
 							onChange={({target: {value}}) =>
@@ -171,6 +172,7 @@ const EditCategoryGeneralInfoTab = ({
 							aria-label={Liferay.Language.get('description')}
 							component="textarea"
 							data-testid="description-input"
+							disabled={category.system}
 							id="description"
 							onChange={({target: {value}}) =>
 								onChangeDescription(value)

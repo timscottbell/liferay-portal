@@ -7,6 +7,7 @@ package com.liferay.jenkins.results.parser.testray;
 
 import com.liferay.jenkins.results.parser.BuildReportFactory;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
+import com.liferay.jenkins.results.parser.MultiPattern;
 import com.liferay.jenkins.results.parser.TopLevelBuildReport;
 
 import java.io.IOException;
@@ -55,14 +56,29 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		"dateModified", "dueStatus { key name }", "errors", "id", "startDate"
 	};
 
+	public static long getId(URL testrayBuildURL) {
+		if (testrayBuildURL == null) {
+			return 0;
+		}
+
+		Matcher matcher = _testrayBuildURLPattern.matcher(
+			String.valueOf(testrayBuildURL));
+
+		if (!matcher.find()) {
+			return 0;
+		}
+
+		return Long.parseLong(matcher.group("buildId"));
+	}
+
 	public int compareTo(TestrayBuild testrayBuild) {
 		if (testrayBuild == null) {
 			throw new NullPointerException("Testray build is null");
 		}
 
-		Long id = testrayBuild.getID();
+		Long id = testrayBuild.getId();
 
-		return id.compareTo(getID());
+		return id.compareTo(getId());
 	}
 
 	public String getDescription() {
@@ -94,7 +110,7 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		return getTestrayCaseResults(null, null, true);
 	}
 
-	public long getID() {
+	public long getId() {
 		return _jsonObject.getLong("id");
 	}
 
@@ -188,9 +204,9 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("r_buildToCaseResult_c_buildId eq '");
-		sb.append(getID());
+		sb.append(getId());
 		sb.append("' and r_caseToCaseResult_c_caseId eq '");
-		sb.append(testrayCase.getID());
+		sb.append(testrayCase.getId());
 		sb.append("'");
 
 		try {
@@ -227,14 +243,14 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 
 		StringBuilder sb = new StringBuilder();
 
-		if ((testrayRun != null) && (testrayRun.getID() > 0)) {
+		if ((testrayRun != null) && (testrayRun.getId() > 0)) {
 			sb.append("r_runToCaseResult_c_runId eq '");
-			sb.append(testrayRun.getID());
+			sb.append(testrayRun.getId());
 			sb.append("' and ");
 		}
 
 		sb.append("r_buildToCaseResult_c_buildId eq '");
-		sb.append(getID());
+		sb.append(getId());
 		sb.append("'");
 
 		if (filterbyFailures) {
@@ -261,8 +277,8 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 
 				if (testrayCaseType != null) {
 					if (Objects.equals(
-							testrayCaseType.getID(),
-							testrayCase.getTestrayCaseTypeID())) {
+							testrayCaseType.getId(),
+							testrayCase.getTestrayCaseTypeId())) {
 
 						testrayCaseResults.add(testrayCaseResult);
 					}
@@ -289,7 +305,7 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		JSONObject productVersionJSONObject = _jsonObject.getJSONObject(
 			"productVersionToBuilds");
 
-		_testrayProductVersion = _testrayProject.getTestrayProductVersionByID(
+		_testrayProductVersion = _testrayProject.getTestrayProductVersionById(
 			productVersionJSONObject.getLong("id"));
 
 		return _testrayProductVersion;
@@ -305,9 +321,9 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 
 	public synchronized TestrayRun getTestrayRun(String name) {
 		for (TestrayRun testrayRun : getTestrayRuns()) {
-			String testrayRunIDString = testrayRun.getRunIDString();
+			String runIdString = testrayRun.getRunIdString();
 
-			if (testrayRunIDString.equals(name)) {
+			if (runIdString.equals(name)) {
 				return testrayRun;
 			}
 		}
@@ -325,7 +341,7 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("/o/c/builds/");
-		sb.append(getID());
+		sb.append(getId());
 		sb.append("/buildToRuns?pageSize=100");
 
 		try {
@@ -335,10 +351,9 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 			JSONArray itemsJSONArray = responseJSONObject.getJSONArray("items");
 
 			for (int i = 0; i < itemsJSONArray.length(); i++) {
-				JSONObject itemJSONObject = itemsJSONArray.getJSONObject(i);
-
 				_testrayRuns.add(
-					TestrayFactory.newTestrayRun(this, itemJSONObject));
+					TestrayFactory.newTestrayRun(
+						this, itemsJSONArray.getJSONObject(i)));
 			}
 		}
 		catch (IOException ioException) {
@@ -401,18 +416,43 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 	}
 
 	public URL getTopLevelBuildURL() {
-		Matcher matcher = _getTestrayAttachmentURLMatcher();
+		String description = getDescription();
 
-		if (matcher == null) {
+		Matcher matcher = null;
+
+		if (!JenkinsResultsParserUtil.isNullOrEmpty(description)) {
+			matcher = _descriptionMultiPattern.matches(description);
+		}
+
+		String topLevelBuildNumber = null;
+		String topLevelJobName = null;
+		String topLevelMasterHostname = null;
+
+		if (matcher != null) {
+			topLevelBuildNumber = matcher.group("topLevelBuildNumber");
+			topLevelJobName = matcher.group("topLevelJobName");
+			topLevelMasterHostname = matcher.group("topLevelMasterHostname");
+		}
+		else {
+			matcher = _getTestrayAttachmentURLMatcher();
+
+			if (matcher != null) {
+				topLevelBuildNumber = matcher.group("topLevelBuildNumber");
+				topLevelJobName = matcher.group("topLevelJobName");
+				topLevelMasterHostname = matcher.group(
+					"topLevelMasterHostname");
+			}
+		}
+
+		if (topLevelMasterHostname == null) {
 			return null;
 		}
 
 		try {
 			return new URL(
 				JenkinsResultsParserUtil.combine(
-					"https://", matcher.group("topLevelMasterHostname"),
-					".liferay.com/job/", matcher.group("topLevelJobName"), "/",
-					matcher.group("topLevelBuildNumber"), "/"));
+					"https://", topLevelMasterHostname, ".liferay.com/job/",
+					topLevelJobName, "/", topLevelBuildNumber));
 		}
 		catch (MalformedURLException malformedURLException) {
 			throw new RuntimeException(malformedURLException);
@@ -435,7 +475,7 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 			return new URL(
 				JenkinsResultsParserUtil.combine(
 					String.valueOf(_testrayRoutine.getURL()), "/build/",
-					String.valueOf(getID())));
+					String.valueOf(getId())));
 		}
 		catch (MalformedURLException malformedURLException) {
 			throw new RuntimeException(malformedURLException);
@@ -456,6 +496,18 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 	protected TestrayBuild(TestrayServer testrayServer, JSONObject jsonObject) {
 		_testrayServer = testrayServer;
 		_jsonObject = jsonObject;
+
+		JSONObject projectJSONObject = jsonObject.getJSONObject(
+			"projectToBuilds");
+
+		_testrayProject = testrayServer.getTestrayProjectById(
+			projectJSONObject.getLong("id"));
+
+		JSONObject routineJSONObject = jsonObject.getJSONObject(
+			"routineToBuilds");
+
+		_testrayRoutine = _testrayProject.getTestrayRoutineById(
+			routineJSONObject.getLong("id"));
 	}
 
 	protected TestrayBuild(URL url) {
@@ -468,15 +520,15 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		_testrayServer = TestrayFactory.newTestrayServer(
 			matcher.group("serverURL"));
 
-		_testrayRoutine = _testrayServer.getTestrayRoutineByID(
-			Long.parseLong(matcher.group("routineID")));
+		_testrayRoutine = _testrayServer.getTestrayRoutineById(
+			Long.parseLong(matcher.group("routineId")));
 
-		String filter = JenkinsResultsParserUtil.combine(
-			"id eq '", matcher.group("buildID"), "'");
+		String filterString = JenkinsResultsParserUtil.combine(
+			"id eq '", matcher.group("buildId"), "'");
 
 		try {
 			Set<JSONObject> entityJSONObjects = _testrayServer.requestGraphQL(
-				"builds", FIELD_NAMES, filter, null, 1, 1);
+				"builds", FIELD_NAMES, filterString, null, 1, 1);
 
 			if (entityJSONObjects.isEmpty()) {
 				throw new RuntimeException("Unable to find entity JSON object");
@@ -499,7 +551,7 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("r_buildToCaseResult_c_buildId eq '");
-		sb.append(getID());
+		sb.append(getId());
 		sb.append("'");
 
 		Set<JSONObject> entityJSONObjects;
@@ -548,6 +600,18 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 		return null;
 	}
 
+	private static final MultiPattern _descriptionMultiPattern =
+		new MultiPattern(
+			JenkinsResultsParserUtil.combine(
+				".*<a href=\"https://(?<topLevelMasterHostname>test-\\d+-\\d+)",
+				"\\.liferay\\.com/userContent/jobs/(?<topLevelJobName>[^/]+)/",
+				"builds/(?<topLevelBuildNumber>\\d+)/jenkins-report\\.html\">",
+				"Jenkins Report</a>.*"),
+			JenkinsResultsParserUtil.combine(
+				".*<a href=\".+/testray-results/\\d{4}-\\d{2}/",
+				"(?<topLevelMasterHostname>test-\\d+-\\d+)/",
+				"(?<topLevelJobName>[^/]+)/(?<topLevelBuildNumber>\\d+)/",
+				"[^\"]+\">Jenkins Report</a>.*"));
 	private static final Pattern _portalBranchPattern = Pattern.compile(
 		"Portal Branch: (?<portalBranch>[^;]+);");
 	private static final Pattern _testrayAttachmentURLPattern = Pattern.compile(
@@ -556,15 +620,15 @@ public class TestrayBuild implements Comparable<TestrayBuild> {
 			"(?<topLevelMasterHostname>test-\\d+-\\d+)/",
 			"(?<topLevelJobName>[^/]+)/(?<topLevelBuildNumber>\\d+)/.*"));
 	private static final Pattern _testrayBuildURLPattern = Pattern.compile(
-		"(?<serverURL>https://[^/]+)/#/project/(?<projectID>\\d+)/routines/" +
-			"(?<routineID>\\d+)/build/(?<buildID>\\d+)");
+		"(?<serverURL>https://[^/]+)/#/project/(?<projectId>\\d+)/routines/" +
+			"(?<routineId>\\d+)/build/(?<buildId>\\d+)");
 
 	private final JSONObject _jsonObject;
 	private String _pullRequestSenderUsername;
 	private Matcher _testrayAttachmentURLMatcher;
 	private TestrayProductVersion _testrayProductVersion;
 	private TestrayProject _testrayProject;
-	private TestrayRoutine _testrayRoutine;
+	private final TestrayRoutine _testrayRoutine;
 	private List<TestrayRun> _testrayRuns;
 	private final TestrayServer _testrayServer;
 	private TopLevelBuildReport _topLevelBuildReport;

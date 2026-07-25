@@ -17,6 +17,7 @@ import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.expando.kernel.model.ExpandoBridge;
 import com.liferay.expando.kernel.service.ExpandoRowLocalService;
 import com.liferay.expando.kernel.util.ExpandoBridgeUtil;
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
 import com.liferay.petra.function.transform.TransformUtil;
@@ -306,8 +307,7 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 
 		// Node
 
-		wikiPageLocalService.updateLastPostDate(
-			node.getNodeId(), serviceContext.getModifiedDate(date));
+		_updateLastPostDate(serviceContext.getModifiedDate(date), nodeId);
 
 		// Asset
 
@@ -918,6 +918,24 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 	}
 
 	@Override
+	public WikiPage fetchPage(long resourcePrimKey, Boolean head) {
+		WikiPageResource pageResource =
+			_wikiPageResourcePersistence.fetchByPrimaryKey(resourcePrimKey);
+
+		if (pageResource == null) {
+			return null;
+		}
+
+		if (head == null) {
+			return wikiPagePersistence.fetchByN_T_First(
+				pageResource.getNodeId(), pageResource.getTitle(), null);
+		}
+
+		return wikiPagePersistence.fetchByN_T_H_First(
+			pageResource.getNodeId(), pageResource.getTitle(), head, null);
+	}
+
+	@Override
 	public WikiPage fetchPage(long nodeId, String title) {
 		return wikiPagePersistence.fetchByN_T_H_First(
 			nodeId, title, true, null);
@@ -1226,9 +1244,7 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 			if (exists) {
 				WikiPage curPage = getPage(nodeId, curTitle);
 
-				if (!pages.containsKey(curPage.getTitle())) {
-					pages.put(curPage.getTitle(), curPage);
-				}
+				pages.putIfAbsent(curPage.getTitle(), curPage);
 			}
 			else {
 				WikiPageImpl wikiPageImpl = new WikiPageImpl();
@@ -1237,9 +1253,7 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 				wikiPageImpl.setNodeId(nodeId);
 				wikiPageImpl.setTitle(curTitle);
 
-				if (!pages.containsKey(curTitle)) {
-					pages.put(curTitle, wikiPageImpl);
-				}
+				pages.putIfAbsent(curTitle, wikiPageImpl);
 			}
 		}
 
@@ -3336,6 +3350,14 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 			workflowContext);
 	}
 
+	private void _updateLastPostDate(Date date, long nodeId) {
+		if (!ExportImportThreadLocal.isImportInProcess() &&
+			!ExportImportThreadLocal.isStagingInProcess()) {
+
+			wikiPageLocalService.updateLastPostDate(nodeId, date);
+		}
+	}
+
 	private WikiPage _updatePage(
 			long userId, WikiPage oldPage, String newTitle, String content,
 			String summary, boolean minorEdit, String format,
@@ -3428,8 +3450,7 @@ public class WikiPageLocalServiceImpl extends WikiPageLocalServiceBaseImpl {
 
 		// Node
 
-		wikiPageLocalService.updateLastPostDate(
-			nodeId, serviceContext.getModifiedDate(date));
+		_updateLastPostDate(serviceContext.getModifiedDate(date), nodeId);
 
 		// Asset
 

@@ -51,6 +51,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -86,6 +87,14 @@ public class ObjectEntryWorkflowHandlerTest {
 		_serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
 	}
 
+	@After
+	public void tearDown() throws Exception {
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			_objectDefinitionLocalService,
+			new String[] {"C_A", "C_AA", "C_AB", "C_AAA", "C_AAB"},
+			_objectEntryLocalService, _objectRelationshipLocalService);
+	}
+
 	@Test
 	public void testDeleteObjectEntryFolder() throws PortalException {
 		_objectEntryFolder = _updateObjectEntryFolderSingleApprover(
@@ -113,7 +122,6 @@ public class ObjectEntryWorkflowHandlerTest {
 		Assert.assertNull(workflowDefinitionLink);
 	}
 
-	@FeatureFlag("LPD-34594")
 	@Test
 	public void testGetEntryClassPK() throws Exception {
 		TreeTestUtil.createObjectDefinitionTree(
@@ -192,11 +200,6 @@ public class ObjectEntryWorkflowHandlerTest {
 			workflowHandler.getEntryClassPK(
 				TestPropsValues.getCompanyId(), mockHttpServletRequest,
 				workflowTask));
-
-		TreeTestUtil.deleteObjectDefinitionHierarchy(
-			_objectDefinitionLocalService,
-			new String[] {"C_A", "C_AA", "C_AB", "C_AAA", "C_AAB"},
-			_objectEntryLocalService, _objectRelationshipLocalService);
 	}
 
 	@Test
@@ -248,8 +251,8 @@ public class ObjectEntryWorkflowHandlerTest {
 	private ObjectDefinition _addObjectDefinition() throws Exception {
 		ObjectDefinition objectDefinition =
 			_objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), 0, null, false, true, false,
-				false, false, false, false, false, null,
+				null, TestPropsValues.getUserId(), 0, null, true, false, true,
+				false, false, false, false, false, false, null,
 				LocalizedMapUtil.getLocalizedMap(StringUtil.randomString()),
 				"A" + StringUtil.randomString(), null, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),

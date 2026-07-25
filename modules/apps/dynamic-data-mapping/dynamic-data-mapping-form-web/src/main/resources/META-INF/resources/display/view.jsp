@@ -80,8 +80,8 @@ boolean limitToOneSubmissionPerUser = DDMFormInstanceSubmissionLimitStatusUtil.i
 					pageTitle = LanguageUtil.get(request, "this-form-is-no-longer-available");
 				}
 				else if (showSuccessPage) {
-					pageDescription = ddmFormDisplayContext.getSuccessPageDescription(displayLocale);
-					pageTitle = ddmFormDisplayContext.getSuccessPageTitle(displayLocale);
+					pageDescription = ddmFormDisplayContext.getSuccessPageDescription();
+					pageTitle = ddmFormDisplayContext.getSuccessPageTitle();
 				}
 				else {
 					Map<String, String> limitToOneSubmissionPerUserMap = ddmFormDisplayContext.getLimitToOneSubmissionPerUserMap();
@@ -302,6 +302,10 @@ boolean limitToOneSubmissionPerUser = DDMFormInstanceSubmissionLimitStatusUtil.i
 									).put(
 										"formReportDataURL", formReportDataURL.toString()
 									).put(
+										"indicatesRequiredFieldsLabel", LanguageUtil.get(displayLocale, "indicates-required-fields")
+									).put(
+										"requiredLabel", LanguageUtil.get(displayLocale, "required")
+									).put(
 										"title", formInstance.getName(displayLocale)
 									).put(
 										"validateCSRFTokenURL", validateCSRFTokenURL.toString()
@@ -371,6 +375,14 @@ boolean limitToOneSubmissionPerUser = DDMFormInstanceSubmissionLimitStatusUtil.i
 							Liferay.Util.fetch('<%= autoSaveFormInstanceRecordURL.toString() %>', {
 								body: data,
 								method: 'POST',
+							}).catch(function () {
+								clearInterval(window.<portlet:namespace />intervalId);
+
+								Liferay.Util.openToast({
+									message:
+										'<%= UnicodeLanguageUtil.get(request, "autosave-error") %>',
+									type: 'warning',
+								});
 							});
 						}
 

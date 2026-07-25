@@ -7,8 +7,10 @@ package com.liferay.batch.engine.internal.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.batch.engine.BatchEngineImportTaskExecutor;
+import com.liferay.batch.engine.BatchEngineTaskExecuteStatus;
 import com.liferay.batch.engine.BatchEngineTaskItemDelegate;
 import com.liferay.batch.engine.model.BatchEngineImportTask;
+import com.liferay.batch.engine.service.BatchEngineImportTaskLocalService;
 import com.liferay.batch.engine.unit.BatchEngineUnitConfiguration;
 import com.liferay.batch.engine.unit.BatchEngineUnitMetaInfo;
 import com.liferay.batch.engine.unit.BatchEngineUnitReader;
@@ -33,6 +35,7 @@ import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.test.util.ZipFileTestUtil;
+import com.liferay.portal.kernel.upgrade.util.UpgradeProcessUtil;
 import com.liferay.portal.kernel.util.ClassUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -144,18 +147,15 @@ public class BatchEngineBundleTrackerTest {
 
 	@Test
 	public void testProcessBatchEngineBundleOnUpgrade() throws Exception {
-		boolean upgradeClient = ReflectionTestUtil.getAndSetFieldValue(
-			DBUpgrader.class, "_upgradeClient", false);
+		boolean upgradeClient = UpgradeProcessUtil.isUpgradeClient();
 
 		try {
-			ReflectionTestUtil.setFieldValue(
-				DBUpgrader.class, "_upgradeClient", true);
+			UpgradeProcessUtil.setUpgradeClient(true);
 
 			_testProcessBatchEngineBundle(null, "batch1");
 		}
 		finally {
-			ReflectionTestUtil.setFieldValue(
-				DBUpgrader.class, "_upgradeClient", upgradeClient);
+			UpgradeProcessUtil.setUpgradeClient(upgradeClient);
 		}
 	}
 
@@ -224,6 +224,16 @@ public class BatchEngineBundleTrackerTest {
 			"batch10", "/batch10/data.batch-engine-data.json");
 	}
 
+	private void _completeBatchEngineImportTask(
+		BatchEngineImportTask batchEngineImportTask) {
+
+		batchEngineImportTask.setExecuteStatus(
+			BatchEngineTaskExecuteStatus.COMPLETED.toString());
+
+		_batchEngineImportTaskLocalService.updateBatchEngineImportTask(
+			batchEngineImportTask);
+	}
+
 	private String _getDataFileName(
 		BatchEngineImportTask batchEngineImportTask) {
 
@@ -277,6 +287,8 @@ public class BatchEngineBundleTrackerTest {
 						if (dataFileName != null) {
 							processedDataFileNames.add(dataFileName);
 						}
+
+						_completeBatchEngineImportTask(batchEngineImportTask);
 					}
 
 					@Override
@@ -296,6 +308,8 @@ public class BatchEngineBundleTrackerTest {
 						if (dataFileName != null) {
 							processedDataFileNames.add(dataFileName);
 						}
+
+						_completeBatchEngineImportTask(batchEngineImportTask);
 					}
 
 				},
@@ -369,6 +383,10 @@ public class BatchEngineBundleTrackerTest {
 
 	@Inject
 	private BatchEngineImportTaskExecutor _batchEngineImportTaskExecutor;
+
+	@Inject
+	private BatchEngineImportTaskLocalService
+		_batchEngineImportTaskLocalService;
 
 	@Inject
 	private BatchEngineUnitReader _batchEngineUnitReader;

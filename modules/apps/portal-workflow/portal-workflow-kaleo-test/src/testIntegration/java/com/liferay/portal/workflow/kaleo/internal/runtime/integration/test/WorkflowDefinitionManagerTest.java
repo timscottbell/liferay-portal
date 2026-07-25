@@ -6,6 +6,7 @@
 package com.liferay.portal.workflow.kaleo.internal.runtime.integration.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.test.AssertUtils;
@@ -14,6 +15,7 @@ import com.liferay.portal.kernel.test.rule.DataGuard;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.FileUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.DefaultWorkflowNodeSetting;
 import com.liferay.portal.kernel.workflow.NoSuchWorkflowDefinitionException;
@@ -33,6 +35,8 @@ import com.liferay.portal.workflow.manager.WorkflowDefinitionManager;
 import java.io.Closeable;
 import java.io.InputStream;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.junit.Assert;
@@ -70,22 +74,96 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 
 	@Test
 	public void testDeployGroovyWorkflowDefinition() throws Exception {
-		String content = StringUtil.read(
-			getResourceInputStream(
-				"single-approver-site-member-workflow-definition.xml"));
-
 		try (Closeable closeable =
 				ScriptManagementConfigurationTestUtil.saveWithCloseable(
 					false)) {
+
+			String content1 = StringUtil.read(
+				getResourceInputStream(
+					"single-approver-site-member-workflow-definition.xml"));
 
 			AssertUtils.assertFailure(
 				KaleoDefinitionValidationException.NotAllowedScriptLanguage.
 					class,
 				"Groovy is not allowed",
 				() -> _workflowDefinitionManager.deployWorkflowDefinition(
-					content.getBytes(), TestPropsValues.getCompanyId(), null,
+					content1.getBytes(), TestPropsValues.getCompanyId(), null,
 					WorkflowDefinitionConstants.NAME_SINGLE_APPROVER,
 					StringPool.BLANK, TestPropsValues.getUserId()));
+
+			String content2 = StringUtil.replace(
+				content1, "<script-language>groovy</script-language>",
+				"<script-language><![CDATA[groovy]]></script-language>");
+
+			AssertUtils.assertFailure(
+				KaleoDefinitionValidationException.NotAllowedScriptLanguage.
+					class,
+				"Groovy is not allowed",
+				() -> _workflowDefinitionManager.deployWorkflowDefinition(
+					content2.getBytes(), TestPropsValues.getCompanyId(), null,
+					WorkflowDefinitionConstants.NAME_SINGLE_APPROVER,
+					StringPool.BLANK, TestPropsValues.getUserId()));
+
+			String content3 = StringUtil.replace(
+				content1, "<name>Site Member Single Approver</name>",
+				"<name>Message Board Threads and Comments Reputation " +
+					"Approver</name>");
+
+			AssertUtils.assertFailure(
+				KaleoDefinitionValidationException.NotAllowedScriptLanguage.
+					class,
+				"Groovy is not allowed",
+				() -> _workflowDefinitionManager.deployWorkflowDefinition(
+					content3.getBytes(), TestPropsValues.getCompanyId(), null,
+					"Message Board Threads and Comments Reputation Approver",
+					StringPool.BLANK, TestPropsValues.getUserId()));
+		}
+	}
+
+	@Test
+	public void testDeployJavaWorkflowDefinition() throws Exception {
+		try (Closeable closeable =
+				ScriptManagementConfigurationTestUtil.saveWithCloseable(
+					false)) {
+
+			String content1 = StringUtil.replace(
+				StringUtil.read(
+					getResourceInputStream(
+						"single-approver-site-member-workflow-definition.xml")),
+				"<script-language>groovy</script-language>",
+				"<script-language>java</script-language>");
+
+			AssertUtils.assertFailure(
+				KaleoDefinitionValidationException.NotAllowedScriptLanguage.
+					class,
+				"Java is not allowed",
+				() -> _workflowDefinitionManager.deployWorkflowDefinition(
+					content1.getBytes(), TestPropsValues.getCompanyId(), null,
+					WorkflowDefinitionConstants.NAME_SINGLE_APPROVER,
+					StringPool.BLANK, TestPropsValues.getUserId()));
+
+			String content2 = StringUtil.replace(
+				content1, "<script-language>java</script-language>",
+				"<script-language><![CDATA[java]]></script-language>");
+
+			AssertUtils.assertFailure(
+				KaleoDefinitionValidationException.NotAllowedScriptLanguage.
+					class,
+				"Java is not allowed",
+				() -> _workflowDefinitionManager.deployWorkflowDefinition(
+					content2.getBytes(), TestPropsValues.getCompanyId(), null,
+					WorkflowDefinitionConstants.NAME_SINGLE_APPROVER,
+					StringPool.BLANK, TestPropsValues.getUserId()));
+
+			String content3 = StringUtil.replace(
+				content1, "<name>Site Member Single Approver</name>",
+				"<name>Message Board Threads and Comments Reputation " +
+					"Approver</name>");
+
+			_workflowDefinitionManager.deployWorkflowDefinition(
+				content3.getBytes(), TestPropsValues.getCompanyId(), null,
+				"Message Board Threads and Comments Reputation Approver",
+				StringPool.BLANK, TestPropsValues.getUserId());
 		}
 	}
 
@@ -170,7 +248,8 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 					"tools",
 					JSONUtil.put(
 						JSONUtil.put(
-							"externalReferenceCode", "L_LIFERAY_MCP_SERVER")
+							"externalReferenceCode",
+							"L_LIFERAY_AI_HUB_MCP_SERVER")
 					).toString()),
 				_createWorkflowNodeSetting("userMessage", "User Message")),
 			workflowNode.getWorkflowNodeSettings());
@@ -214,6 +293,79 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 		Assert.assertEquals(
 			workflowDefinition.getName(), workflowDefinition.getName());
 		Assert.assertTrue(workflowDefinition.isActive());
+	}
+
+	@Test
+	public void testDeployWorkflowDefinitionWithHTTPRequestNode()
+		throws Exception {
+
+		AssertUtils.assertFailure(
+			KaleoDefinitionValidationException.
+				MustNotSetMultipleOutgoingTransitions.class,
+			"The HTTP Request node cannot have multiple outgoing transitions",
+			() -> {
+				InputStream inputStream = getResourceInputStream(
+					"http-request-node-with-multiple-outgoing-transitions-" +
+						"workflow-definition.json");
+
+				_workflowDefinitionManager.deployWorkflowDefinition(
+					FileUtil.getBytes(inputStream),
+					TestPropsValues.getCompanyId(),
+					RandomTestUtil.randomString(),
+					"HTTP Request Node With Multiple Outgoing Transitions " +
+						"Workflow Definition",
+					RandomTestUtil.randomString(), TestPropsValues.getUserId());
+			});
+
+		InputStream inputStream = getResourceInputStream(
+			"http-request-node-workflow-definition.json");
+
+		WorkflowDefinition workflowDefinition =
+			_workflowDefinitionManager.deployWorkflowDefinition(
+				FileUtil.getBytes(inputStream), TestPropsValues.getCompanyId(),
+				RandomTestUtil.randomString(),
+				"HTTP Request Node Workflow Definition",
+				RandomTestUtil.randomString(), TestPropsValues.getUserId());
+
+		List<WorkflowNode> workflowNodes =
+			workflowDefinition.getWorkflowNodes();
+
+		WorkflowNode workflowNode = workflowNodes.get(2);
+
+		Assert.assertEquals(
+			WorkflowNode.Type.HTTP_REQUEST, workflowNode.getType());
+
+		_assertEquals(
+			List.of(
+				_createWorkflowNodeSetting("httpMethod", "POST"),
+				_createWorkflowNodeSetting(
+					"inputVariables",
+					JSONUtil.put(
+						JSONUtil.put(
+							"name", "siteRequestBody"
+						).put(
+							"type", "json"
+						)
+					).toString()),
+				_createWorkflowNodeSetting(
+					"outputVariables",
+					JSONUtil.put(
+						JSONUtil.put(
+							"name", "siteResponseBody"
+						).put(
+							"type", "json"
+						)
+					).toString()),
+				_createWorkflowNodeSetting(
+					"requestBody", "{{siteRequestBody}}"),
+				_createWorkflowNodeSetting("timeout", "10000"),
+				_createWorkflowNodeSetting(
+					"url",
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false),
+						"/o/headless-admin-site/v1.0/sites"))),
+			workflowNode.getWorkflowNodeSettings());
 	}
 
 	@Test
@@ -277,10 +429,44 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 					"tools",
 					JSONUtil.put(
 						JSONUtil.put(
-							"externalReferenceCode", "L_LIFERAY_MCP_SERVER")
+							"externalReferenceCode",
+							"L_LIFERAY_AI_HUB_MCP_SERVER")
 					).toString()),
 				_createWorkflowNodeSetting("userMessage", "User Message")),
 			workflowNode.getWorkflowNodeSettings());
+	}
+
+	@Test
+	public void testDeployWorkflowDefinitionWithServiceNode() throws Exception {
+		AssertUtils.assertFailure(
+			KaleoDefinitionValidationException.
+				MustNotSetMultipleOutgoingTransitions.class,
+			"The convert node cannot have multiple outgoing transitions",
+			() -> {
+				InputStream inputStream = getResourceInputStream(
+					"service-node-multiple-transitions-workflow-" +
+						"definition.json");
+
+				_workflowDefinitionManager.deployWorkflowDefinition(
+					FileUtil.getBytes(inputStream),
+					TestPropsValues.getCompanyId(),
+					RandomTestUtil.randomString(),
+					"Service Node Multiple Transitions Workflow Definition",
+					RandomTestUtil.randomString(), TestPropsValues.getUserId());
+			});
+
+		byte[] bytes = FileUtil.getBytes(
+			getResourceInputStream("service-node-workflow-definition.json"));
+
+		_assertServiceNodeWorkflowDefinition(
+			bytes, "com.example.Converter#convert");
+
+		String content = StringUtil.replace(
+			new String(bytes), "com.example.Converter#convert",
+			"com.example.Converter#scope#convert");
+
+		_assertServiceNodeWorkflowDefinition(
+			content.getBytes(), "com.example.Converter#scope#convert");
 	}
 
 	@Test
@@ -689,11 +875,17 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 			expectedWorkflowNodeSettings.size(),
 			actualWorkflowNodeSettings.size());
 
-		for (int i = 0; i < actualWorkflowNodeSettings.size(); i++) {
+		List<WorkflowNodeSetting> sortedActualWorkflowNodeSettings =
+			new ArrayList<>(actualWorkflowNodeSettings);
+
+		sortedActualWorkflowNodeSettings.sort(
+			Comparator.comparing(WorkflowNodeSetting::getName));
+
+		for (int i = 0; i < sortedActualWorkflowNodeSettings.size(); i++) {
 			WorkflowNodeSetting expectedWorkflowNodeSetting =
 				expectedWorkflowNodeSettings.get(i);
 			WorkflowNodeSetting actualWorkflowNodeSetting =
-				expectedWorkflowNodeSettings.get(i);
+				sortedActualWorkflowNodeSettings.get(i);
 
 			Assert.assertEquals(
 				expectedWorkflowNodeSetting.getName(),
@@ -723,6 +915,48 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 		return null;
 	}
 
+	private void _assertServiceNodeWorkflowDefinition(
+			byte[] bytes, String javaDelegate)
+		throws Exception {
+
+		WorkflowDefinition workflowDefinition =
+			_workflowDefinitionManager.deployWorkflowDefinition(
+				bytes, TestPropsValues.getCompanyId(),
+				RandomTestUtil.randomString(),
+				"Service Node Workflow Definition",
+				RandomTestUtil.randomString(), TestPropsValues.getUserId());
+
+		List<WorkflowNode> workflowNodes =
+			workflowDefinition.getWorkflowNodes();
+
+		WorkflowNode workflowNode = workflowNodes.get(2);
+
+		Assert.assertEquals(WorkflowNode.Type.SERVICE, workflowNode.getType());
+
+		_assertEquals(
+			List.of(
+				_createWorkflowNodeSetting(
+					"inputVariables",
+					JSONUtil.put(
+						JSONUtil.put(
+							"name", "input"
+						).put(
+							"type", "string"
+						)
+					).toString()),
+				_createWorkflowNodeSetting("javaDelegate", javaDelegate),
+				_createWorkflowNodeSetting(
+					"outputVariables",
+					JSONUtil.put(
+						JSONUtil.put(
+							"name", "output"
+						).put(
+							"type", "string"
+						)
+					).toString())),
+			workflowNode.getWorkflowNodeSettings());
+	}
+
 	private void _assertValid(InputStream inputStream) throws Exception {
 		_workflowDefinitionManager.validateWorkflowDefinition(
 			FileUtil.getBytes(inputStream));
@@ -735,7 +969,7 @@ public class WorkflowDefinitionManagerTest extends BaseWorkflowManagerTestCase {
 			new DefaultWorkflowNodeSetting();
 
 		defaultWorkflowNodeSetting.setName(name);
-		defaultWorkflowNodeSetting.setName(value);
+		defaultWorkflowNodeSetting.setValue(value);
 
 		return defaultWorkflowNodeSetting;
 	}

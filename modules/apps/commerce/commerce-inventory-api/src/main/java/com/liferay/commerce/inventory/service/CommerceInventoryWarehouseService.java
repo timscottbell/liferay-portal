@@ -151,3 +151,4 @@ public interface CommerceInventoryWarehouseService extends BaseService {
 		throws PortalException;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:1453113601

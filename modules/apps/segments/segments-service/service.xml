@@ -62,7 +62,16 @@
 		</finder>
 		<finder name="G_SRC" return-type="Collection">
 			<finder-column arrayable-operator="OR" name="groupId" />
-			<finder-column name="source" />
+			<finder-column arrayable-operator="OR" name="source" />
+		</finder>
+		<finder name="C_SRC" return-type="Collection">
+			<finder-column name="companyId" />
+			<finder-column arrayable-operator="OR" name="source" />
+		</finder>
+		<finder name="G_A_SRC" return-type="Collection">
+			<finder-column arrayable-operator="OR" name="groupId" />
+			<finder-column name="active" />
+			<finder-column arrayable-operator="OR" name="source" />
 		</finder>
 	</entity>
 	<entity local-service="true" name="SegmentsEntryRel" remote-service="true">
@@ -186,6 +195,10 @@
 			<finder-column name="groupId" />
 			<finder-column name="plid" />
 		</finder>
+		<finder name="G_A" return-type="Collection">
+			<finder-column arrayable-operator="OR" name="groupId" />
+			<finder-column name="active" />
+		</finder>
 		<finder name="SEERC_SESERC" return-type="Collection">
 			<finder-column name="segmentsEntryERC" />
 			<finder-column name="segmentsEntryScopeERC" />
@@ -232,6 +245,52 @@
 			<finder-column name="segmentsEntryScopeERC" />
 			<finder-column name="plid" />
 			<finder-column name="active" />
+		</finder>
+	</entity>
+	<entity local-service="true" name="SegmentsExperienceAudienceEntryRel" remote-service="true" table="SExperienceAudienceEntryRel" uuid="true">
+
+		<!-- PK fields -->
+
+		<column db-name="sExperienceAudienceEntryRelId" name="segmentsExperienceAudienceEntryRelId" primary="true" type="long" />
+
+		<!-- Group instance -->
+
+		<column name="groupId" type="long" />
+
+		<!-- Audit fields -->
+
+		<column name="companyId" type="long" />
+		<column name="userId" type="long" />
+		<column name="userName" type="String" />
+		<column name="createDate" type="Date" />
+		<column name="modifiedDate" type="Date" />
+
+		<!-- Other fields -->
+
+		<column name="audienceEntryERC" type="String" />
+		<column name="priority" type="int" />
+		<column name="segmentsExperienceERC" type="String" />
+
+		<!-- Order -->
+
+		<order by="desc">
+			<order-column name="priority" />
+		</order>
+
+		<!-- Finder methods -->
+
+		<finder name="G_SEERC" return-type="Collection">
+			<finder-column name="groupId" />
+			<finder-column name="segmentsExperienceERC" />
+		</finder>
+		<finder name="C_AEERC" return-type="Collection">
+			<finder-column name="companyId" />
+			<finder-column name="audienceEntryERC" />
+		</finder>
+		<finder name="G_AEERC_SEERC" return-type="SegmentsExperienceAudienceEntryRel" unique="true">
+			<finder-column name="groupId" />
+			<finder-column name="audienceEntryERC" />
+			<finder-column name="segmentsExperienceERC" />
 		</finder>
 	</entity>
 	<entity local-service="true" name="SegmentsExperiment" remote-service="true" uuid="true">
@@ -325,7 +384,10 @@
 		</finder>
 	</entity>
 	<exceptions>
+		<exception>DefaultSegmentsExperience</exception>
+		<exception>DuplicateSegmentsExperienceKey</exception>
 		<exception>DuplicateSegmentsExperiment</exception>
+		<exception>LockedSegmentsEntry</exception>
 		<exception>LockedSegmentsExperiment</exception>
 		<exception>RequiredSegmentsEntry</exception>
 		<exception>RequiredSegmentsExperience</exception>
@@ -333,6 +395,7 @@
 		<exception>SegmentsEntryCriteria</exception>
 		<exception>SegmentsEntryKey</exception>
 		<exception>SegmentsEntryName</exception>
+		<exception>SegmentsExperienceAudienceEntryRelAudienceEntryERC</exception>
 		<exception>SegmentsExperienceName</exception>
 		<exception>SegmentsExperiencePriority</exception>
 		<exception>SegmentsExperimentConfidenceLevel</exception>

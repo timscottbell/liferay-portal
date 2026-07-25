@@ -54,7 +54,7 @@ public class ViewStructureUsagesDisplayContext {
 	public String getAPIURL() {
 		return StringBundler.concat(
 			"/o/search/v1.0/search?emptySearch=true&",
-			"filter=(objectDefinitionId eq ",
+			"filter=(folderId ne 0 and objectDefinitionId eq ",
 			ParamUtil.getLong(_httpServletRequest, "objectDefinitionId"),
 			" and status in (", _STATUSES, "))&nestedFields=embedded");
 	}
@@ -132,12 +132,9 @@ public class ViewStructureUsagesDisplayContext {
 				_language.get(_httpServletRequest, "permissions"), "get", null,
 				"modal-permissions"),
 			new FDSActionDropdownItem(
-				_language.get(
-					_httpServletRequest,
-					"are-you-sure-you-want-to-delete-this-entry"),
 				null, "trash", "delete",
-				_language.get(_httpServletRequest, "delete"), "delete",
-				"delete", "headless"));
+				_language.get(_httpServletRequest, "delete"), null, "delete",
+				null));
 	}
 
 	private static final String _STATUSES = StringUtil.merge(

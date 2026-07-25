@@ -5,8 +5,12 @@
 
 package com.liferay.site.cms.site.initializer.internal.fragment.renderer;
 
+import com.liferay.depot.service.DepotEntryPinLocalService;
 import com.liferay.fragment.renderer.FragmentRenderer;
 import com.liferay.fragment.renderer.FragmentRendererContext;
+import com.liferay.headless.asset.library.resource.v1_0.AssetLibraryResource;
+import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.site.cms.site.initializer.internal.constants.CMSSpaceConstants;
 import com.liferay.site.cms.site.initializer.internal.display.context.BreadcrumbDisplayContext;
@@ -32,13 +36,13 @@ public class BreadcrumbComponentSectionFragmentRenderer
 	}
 
 	@Override
-	protected String getLabelKey() {
-		return "breadcrumb";
+	protected String getComponentName() {
+		return "Breadcrumb";
 	}
 
 	@Override
-	protected String getModuleName() {
-		return "Breadcrumb";
+	protected String getLabelKey() {
+		return "breadcrumb";
 	}
 
 	@Override
@@ -49,13 +53,26 @@ public class BreadcrumbComponentSectionFragmentRenderer
 
 		BreadcrumbDisplayContext breadcrumbDisplayContext =
 			new BreadcrumbDisplayContext(
+				_assetLibraryResourceFactory, _depotEntryPinLocalService,
 				InfoItemUtil.getGroupId(httpServletRequest), _groupLocalService,
-				httpServletRequest, CMSSpaceConstants.SPACE_STICKER_MD);
+				_groupModelResourcePermission, httpServletRequest,
+				CMSSpaceConstants.SPACE_STICKER_MD);
 
 		return breadcrumbDisplayContext.getProps();
 	}
 
 	@Reference
+	private AssetLibraryResource.Factory _assetLibraryResourceFactory;
+
+	@Reference
+	private DepotEntryPinLocalService _depotEntryPinLocalService;
+
+	@Reference
 	private GroupLocalService _groupLocalService;
+
+	@Reference(
+		target = "(model.class.name=com.liferay.portal.kernel.model.Group)"
+	)
+	private ModelResourcePermission<Group> _groupModelResourcePermission;
 
 }

@@ -45,7 +45,7 @@ public class AssetCategoryPropertyExternalReferenceCodeUpgradeProcessTest
 		AssetCategory assetCategory = _assetCategoryLocalService.addCategory(
 			RandomTestUtil.randomString(), group.getCreatorUserId(),
 			group.getGroupId(), 0, RandomTestUtil.randomLocaleStringMap(), null,
-			assetVocabulary.getVocabularyId(), null,
+			assetVocabulary.getVocabularyId(), false, null,
 			ServiceContextTestUtil.getServiceContext(group.getGroupId()));
 
 		return new ExternalReferenceCodeModel[] {
@@ -100,11 +100,6 @@ public class AssetCategoryPropertyExternalReferenceCodeUpgradeProcessTest
 		return new Version(2, 4, 0);
 	}
 
-	@Inject(
-		filter = "(&(component.name=com.liferay.asset.category.property.internal.upgrade.registry.AssetCategoryPropertyServiceUpgradeStepRegistrator))"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	@Inject
 	private AssetCategoryLocalService _assetCategoryLocalService;
 
@@ -114,5 +109,10 @@ public class AssetCategoryPropertyExternalReferenceCodeUpgradeProcessTest
 
 	@Inject
 	private AssetVocabularyLocalService _assetVocabularyLocalService;
+
+	@Inject(
+		filter = "(&(component.name=com.liferay.asset.category.property.internal.upgrade.registry.AssetCategoryPropertyServiceUpgradeStepRegistrator))"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

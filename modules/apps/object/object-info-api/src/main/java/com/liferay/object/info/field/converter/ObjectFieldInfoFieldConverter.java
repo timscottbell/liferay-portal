@@ -6,12 +6,15 @@
 package com.liferay.object.info.field.converter;
 
 import com.liferay.dynamic.data.mapping.expression.DDMExpressionFactory;
+import com.liferay.info.constants.InfoDisplayWebKeys;
 import com.liferay.info.field.InfoField;
+import com.liferay.info.field.type.EmailInfoFieldType;
 import com.liferay.info.field.type.FileInfoFieldType;
 import com.liferay.info.field.type.LongTextInfoFieldType;
 import com.liferay.info.field.type.MultiselectInfoFieldType;
 import com.liferay.info.field.type.NumberInfoFieldType;
 import com.liferay.info.field.type.OptionInfoFieldType;
+import com.liferay.info.field.type.PhoneNumberInfoFieldType;
 import com.liferay.info.field.type.RelationshipInfoFieldType;
 import com.liferay.info.field.type.SelectInfoFieldType;
 import com.liferay.info.field.type.TextInfoFieldType;
@@ -48,7 +51,6 @@ import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.object.service.ObjectStateFlowLocalService;
 import com.liferay.object.service.ObjectStateLocalService;
 import com.liferay.petra.function.transform.TransformUtil;
-import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
@@ -64,6 +66,7 @@ import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.StringUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -187,6 +190,14 @@ public class ObjectFieldInfoFieldConverter {
 		}
 		else if (Objects.equals(
 					objectField.getBusinessType(),
+					ObjectFieldConstants.BUSINESS_TYPE_EMAIL_ADDRESS)) {
+
+			finalStep.attribute(
+				EmailInfoFieldType.PREFERRED_DOMAINS,
+				_getPreferredDomains(objectField));
+		}
+		else if (Objects.equals(
+					objectField.getBusinessType(),
 					ObjectFieldConstants.BUSINESS_TYPE_INTEGER)) {
 
 			finalStep.attribute(
@@ -240,6 +251,21 @@ public class ObjectFieldInfoFieldConverter {
 						new FunctionInfoLocalizedValue<>(
 							listTypeEntry::getName),
 						listTypeEntry.getKey())));
+		}
+		else if (Objects.equals(
+					objectField.getBusinessType(),
+					ObjectFieldConstants.BUSINESS_TYPE_PHONE_NUMBER)) {
+
+			finalStep.attribute(
+				PhoneNumberInfoFieldType.COUNTRY,
+				ObjectFieldSettingUtil.getValue(
+					ObjectFieldSettingConstants.NAME_COUNTRY, objectField)
+			).attribute(
+				PhoneNumberInfoFieldType.COUNTRY_SOURCE,
+				ObjectFieldSettingUtil.getValue(
+					ObjectFieldSettingConstants.NAME_COUNTRY_SOURCE,
+					objectField)
+			);
 		}
 		else if (Objects.equals(
 					objectField.getBusinessType(),
@@ -319,6 +345,9 @@ public class ObjectFieldInfoFieldConverter {
 
 		if (Objects.equals(
 				objectFieldSetting.getValue(),
+				ObjectFieldSettingConstants.VALUE_CMS_BASIC_DOCUMENT) ||
+			Objects.equals(
+				objectFieldSetting.getValue(),
 				ObjectFieldSettingConstants.VALUE_DOCS_AND_MEDIA)) {
 
 			return FileInfoFieldType.FileSourceType.DOCUMENTS_AND_MEDIA;
@@ -326,7 +355,11 @@ public class ObjectFieldInfoFieldConverter {
 		else if (Objects.equals(
 					objectFieldSetting.getValue(),
 					ObjectFieldSettingConstants.
-						VALUE_USER_COMPUTER_TO_DOCS_AND_MEDIA)) {
+						VALUE_USER_COMPUTER_TO_CMS_BASIC_DOCUMENT) ||
+				 Objects.equals(
+					 objectFieldSetting.getValue(),
+					 ObjectFieldSettingConstants.
+						 VALUE_USER_COMPUTER_TO_DOCS_AND_MEDIA)) {
 
 			return FileInfoFieldType.FileSourceType.USER_COMPUTER;
 		}
@@ -432,6 +465,25 @@ public class ObjectFieldInfoFieldConverter {
 		return (ObjectEntry)layoutDisplayPageObjectProvider.getDisplayObject();
 	}
 
+	private long _getObjectEntryGroupId(ServiceContext serviceContext) {
+		HttpServletRequest httpServletRequest = serviceContext.getRequest();
+
+		if (httpServletRequest == null) {
+			return 0;
+		}
+
+		Object infoItem = httpServletRequest.getAttribute(
+			InfoDisplayWebKeys.INFO_ITEM);
+
+		if (!(infoItem instanceof ObjectEntry)) {
+			return 0;
+		}
+
+		ObjectEntry objectEntry = (ObjectEntry)infoItem;
+
+		return objectEntry.getGroupId();
+	}
+
 	private List<OptionInfoFieldType> _getOptionInfoFieldTypes(
 		ObjectField objectField) {
 
@@ -493,6 +545,23 @@ public class ObjectFieldInfoFieldConverter {
 				Objects.equals(defaultValue, listTypeEntry.getKey()),
 				new FunctionInfoLocalizedValue<>(listTypeEntry::getName),
 				listTypeEntry.getKey()));
+	}
+
+	private List<String> _getPreferredDomains(ObjectField objectField) {
+		if (!GetterUtil.getBoolean(
+				ObjectFieldSettingUtil.getValue(
+					ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_ENABLED,
+					objectField))) {
+
+			return Collections.emptyList();
+		}
+
+		return ListUtil.fromArray(
+			StringUtil.split(
+				ObjectFieldSettingUtil.getValue(
+					ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_DOMAINS,
+					objectField),
+				StringPool.COMMA));
 	}
 
 	private String _getRelationshipLabelFieldName(
@@ -561,23 +630,25 @@ public class ObjectFieldInfoFieldConverter {
 			return StringPool.BLANK;
 		}
 
-		Group group = _getGroup(serviceContext);
-
-		if ((group != null) && group.isCMS()) {
-			return StringBundler.concat(
-				_portal.getPortalURL(serviceContext.getRequest()),
-				"/o/search/v1.0/search?emptySearch=true&filter=status in (0) ",
-				"and objectDefinitionId in (",
-				relatedObjectDefinition.getObjectDefinitionId(),
-				")&nestedFields=embedded");
-		}
-
 		RESTContextPathResolver restContextPathResolver =
 			_restContextPathResolverRegistry.getRESTContextPathResolver(
 				relatedObjectDefinition.getClassName());
 
-		String restContextPath = restContextPathResolver.getRESTContextPath(
-			_getGroupId(serviceContext.getRequest(), relatedObjectDefinition));
+		String restContextPath = null;
+
+		Group group = _getGroup(serviceContext);
+
+		if ((group != null) && group.isCMS()) {
+			long groupId = _getObjectEntryGroupId(serviceContext);
+
+			restContextPath = restContextPathResolver.getRESTContextPath(
+				groupId);
+		}
+		else {
+			restContextPath = restContextPathResolver.getRESTContextPath(
+				_getGroupId(
+					serviceContext.getRequest(), relatedObjectDefinition));
+		}
 
 		return _portal.getPortalURL(serviceContext.getRequest()) +
 			_portal.getPathContext() + restContextPath;

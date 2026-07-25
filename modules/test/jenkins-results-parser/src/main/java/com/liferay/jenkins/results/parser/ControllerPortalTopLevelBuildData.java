@@ -30,7 +30,7 @@ public class ControllerPortalTopLevelBuildData extends PortalTopLevelBuildData {
 	}
 
 	public String getTestrayProjectName() {
-		String testrayProjectName = System.getenv("TESTRAY_PROJECT_NAME");
+		String testrayProjectName = Environment.get("TESTRAY_PROJECT_NAME");
 
 		if ((testrayProjectName != null) && !testrayProjectName.isEmpty()) {
 			return testrayProjectName;
@@ -70,9 +70,9 @@ public class ControllerPortalTopLevelBuildData extends PortalTopLevelBuildData {
 	}
 
 	protected ControllerPortalTopLevelBuildData(
-		String runID, String jobName, String buildURL) {
+		String runId, String jobName, String buildURL) {
 
-		super(runID, jobName, buildURL);
+		super(runId, jobName, buildURL);
 
 		setPortalBranchSHA(_getPortalBranchSHA());
 		setPortalGitHubURL(_getPortalGitHubURL());
@@ -93,7 +93,7 @@ public class ControllerPortalTopLevelBuildData extends PortalTopLevelBuildData {
 	}
 
 	private String _getPortalGitHubURL() {
-		String portalGitHubURL = System.getenv("PORTAL_GITHUB_URL");
+		String portalGitHubURL = Environment.get("PORTAL_GITHUB_URL");
 
 		if ((portalGitHubURL != null) && !portalGitHubURL.isEmpty()) {
 			return portalGitHubURL;

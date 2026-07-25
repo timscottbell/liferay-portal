@@ -379,3 +379,4 @@ public interface CommerceInventoryReplenishmentItemLocalService
 		throws PortalException;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-1927759404

@@ -17,6 +17,8 @@ import com.liferay.commerce.model.CommerceOrder;
 import com.liferay.commerce.model.CommerceOrderType;
 import com.liferay.commerce.model.CommerceShippingEngine;
 import com.liferay.commerce.model.CommerceShippingMethod;
+import com.liferay.commerce.order.CommerceOrderValidatorRegistry;
+import com.liferay.commerce.order.CommerceOrderValidatorResult;
 import com.liferay.commerce.payment.method.CommercePaymentMethod;
 import com.liferay.commerce.payment.method.CommercePaymentMethodRegistry;
 import com.liferay.commerce.payment.model.CommercePaymentMethodGroupRel;
@@ -42,13 +44,15 @@ import com.liferay.headless.commerce.delivery.cart.internal.dto.v1_0.converter.c
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Country;
 import com.liferay.portal.kernel.model.Region;
 import com.liferay.portal.kernel.module.service.Snapshot;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.util.BigDecimalUtil;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.language.LanguageResources;
@@ -84,14 +88,21 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 	public Cart toDTO(DTOConverterContext dtoConverterContext)
 		throws Exception {
 
-		CommerceOrder commerceOrder = _commerceOrderService.getCommerceOrder(
+		CommerceOrder commerceOrder = _getCommerceOrder(
 			(Long)dtoConverterContext.getId());
 
-		CommerceShippingMethod commerceShippingMethod =
-			commerceOrder.getCommerceShippingMethod();
+		if (commerceOrder == null) {
+			return null;
+		}
 
 		Locale locale = dtoConverterContext.getLocale();
 
+		List<CommerceOrderValidatorResult> commerceOrderValidatorResults =
+			_getCommerceOrderValidatorResults(
+				commerceOrder, dtoConverterContext, locale);
+
+		CommerceShippingMethod commerceShippingMethod =
+			commerceOrder.getCommerceShippingMethod();
 		ResourceBundle resourceBundle = LanguageResources.getResourceBundle(
 			locale);
 
@@ -143,14 +154,18 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 						return commerceTermEntry.getLabel(
 							_language.getLanguageId(locale));
 					});
+				setErrorMessages(
+					() -> {
+						if (commerceOrderValidatorResults == null) {
+							return null;
+						}
+
+						return _getErrorMessages(commerceOrderValidatorResults);
+					});
 				setExternalReferenceCode(
 					commerceOrder::getExternalReferenceCode);
 				setFriendlyURLSeparator(
 					() -> {
-						if (!FeatureFlagManagerUtil.isEnabled("LPD-20379")) {
-							return null;
-						}
-
 						FriendlyURLSeparatorProvider
 							friendlyURLSeparatorProvider =
 								_friendlyURLSeparatorProviderSnapshot.get();
@@ -327,6 +342,14 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 							false, commerceOrder, locale),
 						stepModel -> _toStep(stepModel), Step.class));
 				setSummary(() -> _getSummary(commerceOrder, locale));
+				setValid(
+					() -> {
+						if (commerceOrderValidatorResults == null) {
+							return null;
+						}
+
+						return commerceOrderValidatorResults.isEmpty();
+					});
 				setWorkflowStatusInfo(
 					() -> {
 						String commerceOrderWorkflowStatusLabelI18n =
@@ -351,7 +374,8 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 			price = BigDecimal.ZERO;
 		}
 
-		return _commercePriceFormatter.format(commerceCurrency, price, locale);
+		return _commercePriceFormatter.format(
+			commerceCurrency, true, locale, price);
 	}
 
 	private Attachment[] _getAttachments(CommerceOrder commerceOrder)
@@ -361,6 +385,51 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 			commerceOrder.getAttachmentFileEntries(
 				QueryUtil.ALL_POS, QueryUtil.ALL_POS),
 			_attachmentDTOConverter::toDTO, Attachment.class);
+	}
+
+	private CommerceOrder _getCommerceOrder(long commerceOrderId) {
+		try {
+			return _commerceOrderService.getCommerceOrder(commerceOrderId);
+		}
+		catch (PortalException portalException) {
+			if (_log.isDebugEnabled()) {
+				_log.debug(portalException);
+			}
+		}
+
+		return null;
+	}
+
+	private List<CommerceOrderValidatorResult>
+			_getCommerceOrderValidatorResults(
+				CommerceOrder commerceOrder,
+				DTOConverterContext dtoConverterContext, Locale locale)
+		throws Exception {
+
+		if (!GetterUtil.getBoolean(
+				dtoConverterContext.getAttribute("checkOrderErrors"))) {
+
+			return null;
+		}
+
+		return _commerceOrderValidatorRegistry.validate(locale, commerceOrder);
+	}
+
+	private String[] _getErrorMessages(
+		List<CommerceOrderValidatorResult> commerceOrderValidatorResults) {
+
+		List<String> errorMessages = new ArrayList<>();
+
+		for (CommerceOrderValidatorResult commerceOrderValidatorResult :
+				commerceOrderValidatorResults) {
+
+			if (commerceOrderValidatorResult.hasMessageResult()) {
+				errorMessages.add(
+					commerceOrderValidatorResult.getLocalizedMessage());
+			}
+		}
+
+		return errorMessages.toArray(new String[0]);
 	}
 
 	private String[] _getFormattedDiscountPercentages(
@@ -814,6 +883,9 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 		};
 	}
 
+	private static final Log _log = LogFactoryUtil.getLog(
+		CartDTOConverter.class);
+
 	private static final Snapshot<FriendlyURLSeparatorProvider>
 		_friendlyURLSeparatorProviderSnapshot = new Snapshot<>(
 			CartDTOConverter.class, FriendlyURLSeparatorProvider.class);
@@ -835,6 +907,9 @@ public class CartDTOConverter implements DTOConverter<CommerceOrder, Cart> {
 
 	@Reference
 	private CommerceOrderTypeService _commerceOrderTypeService;
+
+	@Reference
+	private CommerceOrderValidatorRegistry _commerceOrderValidatorRegistry;
 
 	@Reference
 	private CommercePaymentMethodGroupRelLocalService

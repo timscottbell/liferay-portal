@@ -20,9 +20,9 @@ import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 
 import java.util.Collections;
@@ -40,7 +40,6 @@ import org.junit.runner.RunWith;
  * @author Javier Gamarra
  * @author Murilo Stodolni
  */
-@FeatureFlag("LPD-34594")
 @RunWith(Arquillian.class)
 public class ObjectRelationshipResourceTest
 	extends BaseObjectRelationshipResourceTestCase {
@@ -165,6 +164,37 @@ public class ObjectRelationshipResourceTest
 			randomObjectRelationship.getObjectDefinitionScope2(),
 			postObjectRelationship.getObjectDefinitionScope2());
 		Assert.assertFalse(postObjectRelationship.getObjectDefinitionSystem2());
+
+		ObjectRelationship systemObjectRelationship =
+			randomObjectRelationship();
+
+		String externalReferenceCode =
+			ObjectDefinitionConstants.
+				EXTERNAL_REFERENCE_CODE_PREFIX_SYSTEM_OBJECT_DEFINITION +
+					RandomTestUtil.randomString();
+
+		systemObjectRelationship.setObjectDefinitionExternalReferenceCode2(
+			externalReferenceCode);
+
+		systemObjectRelationship.setObjectDefinitionId2(0L);
+		systemObjectRelationship.setObjectDefinitionModifiable2(() -> null);
+		systemObjectRelationship.setObjectDefinitionScope2(
+			RandomTestUtil.randomString());
+		systemObjectRelationship.setObjectDefinitionSystem2(() -> null);
+
+		ObjectRelationship postSystemObjectRelationship =
+			testPostObjectDefinitionObjectRelationship_addObjectRelationship(
+				systemObjectRelationship);
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.
+				getObjectDefinitionByExternalReferenceCode(
+					externalReferenceCode, TestPropsValues.getCompanyId());
+
+		Assert.assertTrue(objectDefinition.isSystem());
+
+		Assert.assertTrue(
+			postSystemObjectRelationship.getObjectDefinitionSystem2());
 	}
 
 	@Override
@@ -402,7 +432,8 @@ public class ObjectRelationshipResourceTest
 			).authentication(
 				user.getEmailAddress(), PropsValues.DEFAULT_ADMIN_PASSWORD
 			).endpoint(
-				testCompany.getVirtualHostname(), 8080, "http"
+				testCompany.getVirtualHostname(),
+				PortalUtil.getPortalServerPort(false), "http"
 			).locale(
 				locale
 			).build();

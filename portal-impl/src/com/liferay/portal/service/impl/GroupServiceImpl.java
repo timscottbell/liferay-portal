@@ -33,6 +33,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.UserBag;
+import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.permission.GroupPermissionUtil;
 import com.liferay.portal.kernel.service.permission.PortalPermissionUtil;
@@ -40,7 +41,6 @@ import com.liferay.portal.kernel.service.permission.PortletPermissionUtil;
 import com.liferay.portal.kernel.service.permission.RolePermissionUtil;
 import com.liferay.portal.kernel.service.permission.UserPermissionUtil;
 import com.liferay.portal.kernel.service.persistence.CompanyPersistence;
-import com.liferay.portal.kernel.service.persistence.UserPersistence;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LinkedHashMapBuilder;
@@ -228,7 +228,7 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		Group group = groupLocalService.fetchGroupByExternalReferenceCode(
+		Group group = groupPersistence.fetchByERC_C(
 			externalReferenceCode, companyId);
 
 		if (group != null) {
@@ -248,7 +248,9 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 	 */
 	@Override
 	public Group getCompanyGroup(long companyId) throws PortalException {
-		Group group = groupLocalService.getCompanyGroup(companyId);
+		Group group = groupPersistence.findByC_C_C(
+			companyId, _classNameLocalService.getClassNameId(Company.class),
+			companyId);
 
 		GroupPermissionUtil.check(
 			getPermissionChecker(), group, ActionKeys.VIEW);
@@ -286,6 +288,20 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 		throws PortalException {
 
 		Group group = groupLocalService.getGroup(companyId, groupKey);
+
+		GroupPermissionUtil.check(
+			getPermissionChecker(), group, ActionKeys.VIEW);
+
+		return group;
+	}
+
+	@Override
+	public Group getGroupByExternalReferenceCode(
+			String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		Group group = groupPersistence.findByERC_C(
+			externalReferenceCode, companyId);
 
 		GroupPermissionUtil.check(
 			getPermissionChecker(), group, ActionKeys.VIEW);
@@ -543,7 +559,9 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 	public Group getUserGroup(long companyId, long userId)
 		throws PortalException {
 
-		Group group = groupLocalService.getUserGroup(companyId, userId);
+		Group group = groupPersistence.findByC_C_C(
+			companyId, _classNameLocalService.getClassNameId(User.class),
+			userId);
 
 		GroupPermissionUtil.check(
 			getPermissionChecker(), group, ActionKeys.VIEW);
@@ -653,7 +671,7 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 			long userId, String[] classNames, int max)
 		throws PortalException {
 
-		User user = _userPersistence.findByPrimaryKey(userId);
+		User user = userPersistence.findByPrimaryKey(userId);
 
 		boolean checkPermissions = true;
 
@@ -1179,10 +1197,10 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 	@BeanReference(type = AssetTagLocalService.class)
 	private AssetTagLocalService _assetTagLocalService;
 
+	@BeanReference(type = ClassNameLocalService.class)
+	private ClassNameLocalService _classNameLocalService;
+
 	@BeanReference(type = CompanyPersistence.class)
 	private CompanyPersistence _companyPersistence;
-
-	@BeanReference(type = UserPersistence.class)
-	private UserPersistence _userPersistence;
 
 }

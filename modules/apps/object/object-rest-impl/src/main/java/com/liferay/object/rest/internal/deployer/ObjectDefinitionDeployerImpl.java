@@ -8,6 +8,8 @@ package com.liferay.object.rest.internal.deployer;
 import com.liferay.headless.delivery.dto.v1_0.Comment;
 import com.liferay.headless.object.dto.v1_0.Collaborator;
 import com.liferay.object.deployer.ObjectDefinitionDeployer;
+import com.liferay.object.entry.scope.provider.ObjectEntryScopeProvider;
+import com.liferay.object.entry.scope.provider.ObjectEntryScopeProviderRegistry;
 import com.liferay.object.exception.NoSuchObjectDefinitionException;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectField;
@@ -27,6 +29,7 @@ import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectEntryManage
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectEntryScopeExceptionMapper;
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectEntryStatusExceptionMapper;
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectEntryValuesExceptionMapper;
+import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectFieldReadOnlyExceptionMapper;
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.ObjectRelationshipDeletionTypeExceptionMapper;
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.RequiredObjectEntryVersionExceptionMapper;
 import com.liferay.object.rest.internal.jaxrs.exception.mapper.RequiredObjectRelationshipExceptionMapper;
@@ -70,10 +73,10 @@ import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.metatype.annotations.ExtendedObjectClassDefinition;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.db.partition.util.DBPartitionUtil;
 import com.liferay.portal.kernel.comment.CommentManager;
 import com.liferay.portal.kernel.comment.DiscussionPermission;
-import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
@@ -85,6 +88,7 @@ import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ResourceActionLocalService;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.RoleLocalService;
+import com.liferay.portal.kernel.service.TicketLocalService;
 import com.liferay.portal.kernel.service.UserGroupLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
@@ -217,9 +221,10 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	private CollaboratorResourceImpl _createCollaboratorResourceImpl() {
 		return new CollaboratorResourceImpl(
 			_classNameLocalService, _collaboratorDTOConverter,
-			_dtoConverterRegistry, _groupLocalService, _objectEntryLocalService,
-			_sharingEntryService, _sharingEntryLocalService,
-			_userGroupLocalService, _userLocalService);
+			_configurationProvider, _dtoConverterRegistry, _groupLocalService,
+			_objectEntryLocalService, _sharingEntryLocalService,
+			_sharingEntryService, _ticketLocalService, _userGroupLocalService,
+			_userLocalService);
 	}
 
 	private CommentResourceImpl _createCommentResourceImpl(
@@ -327,6 +332,24 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 				excludedOperationIds,
 				BaseObjectEntryResourceImpl.class.getMethods(),
 				objectScopeProvider);
+
+			if (!objectDefinition.isAllowStandaloneObjectEntry() &&
+				objectDefinition.isRootDescendantNode()) {
+
+				excludedOperationIds.addAll(_objectEntryCRUDOperationIds);
+			}
+
+			if (objectDefinition.isModifiableAndSystem()) {
+				ObjectEntryScopeProvider objectEntryScopeProvider =
+					_objectEntryScopeProviderRegistry.
+						getObjectEntryScopeProvider(
+							objectDefinition.getExternalReferenceCode());
+
+				if (objectEntryScopeProvider != null) {
+					excludedOperationIds.add("postScopeScopeKey");
+					excludedOperationIds.remove("postObjectEntry");
+				}
+			}
 
 			Collections.sort(excludedOperationIds);
 
@@ -927,6 +950,7 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 				ObjectEntryScopeExceptionMapper::new,
 				() -> new ObjectEntryStatusExceptionMapper(_language),
 				() -> new ObjectEntryValuesExceptionMapper(_language),
+				ObjectFieldReadOnlyExceptionMapper::new,
 				() -> new ObjectRelationshipDeletionTypeExceptionMapper(
 					_language),
 				() -> new RequiredObjectEntryVersionExceptionMapper(_language),
@@ -1130,6 +1154,18 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	private static final Log _log = LogFactoryUtil.getLog(
 		ObjectDefinitionDeployerImpl.class);
 
+	private static final List<String> _objectEntryCRUDOperationIds =
+		Arrays.asList(
+			"deleteByExternalReferenceCode", "deleteObjectEntry",
+			"deleteScopeScopeKeyByExternalReferenceCode",
+			"getByExternalReferenceCode", "getObjectEntriesPage",
+			"getObjectEntry", "getScopeScopeKeyByExternalReferenceCode",
+			"getScopeScopeKeyPage", "patchByExternalReferenceCode",
+			"patchObjectEntry", "patchScopeScopeKeyByExternalReferenceCode",
+			"postObjectEntry", "postScopeScopeKey",
+			"putByExternalReferenceCode", "putObjectEntry",
+			"putScopeScopeKeyByExternalReferenceCode");
+
 	private final Map<String, Dictionary<String, Object>>
 		_applicationPropertiesMap = new HashMap<>();
 	private final Map<String, ServiceRegistration<Application>>
@@ -1167,6 +1203,9 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	private ConfigurationAdmin _configurationAdmin;
 
 	@Reference
+	private ConfigurationProvider _configurationProvider;
+
+	@Reference
 	private PermissionCheckerFactory _defaultPermissionCheckerFactory;
 
 	@Reference
@@ -1191,9 +1230,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 
 	@Reference
 	private GroupLocalService _groupLocalService;
-
-	@Reference
-	private JSONFactory _jsonFactory;
 
 	@Reference
 	private Language _language;
@@ -1221,6 +1257,9 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 		_objectEntryResourcePropertiesMap = new HashMap<>();
 	private final Map<String, ServiceRegistration<ObjectEntryResource>>
 		_objectEntryResourceServiceRegistrationsMap = new HashMap<>();
+
+	@Reference
+	private ObjectEntryScopeProviderRegistry _objectEntryScopeProviderRegistry;
 
 	@Reference
 	private ObjectEntryService _objectEntryService;
@@ -1281,6 +1320,9 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	@Reference
 	private SystemObjectDefinitionManagerRegistry
 		_systemObjectDefinitionManagerRegistry;
+
+	@Reference
+	private TicketLocalService _ticketLocalService;
 
 	@Reference
 	private TranslationManager _translationManager;

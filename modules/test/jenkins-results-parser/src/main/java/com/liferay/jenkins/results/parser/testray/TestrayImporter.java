@@ -9,6 +9,7 @@ import com.liferay.jenkins.results.parser.BuildDatabase;
 import com.liferay.jenkins.results.parser.BuildReport;
 import com.liferay.jenkins.results.parser.ControllerBuildReport;
 import com.liferay.jenkins.results.parser.Dom4JUtil;
+import com.liferay.jenkins.results.parser.Environment;
 import com.liferay.jenkins.results.parser.JenkinsMaster;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 import com.liferay.jenkins.results.parser.Job;
@@ -29,6 +30,7 @@ import com.liferay.jenkins.results.parser.Workspace;
 import com.liferay.jenkins.results.parser.WorkspaceGitRepository;
 import com.liferay.jenkins.results.parser.job.property.JobProperty;
 import com.liferay.jenkins.results.parser.job.property.JobPropertyFactory;
+import com.liferay.jenkins.results.parser.persistent.resource.PersistentResource;
 import com.liferay.jenkins.results.parser.test.clazz.TestClass;
 import com.liferay.jenkins.results.parser.test.clazz.TestClassMethod;
 import com.liferay.jenkins.results.parser.test.clazz.group.AxisTestClassGroup;
@@ -40,6 +42,8 @@ import com.liferay.jenkins.results.parser.test.clazz.group.PlaywrightAxisTestCla
 
 import java.io.File;
 import java.io.IOException;
+
+import java.net.URL;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,7 +59,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
@@ -119,7 +123,7 @@ public class TestrayImporter {
 		Map<Long, TestrayBuild> testrayBuildMap = new HashMap<>();
 
 		for (TestrayBuild testrayBuild : _testrayBuilds.values()) {
-			testrayBuildMap.put(testrayBuild.getID(), testrayBuild);
+			testrayBuildMap.put(testrayBuild.getId(), testrayBuild);
 		}
 
 		int i = 0;
@@ -154,12 +158,12 @@ public class TestrayImporter {
 					testrayBuildTitle, testrayBuild.getName(),
 					String.valueOf(testrayBuild.getURL())),
 				_getJenkinsBuildDescriptionCodeElement(
-					"Testray Build ID", String.valueOf(testrayBuild.getID())));
+					"Testray Build ID", String.valueOf(testrayBuild.getId())));
 
 			i++;
 		}
 
-		String currentJobName = System.getenv("JOB_NAME");
+		String currentJobName = Environment.get("JOB_NAME");
 
 		if (!JenkinsResultsParserUtil.isNullOrEmpty(currentJobName)) {
 			Dom4JUtil.addToElement(
@@ -167,8 +171,8 @@ public class TestrayImporter {
 				_getJenkinsBuildDescriptionElement(
 					"Testray Importer",
 					JenkinsResultsParserUtil.combine(
-						currentJobName, "#", System.getenv("BUILD_NUMBER")),
-					System.getenv("BUILD_URL")));
+						currentJobName, "#", Environment.get("BUILD_NUMBER")),
+					Environment.get("BUILD_URL")));
 		}
 
 		try {
@@ -255,18 +259,18 @@ public class TestrayImporter {
 		String testrayBuildSHA = getTestrayBuildSHA();
 
 		try {
-			String testrayBuildID = System.getenv("TESTRAY_BUILD_ID");
+			String testrayBuildId = Environment.get("TESTRAY_BUILD_ID");
 
 			TestrayRoutine testrayRoutine = getTestrayRoutine(testBaseDir);
 			TestrayProductVersion testrayProductVersion =
 				getTestrayProductVersion(testBaseDir);
 
-			if ((testrayBuildID != null) && testrayBuildID.matches("\\d+")) {
-				testrayBuild = testrayRoutine.getTestrayBuildByID(
-					Long.parseLong(testrayBuildID));
+			if ((testrayBuildId != null) && testrayBuildId.matches("\\d+")) {
+				testrayBuild = TestrayFactory.newTestrayBuild(
+					testrayRoutine, Long.parseLong(testrayBuildId));
 			}
 
-			String testrayBuildName = System.getenv("TESTRAY_BUILD_NAME");
+			String testrayBuildName = Environment.get("TESTRAY_BUILD_NAME");
 
 			if ((testrayBuild == null) &&
 				!JenkinsResultsParserUtil.isNullOrEmpty(testrayBuildName)) {
@@ -277,13 +281,13 @@ public class TestrayImporter {
 					testrayBuildDescription, testrayBuildSHA);
 			}
 
-			testrayBuildID = _getBuildParameter("TESTRAY_BUILD_ID");
+			testrayBuildId = _getBuildParameter("TESTRAY_BUILD_ID");
 
-			if ((testrayBuild == null) && (testrayBuildID != null) &&
-				testrayBuildID.matches("\\d+")) {
+			if ((testrayBuild == null) && (testrayBuildId != null) &&
+				testrayBuildId.matches("\\d+")) {
 
-				testrayBuild = testrayRoutine.getTestrayBuildByID(
-					Long.parseLong(testrayBuildID));
+				testrayBuild = TestrayFactory.newTestrayBuild(
+					testrayRoutine, Long.parseLong(testrayBuildId));
 			}
 
 			testrayBuildName = _getBuildParameter("TESTRAY_BUILD_NAME");
@@ -301,13 +305,13 @@ public class TestrayImporter {
 				JobProperty jobProperty = _getJobProperty(
 					"testray.build.id", testBaseDir);
 
-				testrayBuildID = jobProperty.getValue();
+				testrayBuildId = jobProperty.getValue();
 
-				if ((testrayBuildID != null) &&
-					testrayBuildID.matches("\\d+")) {
+				if ((testrayBuildId != null) &&
+					testrayBuildId.matches("\\d+")) {
 
-					testrayBuild = testrayRoutine.getTestrayBuildByID(
-						Long.parseLong(testrayBuildID));
+					testrayBuild = TestrayFactory.newTestrayBuild(
+						testrayRoutine, Long.parseLong(testrayBuildId));
 				}
 			}
 
@@ -384,7 +388,19 @@ public class TestrayImporter {
 		}
 
 		sb.append("<a href=\"");
-		sb.append(_topLevelBuildReport.getJenkinsReportURL());
+
+		URL testrayAttachmentURL =
+			_topLevelBuildReport.getTestrayAttachmentURLBySuffix(
+				"jenkins-report.html.gz");
+
+		if (testrayAttachmentURL != null) {
+			sb.append(testrayAttachmentURL);
+			sb.append("?authuser=0");
+		}
+		else {
+			sb.append(_topLevelBuildReport.getJenkinsReportURL());
+		}
+
 		sb.append("\">Jenkins Report</a>");
 		sb.append("; ");
 
@@ -471,18 +487,18 @@ public class TestrayImporter {
 		try {
 			TestrayProject testrayProject = getTestrayProject(testBaseDir);
 
-			String testrayProductVersionID = System.getenv(
+			String testrayProductVersionId = Environment.get(
 				"TESTRAY_PRODUCT_VERSION_ID");
 
-			if ((testrayProductVersionID != null) &&
-				testrayProductVersionID.matches("\\d+")) {
+			if ((testrayProductVersionId != null) &&
+				testrayProductVersionId.matches("\\d+")) {
 
 				testrayProductVersion =
-					testrayProject.getTestrayProductVersionByID(
-						Long.parseLong(testrayProductVersionID));
+					testrayProject.getTestrayProductVersionById(
+						Long.parseLong(testrayProductVersionId));
 			}
 
-			String testrayProductVersionName = System.getenv(
+			String testrayProductVersionName = Environment.get(
 				"TESTRAY_PRODUCT_VERSION_NAME");
 
 			if ((testrayProductVersion == null) &&
@@ -494,16 +510,16 @@ public class TestrayImporter {
 						_replaceEnvVars(testrayProductVersionName, true));
 			}
 
-			testrayProductVersionID = _getBuildParameter(
+			testrayProductVersionId = _getBuildParameter(
 				"TESTRAY_PRODUCT_VERSION_ID");
 
 			if ((testrayProductVersion == null) &&
-				(testrayProductVersionID != null) &&
-				testrayProductVersionID.matches("\\d+")) {
+				(testrayProductVersionId != null) &&
+				testrayProductVersionId.matches("\\d+")) {
 
 				testrayProductVersion =
-					testrayProject.getTestrayProductVersionByID(
-						Long.parseLong(testrayProductVersionID));
+					testrayProject.getTestrayProductVersionById(
+						Long.parseLong(testrayProductVersionId));
 			}
 
 			testrayProductVersionName = _getBuildParameter(
@@ -522,14 +538,14 @@ public class TestrayImporter {
 				JobProperty jobProperty = _getJobProperty(
 					"testray.product.version.id", testBaseDir);
 
-				testrayProductVersionID = jobProperty.getValue();
+				testrayProductVersionId = jobProperty.getValue();
 
-				if ((testrayProductVersionID != null) &&
-					testrayProductVersionID.matches("\\d+")) {
+				if ((testrayProductVersionId != null) &&
+					testrayProductVersionId.matches("\\d+")) {
 
 					testrayProductVersion =
-						testrayProject.getTestrayProductVersionByID(
-							Long.parseLong(testrayProductVersionID));
+						testrayProject.getTestrayProductVersionById(
+							Long.parseLong(testrayProductVersionId));
 				}
 			}
 
@@ -597,18 +613,18 @@ public class TestrayImporter {
 		long start = JenkinsResultsParserUtil.getCurrentTimeMillis();
 
 		try {
-			String testrayProjectID = System.getenv("TESTRAY_PROJECT_ID");
+			String testrayProjectId = Environment.get("TESTRAY_PROJECT_ID");
 
 			TestrayServer testrayServer = getTestrayServer(testBaseDir);
 
-			if ((testrayProjectID != null) &&
-				testrayProjectID.matches("\\d+")) {
+			if ((testrayProjectId != null) &&
+				testrayProjectId.matches("\\d+")) {
 
-				testrayProject = testrayServer.getTestrayProjectByID(
-					Long.parseLong(testrayProjectID));
+				testrayProject = testrayServer.getTestrayProjectById(
+					Long.parseLong(testrayProjectId));
 			}
 
-			String testrayProjectName = System.getenv("TESTRAY_PROJECT_NAME");
+			String testrayProjectName = Environment.get("TESTRAY_PROJECT_NAME");
 
 			if ((testrayProject == null) &&
 				!JenkinsResultsParserUtil.isNullOrEmpty(testrayProjectName)) {
@@ -624,13 +640,13 @@ public class TestrayImporter {
 					_replaceEnvVars(testrayProjectName, true));
 			}
 
-			testrayProjectID = _getBuildParameter("TESTRAY_PROJECT_ID");
+			testrayProjectId = _getBuildParameter("TESTRAY_PROJECT_ID");
 
-			if ((testrayProject == null) && (testrayProjectID != null) &&
-				testrayProjectID.matches("\\d+")) {
+			if ((testrayProject == null) && (testrayProjectId != null) &&
+				testrayProjectId.matches("\\d+")) {
 
-				testrayProject = testrayServer.getTestrayProjectByID(
-					Long.parseLong(testrayProjectID));
+				testrayProject = testrayServer.getTestrayProjectById(
+					Long.parseLong(testrayProjectId));
 			}
 
 			testrayProjectName = _getBuildParameter("TESTRAY_PROJECT_NAME");
@@ -646,13 +662,13 @@ public class TestrayImporter {
 				JobProperty jobProperty = _getJobProperty(
 					"testray.project.id", testBaseDir);
 
-				testrayProjectID = jobProperty.getValue();
+				testrayProjectId = jobProperty.getValue();
 
-				if ((testrayProjectID != null) &&
-					testrayProjectID.matches("\\d+")) {
+				if ((testrayProjectId != null) &&
+					testrayProjectId.matches("\\d+")) {
 
-					testrayProject = testrayServer.getTestrayProjectByID(
-						Long.parseLong(testrayProjectID));
+					testrayProject = testrayServer.getTestrayProjectById(
+						Long.parseLong(testrayProjectId));
 				}
 			}
 
@@ -742,18 +758,18 @@ public class TestrayImporter {
 		long start = JenkinsResultsParserUtil.getCurrentTimeMillis();
 
 		try {
-			String testrayRoutineID = System.getenv("TESTRAY_ROUTINE_ID");
+			String testrayRoutineId = Environment.get("TESTRAY_ROUTINE_ID");
 
 			TestrayProject testrayProject = getTestrayProject(testBaseDir);
 
-			if ((testrayRoutineID != null) &&
-				testrayRoutineID.matches("\\d+")) {
+			if ((testrayRoutineId != null) &&
+				testrayRoutineId.matches("\\d+")) {
 
-				testrayRoutine = testrayProject.getTestrayRoutineByID(
-					Long.parseLong(testrayRoutineID));
+				testrayRoutine = testrayProject.getTestrayRoutineById(
+					Long.parseLong(testrayRoutineId));
 			}
 
-			String testrayRoutineName = System.getenv("TESTRAY_ROUTINE_NAME");
+			String testrayRoutineName = Environment.get("TESTRAY_ROUTINE_NAME");
 
 			if ((testrayRoutine == null) &&
 				!JenkinsResultsParserUtil.isNullOrEmpty(testrayRoutineName)) {
@@ -762,13 +778,13 @@ public class TestrayImporter {
 					_replaceEnvVars(testrayRoutineName, true));
 			}
 
-			testrayRoutineID = _getBuildParameter("TESTRAY_ROUTINE_ID");
+			testrayRoutineId = _getBuildParameter("TESTRAY_ROUTINE_ID");
 
-			if ((testrayRoutine == null) && (testrayRoutineID != null) &&
-				testrayRoutineID.matches("\\d+")) {
+			if ((testrayRoutine == null) && (testrayRoutineId != null) &&
+				testrayRoutineId.matches("\\d+")) {
 
-				testrayRoutine = testrayProject.getTestrayRoutineByID(
-					Long.parseLong(testrayRoutineID));
+				testrayRoutine = testrayProject.getTestrayRoutineById(
+					Long.parseLong(testrayRoutineId));
 			}
 
 			testrayRoutineName = _getBuildParameter("TESTRAY_ROUTINE_NAME");
@@ -793,13 +809,13 @@ public class TestrayImporter {
 				JobProperty jobProperty = _getJobProperty(
 					"testray.routine.id", testBaseDir);
 
-				testrayRoutineID = jobProperty.getValue();
+				testrayRoutineId = jobProperty.getValue();
 
-				if ((testrayRoutineID != null) &&
-					testrayRoutineID.matches("\\d+")) {
+				if ((testrayRoutineId != null) &&
+					testrayRoutineId.matches("\\d+")) {
 
-					testrayRoutine = testrayProject.getTestrayRoutineByID(
-						Long.parseLong(testrayRoutineID));
+					testrayRoutine = testrayProject.getTestrayRoutineById(
+						Long.parseLong(testrayRoutineId));
 				}
 			}
 
@@ -864,7 +880,7 @@ public class TestrayImporter {
 		long start = JenkinsResultsParserUtil.getCurrentTimeMillis();
 
 		try {
-			String testrayServerURL = System.getenv("TESTRAY_SERVER_URL");
+			String testrayServerURL = Environment.get("TESTRAY_SERVER_URL");
 
 			if ((testrayServerURL != null) &&
 				testrayServerURL.matches("https?://.*")) {
@@ -916,7 +932,7 @@ public class TestrayImporter {
 	}
 
 	public void postSlackNotification() {
-		List<Long> testrayBuildIDs = new ArrayList<>();
+		List<Long> testrayBuildIds = new ArrayList<>();
 
 		for (Map.Entry<File, TestrayBuild> testrayBuildEntry :
 				_testrayBuilds.entrySet()) {
@@ -925,11 +941,11 @@ public class TestrayImporter {
 
 			TestrayBuild testrayBuild = testrayBuildEntry.getValue();
 
-			if (testrayBuildIDs.contains(testrayBuild.getID())) {
+			if (testrayBuildIds.contains(testrayBuild.getId())) {
 				continue;
 			}
 
-			testrayBuildIDs.add(testrayBuild.getID());
+			testrayBuildIds.add(testrayBuild.getId());
 
 			String slackChannels = _getSlackChannels(testBaseDir);
 
@@ -977,53 +993,27 @@ public class TestrayImporter {
 				testBaseDir = axisTestClassGroup.getTestBaseDir();
 			}
 
-			TestrayBuild testrayBuild = getTestrayBuild(testBaseDir);
+			TestrayCaseResult topLevelTestrayCaseResult =
+				_recordTopLevelTestrayCaseResult(job, testBaseDir);
 
-			TopLevelStandaloneBuildTestrayCaseResult
-				topLevelStandaloneBuildTestrayCaseResult =
-					TestrayFactory.newTopLevelStandaloneBuildTestrayCaseResult(
-						testrayBuild, _topLevelBuildReport);
+			_recordAppServerTestrayCaseResult(
+				job, PersistentResource.Type.ASAH_BUNDLE, testBaseDir,
+				topLevelTestrayCaseResult);
+			_recordAppServerTestrayCaseResult(
+				job, PersistentResource.Type.FARO_BUNDLE, testBaseDir,
+				topLevelTestrayCaseResult);
+			_recordAppServerTestrayCaseResult(
+				job, PersistentResource.Type.PORTAL_BUNDLE, testBaseDir,
+				topLevelTestrayCaseResult);
 
-			topLevelStandaloneBuildTestrayCaseResult.recordTestrayCaseResult(
-				job);
-
-			AppServerBundleStandaloneBuildTestrayCaseResult
-				portalAppServerBundleStandaloneBuildTestrayCaseResult =
-					new AppServerBundleStandaloneBuildTestrayCaseResult(
-						"portal", testrayBuild, _topLevelBuildReport);
-
-			BuildReport portalAppServerBundleBuildReport =
-				portalAppServerBundleStandaloneBuildTestrayCaseResult.
-					getBuildReport();
-
-			if (portalAppServerBundleBuildReport != null) {
-				portalAppServerBundleStandaloneBuildTestrayCaseResult.
-					recordTestrayCaseResult(job);
-			}
-
-			AppServerBundleStandaloneBuildTestrayCaseResult
-				analyticsCloudAppServerBundleStandaloneBuildTestrayCaseResult =
-					new AppServerBundleStandaloneBuildTestrayCaseResult(
-						"analytics.cloud", testrayBuild, _topLevelBuildReport);
-
-			BuildReport analyticsCloudAppServerBundleBuildReport =
-				analyticsCloudAppServerBundleStandaloneBuildTestrayCaseResult.
-					getBuildReport();
-
-			if (analyticsCloudAppServerBundleBuildReport != null) {
-				analyticsCloudAppServerBundleStandaloneBuildTestrayCaseResult.
-					recordTestrayCaseResult(job);
-			}
-
-			for (final AxisTestClassGroup axisTestClassGroup :
-					axisTestClassGroups) {
-
+			for (AxisTestClassGroup axisTestClassGroup : axisTestClassGroups) {
 				callables.add(
 					new Callable<Void>() {
 
 						@Override
 						public Void call() throws Exception {
-							_recordAxisTestClassGroup(axisTestClassGroup);
+							_recordAxisTestClassGroup(
+								axisTestClassGroup, topLevelTestrayCaseResult);
 
 							return null;
 						}
@@ -1042,14 +1032,14 @@ public class TestrayImporter {
 			throw new RuntimeException(timeoutException);
 		}
 
-		List<Long> testrayBuildIDs = new ArrayList<>();
+		List<Long> testrayBuildIds = new ArrayList<>();
 
 		for (TestrayBuild testrayBuild : _testrayBuilds.values()) {
-			if (testrayBuildIDs.contains(testrayBuild.getID())) {
+			if (testrayBuildIds.contains(testrayBuild.getId())) {
 				continue;
 			}
 
-			testrayBuildIDs.add(testrayBuild.getID());
+			testrayBuildIds.add(testrayBuild.getId());
 
 			TestrayServer testrayServer = testrayBuild.getTestrayServer();
 
@@ -1142,6 +1132,33 @@ public class TestrayImporter {
 		return buildParameters.get(buildParameterName);
 	}
 
+	private String _getEnhancedBatchName(
+		AxisTestClassGroup axisTestClassGroup) {
+
+		if (!(axisTestClassGroup instanceof FunctionalAxisTestClassGroup)) {
+			return axisTestClassGroup.getBatchName();
+		}
+
+		String batchName = axisTestClassGroup.getBatchName();
+
+		FunctionalAxisTestClassGroup functionalAxisTestClassGroup =
+			(FunctionalAxisTestClassGroup)axisTestClassGroup;
+
+		Properties poshiProperties =
+			functionalAxisTestClassGroup.getPoshiProperties();
+
+		String browserChromeVersion = poshiProperties.getProperty(
+			"browser.chrome.version");
+
+		if ((browserChromeVersion != null) &&
+			browserChromeVersion.equals("139.0")) {
+
+			batchName += "-chrome139";
+		}
+
+		return batchName;
+	}
+
 	private Element _getJenkinsBuildDescriptionCodeElement(
 		String title, String name) {
 
@@ -1221,7 +1238,8 @@ public class TestrayImporter {
 			return JobPropertyFactory.newJobProperty(basePropertyName, job);
 		}
 
-		return null;
+		throw new RuntimeException(
+			"Unable to get job property " + basePropertyName);
 	}
 
 	private String _getMajorPortalVersion() {
@@ -1319,7 +1337,7 @@ public class TestrayImporter {
 	}
 
 	private String _getSlackChannels(File testBaseDir) {
-		String slackChannels = System.getenv("TESTRAY_SLACK_CHANNELS");
+		String slackChannels = Environment.get("TESTRAY_SLACK_CHANNELS");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(slackChannels)) {
 			JobProperty jobProperty = _getJobProperty(
@@ -1336,7 +1354,7 @@ public class TestrayImporter {
 	}
 
 	private String _getSlackIconEmoji(File testBaseDir) {
-		String slackIconEmoji = System.getenv("TESTRAY_SLACK_ICON_EMOJI");
+		String slackIconEmoji = Environment.get("TESTRAY_SLACK_ICON_EMOJI");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(slackIconEmoji)) {
 			JobProperty jobProperty = _getJobProperty(
@@ -1368,7 +1386,7 @@ public class TestrayImporter {
 	}
 
 	private String _getSlackUsername(File testBaseDir) {
-		String slackUsername = System.getenv("TESTRAY_SLACK_USERNAME");
+		String slackUsername = Environment.get("TESTRAY_SLACK_USERNAME");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(slackUsername)) {
 			JobProperty jobProperty = _getJobProperty(
@@ -1384,25 +1402,196 @@ public class TestrayImporter {
 		return "Liferay CI";
 	}
 
+	private Element _getTestcaseElement(
+		TestrayCaseResult testrayCaseResult, String testSuiteName,
+		String[] warnings) {
+
+		Element testcaseElement = Dom4JUtil.getNewElement("testcase");
+
+		Map<String, String> testcasePropertiesMap = new HashMap<>();
+
+		testcasePropertiesMap.put(
+			"testray.case.type.name", testrayCaseResult.getType());
+		testcasePropertiesMap.put(
+			"testray.component.names",
+			testrayCaseResult.getSubcomponentNames());
+		testcasePropertiesMap.put(
+			"testray.main.component.name",
+			testrayCaseResult.getComponentName());
+		testcasePropertiesMap.put(
+			"testray.team.name", testrayCaseResult.getTeamName());
+		testcasePropertiesMap.put(
+			"testray.testcase.duration",
+			String.valueOf(testrayCaseResult.getDuration()));
+
+		String testrayCaseName = testrayCaseResult.getName();
+
+		if (testrayCaseName.length() > 150) {
+			testrayCaseName = testrayCaseName.substring(0, 150);
+		}
+
+		testcasePropertiesMap.put("testray.testcase.name", testrayCaseName);
+
+		testcasePropertiesMap.put(
+			"testray.testcase.priority",
+			String.valueOf(testrayCaseResult.getPriority()));
+
+		TestrayCaseResult.Status testrayCaseStatus =
+			testrayCaseResult.getStatus();
+
+		testcasePropertiesMap.put(
+			"testray.testcase.status", testrayCaseStatus.getName());
+
+		Element propertiesElement = testcaseElement.addElement("properties");
+
+		if (testSuiteName.equals("upstream-dxp")) {
+			if (testrayCaseResult instanceof JUnitBatchBuildTestrayCaseResult) {
+				_addDetailsElements(
+					propertiesElement,
+					(JUnitBatchBuildTestrayCaseResult)testrayCaseResult);
+			}
+			else {
+				testcasePropertiesMap.put(
+					"testray.jira.issues", testrayCaseResult.getIssues());
+			}
+		}
+
+		_addPropertyElements(propertiesElement, testcasePropertiesMap);
+
+		if ((warnings != null) && (warnings.length > 0)) {
+			Element warningsPropertyElement = propertiesElement.addElement(
+				"property");
+
+			warningsPropertyElement.addAttribute(
+				"name", "testray.testcase.warnings");
+			warningsPropertyElement.addAttribute(
+				"value", String.valueOf(warnings.length));
+
+			for (String warning : warnings) {
+				Element warningPropertyElement =
+					warningsPropertyElement.addElement("value");
+
+				warningPropertyElement.addText(
+					StringEscapeUtils.escapeHtml4(warning));
+			}
+		}
+
+		Element attachmentsElement = testcaseElement.addElement("attachments");
+
+		for (TestrayAttachment testrayAttachment :
+				testrayCaseResult.getTestrayAttachments()) {
+
+			Element attachmentFileElement = attachmentsElement.addElement(
+				"file");
+
+			attachmentFileElement.addAttribute(
+				"name", testrayAttachment.getName());
+			attachmentFileElement.addAttribute(
+				"url", testrayAttachment.getURL() + "?authuser=0");
+			attachmentFileElement.addAttribute(
+				"value", testrayAttachment.getKey() + "?authuser=0");
+		}
+
+		String errors = testrayCaseResult.getErrors();
+
+		if (!JenkinsResultsParserUtil.isNullOrEmpty(errors)) {
+			Element failureElement = testcaseElement.addElement("failure");
+
+			failureElement.addAttribute("message", errors);
+		}
+
+		return testcaseElement;
+	}
+
+	private List<Element> _getTestcaseElements(
+		AxisTestClassGroup axisTestClassGroup,
+		List<TestrayCaseResult> testrayCaseResults, String testSuiteName) {
+
+		final String[] testrayCaseResultWarnings =
+			_getTestrayCaseResultWarnings(testrayCaseResults);
+
+		List<Callable<Element>> callables = new ArrayList<>();
+
+		for (final TestrayCaseResult testrayCaseResult : testrayCaseResults) {
+			callables.add(
+				new Callable<Element>() {
+
+					@Override
+					public Element call() throws Exception {
+						return _getTestcaseElement(
+							testrayCaseResult, testSuiteName,
+							testrayCaseResultWarnings);
+					}
+
+				});
+		}
+
+		ParallelExecutor<Element> parallelExecutor = new ParallelExecutor<>(
+			callables, true, _caseResultExecutorService, true,
+			"recordAxisTestClassGroup:" + axisTestClassGroup.getAxisName());
+
+		try {
+			return parallelExecutor.execute(60L * 30L);
+		}
+		catch (TimeoutException timeoutException) {
+			throw new RuntimeException(timeoutException);
+		}
+	}
+
+	private String[] _getTestrayCaseResultWarnings(
+		List<TestrayCaseResult> testrayCaseResults) {
+
+		for (TestrayCaseResult testrayCaseResult : testrayCaseResults) {
+			String[] warnings = testrayCaseResult.getWarnings();
+
+			if (warnings != null) {
+				return warnings;
+			}
+		}
+
+		return null;
+	}
+
+	private TestrayCaseResult _recordAppServerTestrayCaseResult(
+		Job job, PersistentResource.Type persistentResourceType,
+		File testBaseDir, TestrayCaseResult topLevelTestrayCaseResult) {
+
+		TestrayBuild testrayBuild = getTestrayBuild(testBaseDir);
+
+		AppServerBundleStandaloneBuildTestrayCaseResult
+			appServerBundleStandaloneBuildTestrayCaseResult =
+				new AppServerBundleStandaloneBuildTestrayCaseResult(
+					String.valueOf(persistentResourceType), testrayBuild,
+					_topLevelBuildReport);
+
+		BuildReport buildReport =
+			appServerBundleStandaloneBuildTestrayCaseResult.getBuildReport();
+
+		if (buildReport == null) {
+			return null;
+		}
+
+		appServerBundleStandaloneBuildTestrayCaseResult.
+			setParentTestrayCaseResult(topLevelTestrayCaseResult);
+
+		appServerBundleStandaloneBuildTestrayCaseResult.recordTestrayCaseResult(
+			job);
+
+		return appServerBundleStandaloneBuildTestrayCaseResult;
+	}
+
 	private void _recordAxisTestClassGroup(
-		AxisTestClassGroup axisTestClassGroup) {
+		AxisTestClassGroup axisTestClassGroup,
+		TestrayCaseResult topLevelTestrayCaseResult) {
 
 		Job job = axisTestClassGroup.getJob();
 
 		TestrayBuild testrayBuild = getTestrayBuild(
 			axisTestClassGroup.getTestBaseDir());
 
-		TestrayRun testrayRun;
-
-		if (axisTestClassGroup instanceof FunctionalAxisTestClassGroup) {
-			testrayRun = TestrayFactory.newTestrayRun(
-				testrayBuild, axisTestClassGroup, job.getJobPropertiesFiles());
-		}
-		else {
-			testrayRun = TestrayFactory.newTestrayRun(
-				testrayBuild, axisTestClassGroup.getBatchName(),
-				job.getJobPropertiesFiles());
-		}
+		TestrayRun testrayRun = TestrayFactory.newTestrayRun(
+			testrayBuild, _getEnhancedBatchName(axisTestClassGroup),
+			_topLevelBuildReport.getTestSuiteName(), job.getJobProperties());
 
 		long start = JenkinsResultsParserUtil.getCurrentTimeMillis();
 
@@ -1410,15 +1599,7 @@ public class TestrayImporter {
 
 		Element rootElement = document.addElement("testsuite");
 
-		Element environmentsElement = rootElement.addElement("environments");
-
-		for (TestrayRun.Factor factor : testrayRun.getFactors()) {
-			Element environmentElement = environmentsElement.addElement(
-				"environment");
-
-			environmentElement.addAttribute("type", factor.getName());
-			environmentElement.addAttribute("option", factor.getValue());
-		}
+		rootElement.add(testrayRun.getEnvironmentsElement());
 
 		Map<String, String> propertiesMap = new HashMap<>();
 
@@ -1447,7 +1628,7 @@ public class TestrayImporter {
 
 		propertiesMap.put("testray.project.name", testrayProject.getName());
 
-		propertiesMap.put("testray.run.id", testrayRun.getRunIDString());
+		propertiesMap.put("testray.run.id", testrayRun.getRunIdString());
 		propertiesMap.put(
 			"testray.total.cpu.use.time",
 			JenkinsResultsParserUtil.toDurationString(
@@ -1456,9 +1637,20 @@ public class TestrayImporter {
 		_addPropertyElements(
 			rootElement.addElement("properties"), propertiesMap);
 
-		String[] warnings = null;
-
 		List<TestrayCaseResult> testrayCaseResults = new ArrayList<>();
+
+		TestrayCaseResult buildTestrayCaseResult =
+			TestrayFactory.newBuildTestrayCaseResult(
+				axisTestClassGroup, testrayBuild, _topLevelBuildReport);
+
+		buildTestrayCaseResult.setParentTestrayCaseResult(
+			topLevelTestrayCaseResult);
+
+		buildTestrayCaseResult.setTestrayRun(testrayRun);
+
+		buildTestrayCaseResult.cacheTestrayCaseResultURL();
+
+		testrayCaseResults.add(buildTestrayCaseResult);
 
 		if (axisTestClassGroup instanceof FunctionalAxisTestClassGroup ||
 			axisTestClassGroup instanceof JSUnitAxisTestClassGroup ||
@@ -1473,14 +1665,24 @@ public class TestrayImporter {
 			if (!JenkinsResultsParserUtil.isNullOrEmpty(
 					portalLogBatchBuildTestrayCaseResult.getErrors())) {
 
+				portalLogBatchBuildTestrayCaseResult.setParentTestrayCaseResult(
+					buildTestrayCaseResult);
+				portalLogBatchBuildTestrayCaseResult.setTestrayRun(testrayRun);
+
 				testrayCaseResults.add(portalLogBatchBuildTestrayCaseResult);
 			}
 
 			for (TestClass testClass : axisTestClassGroup.getTestClasses()) {
-				testrayCaseResults.add(
+				TestrayCaseResult testClassTestrayCaseResult =
 					TestrayFactory.newBuildTestrayCaseResult(
 						axisTestClassGroup, testClass, testrayBuild,
-						_topLevelBuildReport));
+						_topLevelBuildReport);
+
+				testClassTestrayCaseResult.setParentTestrayCaseResult(
+					buildTestrayCaseResult);
+				testClassTestrayCaseResult.setTestrayRun(testrayRun);
+
+				testrayCaseResults.add(testClassTestrayCaseResult);
 			}
 		}
 		else if (axisTestClassGroup instanceof PlaywrightAxisTestClassGroup) {
@@ -1488,123 +1690,26 @@ public class TestrayImporter {
 				for (TestClassMethod testClassMethod :
 						testClass.getTestClassMethods()) {
 
-					testrayCaseResults.add(
+					TestrayCaseResult testClassMethodTestrayCaseResult =
 						TestrayFactory.newBuildTestrayCaseResult(
 							axisTestClassGroup, testClass, testClassMethod,
-							testrayBuild, _topLevelBuildReport));
+							testrayBuild, _topLevelBuildReport);
+
+					testClassMethodTestrayCaseResult.setParentTestrayCaseResult(
+						buildTestrayCaseResult);
+					testClassMethodTestrayCaseResult.setTestrayRun(testrayRun);
+
+					testrayCaseResults.add(testClassMethodTestrayCaseResult);
 				}
 			}
 		}
-		else {
-			testrayCaseResults.add(
-				TestrayFactory.newBuildTestrayCaseResult(
-					axisTestClassGroup, testrayBuild, _topLevelBuildReport));
-		}
 
-		for (TestrayCaseResult testrayCaseResult : testrayCaseResults) {
-			Element testcaseElement = rootElement.addElement("testcase");
+		List<Element> testcaseElements = _getTestcaseElements(
+			axisTestClassGroup, testrayCaseResults,
+			_topLevelBuildReport.getTestSuiteName());
 
-			Map<String, String> testcasePropertiesMap = new HashMap<>();
-
-			testcasePropertiesMap.put(
-				"testray.case.type.name", testrayCaseResult.getType());
-			testcasePropertiesMap.put(
-				"testray.component.names",
-				testrayCaseResult.getSubcomponentNames());
-			testcasePropertiesMap.put(
-				"testray.main.component.name",
-				testrayCaseResult.getComponentName());
-			testcasePropertiesMap.put(
-				"testray.team.name", testrayCaseResult.getTeamName());
-			testcasePropertiesMap.put(
-				"testray.testcase.duration",
-				String.valueOf(testrayCaseResult.getDuration()));
-
-			String testrayCaseName = testrayCaseResult.getName();
-
-			if (testrayCaseName.length() > 150) {
-				testrayCaseName = testrayCaseName.substring(0, 150);
-			}
-
-			testcasePropertiesMap.put("testray.testcase.name", testrayCaseName);
-
-			testcasePropertiesMap.put(
-				"testray.testcase.priority",
-				String.valueOf(testrayCaseResult.getPriority()));
-
-			TestrayCaseResult.Status testrayCaseStatus =
-				testrayCaseResult.getStatus();
-
-			testcasePropertiesMap.put(
-				"testray.testcase.status", testrayCaseStatus.getName());
-
-			Element propertiesElement = testcaseElement.addElement(
-				"properties");
-
-			String testSuiteName = _topLevelBuildReport.getTestSuiteName();
-
-			if (testSuiteName.equals("upstream-dxp")) {
-				if (testrayCaseResult instanceof
-						JUnitBatchBuildTestrayCaseResult) {
-
-					_addDetailsElements(
-						propertiesElement,
-						(JUnitBatchBuildTestrayCaseResult)testrayCaseResult);
-				}
-				else {
-					testcasePropertiesMap.put(
-						"testray.jira.issues", testrayCaseResult.getIssues());
-				}
-			}
-
-			_addPropertyElements(propertiesElement, testcasePropertiesMap);
-
-			if (warnings == null) {
-				warnings = testrayCaseResult.getWarnings();
-			}
-
-			if ((warnings != null) && (warnings.length > 0)) {
-				Element warningsPropertyElement = propertiesElement.addElement(
-					"property");
-
-				warningsPropertyElement.addAttribute(
-					"name", "testray.testcase.warnings");
-				warningsPropertyElement.addAttribute(
-					"value", String.valueOf(warnings.length));
-
-				for (String warning : warnings) {
-					Element warningPropertyElement =
-						warningsPropertyElement.addElement("value");
-
-					warningPropertyElement.addText(
-						StringEscapeUtils.escapeHtml(warning));
-				}
-			}
-
-			Element attachmentsElement = testcaseElement.addElement(
-				"attachments");
-
-			for (TestrayAttachment testrayAttachment :
-					testrayCaseResult.getTestrayAttachments()) {
-
-				Element attachmentFileElement = attachmentsElement.addElement(
-					"file");
-
-				attachmentFileElement.addAttribute(
-					"name", testrayAttachment.getName());
-				attachmentFileElement.addAttribute(
-					"url", testrayAttachment.getURL() + "?authuser=0");
-				attachmentFileElement.addAttribute(
-					"value", testrayAttachment.getKey() + "?authuser=0");
-			}
-
-			String errors = testrayCaseResult.getErrors();
-
-			if (!JenkinsResultsParserUtil.isNullOrEmpty(errors)) {
-				Element failureElement = testcaseElement.addElement("failure");
-
-				failureElement.addAttribute("message", errors);
-			}
+		for (Element testcaseElement : testcaseElements) {
+			rootElement.add(testcaseElement);
 		}
 
 		TestrayServer testrayServer = testrayBuild.getTestrayServer();
@@ -1635,6 +1740,19 @@ public class TestrayImporter {
 				" case results for ", axisTestClassGroup.getAxisName(), " in ",
 				JenkinsResultsParserUtil.toDurationString(
 					currentTimeMillis - start)));
+	}
+
+	private TestrayCaseResult _recordTopLevelTestrayCaseResult(
+		Job job, File testBaseDir) {
+
+		TopLevelStandaloneBuildTestrayCaseResult
+			topLevelStandaloneBuildTestrayCaseResult =
+				TestrayFactory.newTopLevelStandaloneBuildTestrayCaseResult(
+					getTestrayBuild(testBaseDir), _topLevelBuildReport);
+
+		topLevelStandaloneBuildTestrayCaseResult.recordTestrayCaseResult(job);
+
+		return topLevelStandaloneBuildTestrayCaseResult;
 	}
 
 	private String _replaceEnvVars(String string, boolean truncate) {
@@ -2007,20 +2125,20 @@ public class TestrayImporter {
 	}
 
 	private String _replaceSlackEnvVarsTestrayImporter(String string) {
-		String buildNumber = System.getenv("BUILD_NUMBER");
+		String buildNumber = Environment.get("BUILD_NUMBER");
 
 		if (!JenkinsResultsParserUtil.isNullOrEmpty(buildNumber)) {
 			string = string.replace(
 				"$(testray.importer.build.number)", buildNumber);
 		}
 
-		String buildURL = System.getenv("BUILD_URL");
+		String buildURL = Environment.get("BUILD_URL");
 
 		if (!JenkinsResultsParserUtil.isNullOrEmpty(buildURL)) {
 			string = string.replace("$(testray.importer.build.url)", buildURL);
 		}
 
-		String jobName = System.getenv("JOB_NAME");
+		String jobName = Environment.get("JOB_NAME");
 
 		if (!JenkinsResultsParserUtil.isNullOrEmpty(jobName)) {
 			string = string.replace("$(testray.importer.job.name)", jobName);
@@ -2095,6 +2213,8 @@ public class TestrayImporter {
 		pullRequest.addComment(getJenkinsBuildDescription());
 	}
 
+	private static final ExecutorService _caseResultExecutorService =
+		JenkinsResultsParserUtil.getNewThreadPoolExecutor(20, true);
 	private static final ExecutorService _executorService =
 		JenkinsResultsParserUtil.getNewThreadPoolExecutor(10, true);
 	private static final Pattern _quarterlyReleaseVersionPattern =

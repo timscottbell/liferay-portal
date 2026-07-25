@@ -41,6 +41,9 @@ import java.util.function.Supplier;
 	description = "Represents a write-only schema to assign a workflow task to a specific role.",
 	value = "WorkflowTaskAssignToRole"
 )
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "Represents a write-only schema to assign a workflow task to a specific role."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "WorkflowTaskAssignToRole")
 public class WorkflowTaskAssignToRole implements Serializable {
@@ -365,3 +368,4 @@ public class WorkflowTaskAssignToRole implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-94082974

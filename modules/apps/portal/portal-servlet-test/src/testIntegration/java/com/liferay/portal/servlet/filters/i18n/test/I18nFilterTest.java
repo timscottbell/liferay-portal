@@ -19,6 +19,7 @@ import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.PrefsPropsTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
+import com.liferay.portal.kernel.util.JavaConstants;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
@@ -145,6 +146,12 @@ public class I18nFilterTest {
 	}
 
 	@Test
+	public void testGetRedirectPublicServletMapping() throws Exception {
+		_testGetRedirectPublicServletMapping(false);
+		_testGetRedirectPublicServletMapping(true);
+	}
+
+	@Test
 	public void testGetRedirectWithoutVirtualHost() throws Exception {
 		_testGetRedirect(0, "localhost", null, null);
 		_testGetRedirect(1, "localhost", null, null);
@@ -179,6 +186,11 @@ public class I18nFilterTest {
 		_testGetRedirect(
 			3, layoutHostname,
 			"/" + _portal.getI18nPathLanguageId(LocaleUtil.SPAIN, null), null);
+	}
+
+	@Test
+	public void testGetRequestedLanguageId() throws Exception {
+		_testGetRequestedLanguageIdWithImpersonation();
 	}
 
 	@Test
@@ -414,6 +426,88 @@ public class I18nFilterTest {
 		Assert.assertEquals(
 			i18nLanguageId,
 			mockHttpServletRequest.getAttribute(WebKeys.I18N_LANGUAGE_ID));
+	}
+
+	private void _testGetRedirectPublicServletMapping(
+			boolean layoutFriendlyURLPublicServletMappingEnabled)
+		throws Exception {
+
+		String i18nPath =
+			"/" + _portal.getI18nPathLanguageId(LocaleUtil.SPAIN, null);
+
+		String expectedRedirect = i18nPath + _group.getFriendlyURL();
+
+		if (layoutFriendlyURLPublicServletMappingEnabled) {
+			expectedRedirect =
+				i18nPath +
+					PropsValues.LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING +
+						_group.getFriendlyURL();
+		}
+
+		MockHttpServletRequest mockHttpServletRequest =
+			new MockHttpServletRequest();
+
+		mockHttpServletRequest.addHeader("Host", "localhost");
+
+		HttpSession httpSession = mockHttpServletRequest.getSession();
+
+		httpSession.setAttribute(WebKeys.LOCALE, LocaleUtil.SPAIN);
+
+		mockHttpServletRequest.setAttribute(
+			JavaConstants.JAKARTA_SERVLET_FORWARD_REQUEST_URI,
+			_group.getFriendlyURL());
+		mockHttpServletRequest.setRequestURI(
+			PropsValues.LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING +
+				_group.getFriendlyURL());
+		mockHttpServletRequest.setServerName("localhost");
+
+		long companyId = PortalInstances.getCompanyId(mockHttpServletRequest);
+
+		try (AutoCloseable autoCloseable =
+				ReflectionTestUtil.setFieldValueWithAutoCloseable(
+					PropsValues.class,
+					"LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING_ENABLED",
+					layoutFriendlyURLPublicServletMappingEnabled);
+			SafeCloseable safeCloseable =
+				PrefsPropsTestUtil.swapWithSafeCloseable(
+					companyId, PropsKeys.LOCALE_PREPEND_FRIENDLY_URL_STYLE,
+					1)) {
+
+			Assert.assertEquals(
+				expectedRedirect,
+				ReflectionTestUtil.invoke(
+					_i18nFilter, "getRedirect",
+					new Class<?>[] {long.class, HttpServletRequest.class},
+					companyId, mockHttpServletRequest));
+		}
+	}
+
+	private void _testGetRequestedLanguageIdWithImpersonation()
+		throws Exception {
+
+		MockHttpServletRequest mockHttpServletRequest =
+			new MockHttpServletRequest();
+
+		mockHttpServletRequest.setParameter(
+			"doAsUserLanguageId", LocaleUtil.toLanguageId(LocaleUtil.SPAIN));
+
+		HttpSession httpSession = mockHttpServletRequest.getSession();
+
+		httpSession.setAttribute(WebKeys.LOCALE, LocaleUtil.US);
+
+		_user = UserTestUtil.addUser(
+			null, LocaleUtil.US, RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(), new long[] {_group.getGroupId()});
+
+		mockHttpServletRequest.setAttribute(WebKeys.USER, _user);
+
+		Assert.assertEquals(
+			LocaleUtil.toLanguageId(LocaleUtil.SPAIN),
+			ReflectionTestUtil.invoke(
+				_i18nFilter, "getRequestedLanguageId",
+				new Class<?>[] {HttpServletRequest.class, String.class},
+				mockHttpServletRequest,
+				LocaleUtil.toLanguageId(LocaleUtil.US)));
 	}
 
 	@DeleteAfterTestRun

@@ -7,6 +7,7 @@ import {Locator, Page, expect} from '@playwright/test';
 
 import {clickAndExpectToBeVisible} from '../../utils/clickAndExpectToBeVisible';
 import {PORTLET_URLS} from '../../utils/portletUrls';
+import {waitForAlert} from '../../utils/waitForAlert';
 import {zipFolder} from '../../utils/zip';
 import {PagesAdminPage} from '../layout-admin-web/PagesAdminPage';
 import {PageEditorPage} from '../layout-content-page-editor-web/PageEditorPage';
@@ -100,6 +101,29 @@ export class MasterPagesPage {
 		await templateCard.locator('.custom-control.custom-checkbox').waitFor();
 	}
 
+	async clickMoreActions(name: string, actionName: string) {
+		await this.page
+			.locator('.card-page-item')
+			.filter({hasText: name})
+			.getByLabel('More actions')
+			.click();
+
+		await this.page
+			.getByRole('menuitem', {
+				exact: true,
+				name: actionName,
+			})
+			.click();
+	}
+
+	async deleteMaster(name: string) {
+		await this.clickMoreActions(name, 'Delete');
+
+		await this.page.getByRole('button', {name: 'Delete'}).click();
+
+		await waitForAlert(this.page, 'Success:');
+	}
+
 	async editMaster(name: string) {
 		await this.getMasterCard(name).getByRole('link', {name}).click();
 
@@ -177,6 +201,37 @@ export class MasterPagesPage {
 		).toBeVisible();
 
 		await this.page.getByRole('button', {name: 'Import'}).click();
+	}
+
+	async makeCopy(
+		name: string,
+		type: 'master-page' | 'master-page-with-permissions' = 'master-page'
+	) {
+		const label =
+			type === 'master-page-with-permissions'
+				? 'Master Page With Permissions'
+				: 'Master Page';
+
+		// Open the actions menu
+
+		await clickAndExpectToBeVisible({
+			autoClick: false,
+			target: this.page.getByRole('menuitem', {name: 'Make a Copy'}),
+			trigger: this.getMasterCard(name).getByLabel('More actions'),
+		});
+
+		// Click desired option
+
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: this.page
+				.getByText(label, {exact: true})
+				.filter({visible: true}),
+			timeout: 5000,
+			trigger: this.page.getByRole('menuitem', {name: 'Make a Copy'}),
+		});
+
+		await waitForAlert(this.page);
 	}
 
 	async openMasterActionsMenu(name: string) {

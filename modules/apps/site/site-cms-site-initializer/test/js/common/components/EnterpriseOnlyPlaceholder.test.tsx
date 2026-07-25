@@ -64,12 +64,12 @@ describe('EnterpriseOnlyPlaceholder', () => {
 		);
 
 		const detailsLink = screen.getByRole('link', {
-			name: 'get-enterprise-details',
+			name: 'x-opens-new-window',
 		});
 		expect(detailsLink).toBeInTheDocument();
 		expect(detailsLink).toHaveAttribute(
 			'href',
-			'https://www.liferay.com/en/contact-sales'
+			'https://www.liferay.com/web/lr/cms-upgrade?utm_medium=referral&utm_source=cms-ft&utm_content=cms-ft-upgrade&utm_cid=701VO00000wwP6IYAU'
 		);
 	});
 });

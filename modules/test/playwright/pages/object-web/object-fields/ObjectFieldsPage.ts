@@ -22,7 +22,10 @@ export class ObjectFieldsPage {
 	readonly fieldsTabItem: Locator;
 	readonly maximumFileSize: Locator;
 	readonly objectFieldLabelInput: Locator;
+	readonly objectFieldNameInput: Locator;
 	readonly objectFieldOptionsDropdown: Locator;
+	readonly countryPicker: Locator;
+	readonly countrySourceDropdown: Locator;
 	readonly page: Page;
 	readonly saveButton: Locator;
 	readonly selectOptionButton: Locator;
@@ -49,15 +52,26 @@ export class ObjectFieldsPage {
 		this.externalReferenceCodeField = page
 			.frameLocator('iframe')
 			.locator('[name="externalReferenceCode"]');
-		this.fieldsTabItem = page.locator('.nav-item .nav-link').filter({
-			hasText: 'Fields',
-		});
+		this.fieldsTabItem = page
+			.locator('#main-content .nav-item .nav-link')
+			.filter({
+				hasText: 'Fields',
+			});
 		this.maximumFileSize = page
 			.frameLocator('iframe')
 			.getByLabel('Maximum File Size' + 'Mandatory');
 		this.objectFieldLabelInput = page.locator('input[name="label"]');
+		this.objectFieldNameInput = page.locator('input[name="name"]');
 		this.objectFieldOptionsDropdown = page.getByText('Select an Option');
 		this.page = page;
+		this.countryPicker = this.iframeLocator.getByRole('combobox', {
+			exact: true,
+			name: 'Country',
+		});
+		this.countrySourceDropdown = this.iframeLocator.getByRole('combobox', {
+			exact: true,
+			name: 'Country Source',
+		});
 		this.saveButton = page.getByRole('button', {name: 'Save'});
 		this.selectOptionButton = this.iframeLocator.getByRole('combobox');
 		this.useDefaultValueToggle = this.iframeLocator.getByRole('switch', {
@@ -222,6 +236,14 @@ export class ObjectFieldsPage {
 		});
 	}
 
+	async closeObjectFieldSidePanel() {
+		const cancelButton = this.iframeLocator.getByLabel('Cancel');
+
+		await cancelButton.click();
+
+		await cancelButton.waitFor({state: 'hidden'});
+	}
+
 	async saveObjectField() {
 		await this.editFieldSaveButton.click();
 
@@ -257,10 +279,12 @@ export class ObjectFieldsPage {
 
 			await this.useDefaultValueToggle.check({timeout: 1000});
 
-			if (objectFieldBusinessType === 'Boolean') {
+			if (
+				objectFieldBusinessType === 'Boolean' ||
+				objectFieldBusinessType === 'Picklist'
+			) {
 				await this.selectDefaultValue(defaultValue);
 			}
-
 			if (objectFieldBusinessType === 'Date') {
 				await this.iframeLocator
 					.getByPlaceholder('__/__/____')

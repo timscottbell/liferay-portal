@@ -5,6 +5,7 @@
 
 package com.liferay.headless.commerce.admin.catalog.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.commerce.admin.catalog.dto.v1_0.ListTypeDefinition;
 import com.liferay.headless.commerce.admin.catalog.resource.v1_0.ListTypeDefinitionResource;
 import com.liferay.petra.function.UnsafeBiConsumer;
@@ -71,13 +72,18 @@ public abstract class BaseListTypeDefinitionResourceImpl
 	 *
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{specificationId}/list-type-definitions/{listTypeDefinitionId}'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Detaches a list type definition from a specification option. Calls CPSpecificationOptionService.getCPSpecificationOption + CPSpecificationOptionListTypeDefinitionRelService.deleteCPSpecificationOptionListTypeDefinitionRel. Validation -- NoSuchCPSpecificationOptionException -> 404 when specificationId not found. Side effects -- Detaches the list type definition from the specification option."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Identifier of a catalog Specification. Addresses a single specification definition that can be bound to products through ProductSpecification entries.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "specificationId"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Identifier of the ListTypeDefinition used as a specification's picklist. Addresses a single list type definition; resolved against the company scope.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "listTypeDefinitionId"
 			)
@@ -111,9 +117,13 @@ public abstract class BaseListTypeDefinitionResourceImpl
 	 *
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{id}/list-type-definitions'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Lists the list type definitions associated with the specification option identified by id. Calls CPSpecificationOptionService.getCPSpecificationOption + CPSpecificationOption.getListTypeDefinitions. Validation -- NoSuchCPSpecificationOptionException -> 404 when id not found."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -143,9 +153,13 @@ public abstract class BaseListTypeDefinitionResourceImpl
 	 *
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{id}/list-type-definitions' -d $'{"externalReferenceCode": ___, "name": ___, "name_i18n": ___, "system": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Creates a list type definition and attaches it to the specification option identified by id. Calls ListTypeDefinitionService.addListTypeDefinition + CPSpecificationOptionListTypeDefinitionRelService.addCPSpecificationOptionListTypeDefinitionRel. Validation -- NoSuchCPSpecificationOptionException -> 404 when specification id not found. Side effects -- Creates a new list type definition and attaches it to the specification option."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -223,13 +237,18 @@ public abstract class BaseListTypeDefinitionResourceImpl
 	 *
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{specificationId}/list-type-definitions/{listTypeDefinitionId}'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Attaches an existing list type definition to the specification option. Calls CPSpecificationOptionService.getCPSpecificationOption + CPSpecificationOptionListTypeDefinitionRelService.addCPSpecificationOptionListTypeDefinitionRel. Validation -- NoSuchCPSpecificationOptionException -> 404 when specificationId not found. Side effects -- Creates the relation row between the specification option and the list type definition."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Identifier of a catalog Specification. Addresses a single specification definition that can be bound to products through ProductSpecification entries.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "specificationId"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Identifier of the ListTypeDefinition used as a specification's picklist. Addresses a single list type definition; resolved against the company scope.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "listTypeDefinitionId"
 			)
@@ -332,6 +351,15 @@ public abstract class BaseListTypeDefinitionResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -910,3 +938,4 @@ public abstract class BaseListTypeDefinitionResourceImpl
 		LogFactoryUtil.getLog(BaseListTypeDefinitionResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:-429720762

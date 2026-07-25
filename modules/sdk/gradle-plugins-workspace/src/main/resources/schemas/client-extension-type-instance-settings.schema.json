@@ -75,6 +75,45 @@
 		},
 		{
 			"properties": {
+				"checkInterval": {
+					"default": 15,
+					"description": "Set the number of days before a VAT number is revalidated against VIES.",
+					"min": 1,
+					"title": "Check Interval",
+					"type": "number"
+				},
+				"countryCodes": {
+					"default": "AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK",
+					"description": "Select the country codes whose VAT numbers are validated against VIES.",
+					"items": {
+						"type": "string"
+					},
+					"title": "Country Codes",
+					"type": "array"
+				},
+				"enabled": {
+					"default": true,
+					"title": "Enabled",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.account.validator.vies.configuration.VIESAccountEntryValidatorConfiguration",
+					"title": "VIES Account Entry Validator"
+				},
+				"viesEndpointURL": {
+					"default": "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",
+					"description": "Set the full URL of the DG TAXUD VIES check-vat-number REST endpoint.",
+					"title": "VIES Endpoint URL",
+					"type": "string"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "VIES Account Entry Validator"
+		},
+		{
+			"properties": {
 				"enabled": {
 					"default": false,
 					"description": "Enable postprocessing of all legacy markup in fragments, web content, and blogs so that Adaptive Media is able to work with it. Enabling this option may impact the performance of your sites.",
@@ -148,7 +187,7 @@
 					"type": "string"
 				},
 				"pid": {
-					"const": "com.liferay.ai.hub.configuration.AIHubConfiguration",
+					"const": "com.liferay.ai.hub.cell.configuration.AIHubCellConfiguration",
 					"title": "AI Hub Configuration"
 				},
 				"serviceURL": {
@@ -163,6 +202,24 @@
 				"serviceURL"
 			],
 			"title": "AI Hub Configuration"
+		},
+		{
+			"properties": {
+				"enabled": {
+					"default": false,
+					"description": "Enable or disable the integration with AI Hub for automatic translations.",
+					"title": "Enabled",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.ai.hub.cell.translator.internal.configuration.AIHubCellTranslatorConfiguration",
+					"title": "Translator Using AI Hub"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "Translator Using AI Hub"
 		},
 		{
 			"properties": {
@@ -544,6 +601,12 @@
 					"title": "Import Batch Size",
 					"type": "number"
 				},
+				"languageKeyResolutionEnabled": {
+					"default": true,
+					"description": "Enable resolving the [$FOR_EACH_LANGUAGE_ID$] language key placeholder into translations for all portal supported locales when importing batch files or running site initializers.",
+					"title": "Language Key Resolution Enabled",
+					"type": "boolean"
+				},
 				"pid": {
 					"const": "com.liferay.batch.engine.configuration.BatchEngineTaskCompanyConfiguration",
 					"title": "Batch Engine Task Configuration"
@@ -746,6 +809,18 @@
 		},
 		{
 			"properties": {
+				"automaticFriendlyURLConflictResolutionEnabled": {
+					"default": false,
+					"description": "Enable this mode to automatically resolve duplicate friendly URL conflicts.",
+					"title": "Automatic Resolution for Duplicate Friendly URL Conflicts",
+					"type": "boolean"
+				},
+				"cleanUpCTSContentData": {
+					"default": false,
+					"description": "Enable this to remove change tracking store content immediately after a publication publishes.",
+					"title": "Clean Up Change Tracking Store Content Data",
+					"type": "boolean"
+				},
 				"defaultCTCollectionTemplateId": {
 					"default": 0,
 					"title": "Default Publication Template ID",
@@ -815,6 +890,12 @@
 		},
 		{
 			"properties": {
+				"contextViewScoreThreshold": {
+					"default": 60000,
+					"description": "Set the maximum score a publication can have and still render the context view. Publications with a score above this threshold will skip the context view for better performance.",
+					"title": "Context View Score Threshold",
+					"type": "number"
+				},
 				"hiddenApplications": {
 					"description": "These applications will be hidden from the application menu when you are in a publication.",
 					"items": {
@@ -1848,13 +1929,13 @@
 				},
 				"propagateChanges": {
 					"default": false,
-					"description": "When enabled, changes will be propagated immediately after publishing a fragment entry. If staging is enabled, this setting does not affect live sites.",
+					"description": "When enabled, changes are propagated immediately after publishing a fragment entry. If staging is enabled, this setting does not affect live sites.",
 					"title": "Propagate Fragment Changes Automatically",
 					"type": "boolean"
 				},
 				"propagateContributedFragmentChanges": {
 					"default": true,
-					"description": "When enabled, changes will be propagated immediately during the deploy process. When disabled, changes can be propagated manually after deploy process.",
+					"description": "When enabled, changes are propagated immediately during the deploy process. When disabled, changes can be propagated manually after deploy process.",
 					"title": "Propagate Default Fragments Changes During Deploy Process Automatically",
 					"type": "boolean"
 				}
@@ -1947,6 +2028,24 @@
 			]
 		},
 		{
+			"properties": {
+				"enableLog": {
+					"default": false,
+					"description": "If this is checked, the frontend audiences infrastructure will print informational messages to the browser console.",
+					"title": "Enable Log",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.frontend.js.audiences.web.internal.configuration.FrontendJSAudiencesConfiguration",
+					"title": "Frontend Audiences Infrastructure"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "Frontend Audiences Infrastructure"
+		},
+		{
 			"description": "For changes made here to take effect, you must reload the browser page after saving.",
 			"properties": {
 				"cacheExpirationTime": {
@@ -2029,10 +2128,6 @@
 				"cachingStrategy": {
 					"default": "do-not-use-hashes",
 					"description": "Set the balance between caching span and size of the import maps (which affect the size of the page's HTML). If you decide not to use hashes, the import maps will be smaller but the caching span will be limited. On the other hand, if you use one hash per file, the import maps will be bigger but files will be infinitely cacheable.",
-					"enum": [
-						"do-not-use-hashes",
-						"use-one-hash-per-file"
-					],
 					"title": "Caching Strategy",
 					"type": "string"
 				},
@@ -2096,7 +2191,7 @@
 				},
 				"translatedJSFilesMaxAge": {
 					"default": 3600,
-					"description": "Set the value of the \"max-age\" directive in the \"Cache-Control\" header for translated JavaScript files for translated JavaScript files (those that contain invocations to \"Liferay.Language.get()\" and do not have an associated language.json file).",
+					"description": "Set the value of the \"max-age\" directive in the \"Cache-Control\" header for translated JavaScript files (those that contain invocations to \"Liferay.Language.get()\" and do not have an associated language.json file).",
 					"title": "Translated JavaScript Files Max Age Directive Value",
 					"type": "number"
 				}
@@ -2208,6 +2303,13 @@
 					"description": "Set this to true to index all article versions. Set this to false to index only the last indexable version.",
 					"title": "Index All Article Versions Enabled",
 					"type": "boolean"
+				},
+				"journalArticleCheckLimit": {
+					"default": 100,
+					"description": "Set the maximum number of articles to check.",
+					"min": 1,
+					"title": "Journal Article Check Limit",
+					"type": "number"
 				},
 				"journalArticleExportImportProcessorCacheEnabled": {
 					"default": true,
@@ -2368,7 +2470,7 @@
 			"title": "SEO"
 		},
 		{
-			"description": "Configure when automatic propagation is triggered for site templates.",
+			"description": "Site Templates Configuration",
 			"properties": {
 				"cancelPropagationImportTask": {
 					"default": true,
@@ -2378,7 +2480,7 @@
 				},
 				"pid": {
 					"const": "com.liferay.layout.set.prototype.configuration.LayoutSetPrototypeConfiguration",
-					"description": "Configure site template propagation settings.",
+					"description": "Site Templates Configuration",
 					"title": "Site Templates"
 				}
 			},
@@ -2510,6 +2612,25 @@
 			"title": "Mail Settings"
 		},
 		{
+			"description": "The settings in this configuration let you control the MCP Server.",
+			"properties": {
+				"enabled": {
+					"default": false,
+					"title": "Enabled",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.mcp.server.rest.internal.configuration.MCPServerConfiguration",
+					"description": "The settings in this configuration let you control the MCP Server.",
+					"title": "MCP Server"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "MCP Server"
+		},
+		{
 			"properties": {
 				"emailFromAddress": {
 					"description": "Set the sender address on the one-time password email.",
@@ -2595,7 +2716,7 @@
 				"allowedCredentialsPerUser": {
 					"default": 1,
 					"description": "Set the number of allowed credentials per user.",
-					"title": "Allowed Credentials Per User",
+					"title": "Allowed Credentials per User",
 					"type": "number"
 				},
 				"enabled": {
@@ -2749,6 +2870,72 @@
 		},
 		{
 			"properties": {
+				"allowedGrantTypes": {
+					"default": "",
+					"description": "Open registration allows only the \"grant_types\" listed here (for example, \"authorization_code\", \"refresh_token\"), or \"*\" for any grant type. An empty list rejects all open registrations.",
+					"items": {
+						"type": "string"
+					},
+					"title": "Allowed Grant Types",
+					"type": "array"
+				},
+				"allowedHosts": {
+					"default": "",
+					"description": "Open registration allows only requests from the client IP addresses listed here. Each entry is a literal IP address or \"*\" for any host (host names are not resolved). An empty list rejects all open registrations.",
+					"items": {
+						"type": "string"
+					},
+					"title": "Allowed Hosts",
+					"type": "array"
+				},
+				"allowedRedirectURIPatterns": {
+					"default": "",
+					"description": "Open registration allows only \"redirect_uris\" matching at least one of these glob patterns (where \"*\" matches within a single path segment), or \"*\" for any redirect URI. An empty list rejects all open registrations.",
+					"items": {
+						"type": "string"
+					},
+					"title": "Allowed Redirect URI Patterns",
+					"type": "array"
+				},
+				"allowedScopes": {
+					"default": "",
+					"description": "Open registration allows only the scopes listed here, or \"*\" for any scope. An explicit scope is always required in the request. An empty list rejects all open registrations.",
+					"items": {
+						"type": "string"
+					},
+					"title": "Allowed Scopes",
+					"type": "array"
+				},
+				"maximumNumberOfRegistrationsPerHour": {
+					"default": 10,
+					"description": "Maximum number of open registrations per hour for each company and client IP. Set to 0 or a negative number to disable. Counters are kept in memory and are not shared across cluster nodes.",
+					"title": "Maximum Number of Registrations per Hour",
+					"type": "number"
+				},
+				"pid": {
+					"const": "com.liferay.oauth2.provider.rest.internal.configuration.OAuth2DynamicRegistrationConfiguration",
+					"title": "Dynamic Client Registration"
+				},
+				"requireInitialAccessToken": {
+					"default": true,
+					"description": "When enabled (default), registration requires a bearer token issued for the \"Dynamic Registrator\" OAuth 2 application. When disabled, open registration is accepted and owned by the default service account.",
+					"title": "Require Initial Access Token",
+					"type": "boolean"
+				},
+				"trustProxyHeaders": {
+					"default": false,
+					"description": "When enabled, take the client IP for the allowed hosts and rate limit checks from the \"X-Forwarded-For\" header rather than the direct TCP peer. Enable only behind a trusted proxy that overwrites this header, since it can be spoofed.",
+					"title": "Trust Proxy Headers",
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "Dynamic Client Registration"
+		},
+		{
+			"properties": {
 				"issuer": {
 					"description": "OAuth 2 Incoming Assertion Issuer",
 					"title": "OAuth 2 Incoming Assertion Issuer",
@@ -2849,6 +3036,13 @@
 		},
 		{
 			"properties": {
+				"checkBatchSize": {
+					"default": 100,
+					"description": "Set the maximum number of object entries and object entry versions to process per check.",
+					"min": 1,
+					"title": "Object Entry Check Batch Size",
+					"type": "number"
+				},
 				"checkInterval": {
 					"default": 15,
 					"description": "Set the interval (in minutes) to check for expiration, publishing, and review of object entries.",
@@ -3825,12 +4019,7 @@
 					"type": "number"
 				},
 				"referral": {
-					"default": "follow",
-					"enum": [
-						"follow",
-						"ignore",
-						"throws"
-					],
+					"description": "Set how the server handles LDAP referrals to entries on another server. Use \"ignore\" (the default) to skip them, \"follow\" to resolve them safely over \"ldap\" and \"ldaps\" only, or \"throw\" to raise an error.",
 					"title": "Referral",
 					"type": "string"
 				}
@@ -4530,6 +4719,48 @@
 		},
 		{
 			"properties": {
+				"invitationToCollaborateEmailBody": {
+					"description": "Provide a localized template for the body of invitation to collaborate emails.",
+					"properties": {
+					},
+					"title": "Invitation to Collaborate Email Body",
+					"type": "object"
+				},
+				"invitationToCollaborateEmailSenderEmailAddress": {
+					"description": "Define a specific email address for the sender of invitation to collaborate emails. If empty, the inviter's email address is used.",
+					"title": "Invitation to Collaborate Email Sender Email Address",
+					"type": "string"
+				},
+				"invitationToCollaborateEmailSenderName": {
+					"description": "Define a specific name for the sender of invitation to collaborate emails. If empty, the inviter's name is used.",
+					"title": "Invitation to Collaborate Email Sender Name",
+					"type": "string"
+				},
+				"invitationToCollaborateEmailSubject": {
+					"description": "Provide a localized template for the subject of invitation to collaborate emails.",
+					"properties": {
+					},
+					"title": "Invitation to Collaborate Email Subject",
+					"type": "object"
+				},
+				"invitationToCollaborateTokenExpirationTime": {
+					"default": 48,
+					"description": "Define the time (in hours) before the invitation to collaborate token expires.",
+					"title": "Invitation to Collaborate Token Expiration Time",
+					"type": "number"
+				},
+				"pid": {
+					"const": "com.liferay.sharing.configuration.SharingEntryCollaborationEmailConfiguration",
+					"title": "Invitation to Collaborate"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "Invitation to Collaborate"
+		},
+		{
+			"properties": {
 				"enabled": {
 					"default": true,
 					"title": "Enabled",
@@ -4566,6 +4797,59 @@
 		},
 		{
 			"properties": {
+				"content": {
+					"default": "",
+					"title": "llms.txt Content",
+					"type": "string"
+				},
+				"enabled": {
+					"default": false,
+					"title": "Enable llms.txt",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.site.internal.configuration.LLMSCompanyConfiguration",
+					"title": "llms.txt"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "llms.txt"
+		},
+		{
+			"description": "Control how virtual hosts restrict access to sites.",
+			"properties": {
+				"allowDefaultInstanceURLBypass": {
+					"default": false,
+					"description": "When strict virtual host mode is enabled, still allow access to sites through the default instance URL.",
+					"title": "Allow Default Instance URL Bypass",
+					"type": "boolean"
+				},
+				"pid": {
+					"const": "com.liferay.site.internal.configuration.SiteVirtualHostConfiguration",
+					"description": "Control how virtual hosts restrict access to sites.",
+					"title": "Virtual Host Restrictions"
+				},
+				"strictModeEnabled": {
+					"default": false,
+					"description": "When enabled, a site that has a virtual host is reachable only through that virtual host.",
+					"title": "Strict Virtual Host Mode Enabled",
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"pid"
+			],
+			"title": "Virtual Host Restrictions"
+		},
+		{
+			"properties": {
+				"cachedGenerationEnabled": {
+					"default": false,
+					"title": "Cached Generation Enabled",
+					"type": "boolean"
+				},
 				"companySitemapGroupIds": {
 					"default": "",
 					"items": {
@@ -4605,6 +4889,31 @@
 					"default": true,
 					"title": "XML Sitemap Index Enabled",
 					"type": "boolean"
+				},
+				"xmlSitemapIndexMode": {
+					"default": "page-layout",
+					"title": "XML Sitemap Index Mode",
+					"type": "string"
+				},
+				"xmlSitemapRegenerationDayOfWeek": {
+					"default": "1",
+					"title": "XML Sitemap Regeneration Day of Week",
+					"type": "string"
+				},
+				"xmlSitemapRegenerationFrequency": {
+					"default": "daily",
+					"title": "XML Sitemap Regeneration Frequency",
+					"type": "string"
+				},
+				"xmlSitemapRegenerationTime": {
+					"default": "00:00",
+					"title": "XML Sitemap Regeneration Time",
+					"type": "string"
+				},
+				"xmlSitemapRegenerationTimeZoneId": {
+					"default": "",
+					"title": "XML Sitemap Regeneration Time Zone ID",
+					"type": "string"
 				}
 			},
 			"required": [
@@ -4636,12 +4945,6 @@
 					"const": "com.liferay.staging.configuration.StagingConfiguration",
 					"description": "The settings in this configuration let you control the staging process.",
 					"title": "Staging"
-				},
-				"publishDisplayedContent": {
-					"default": false,
-					"description": "If checked, the displayed content will be published to Live for Dynamic Data Lists Display, Form, Web Content Display and Wiki Display. These widgets will publish the displayed content to Live independently of the Publish Process settings. For example, a Web Content Display will publish the Web Content even if Web Contents were not selected on the Publish Process screen. This can be useful to make sure that Staging and Live display the same content. However, in most cases the content is already available in Live and publishing it again can slow down the process unnecessarily. Uncheck to not publish the displayed content.",
-					"title": "Publish Displayed Content by Default",
-					"type": "boolean"
 				},
 				"stagingDeleteTempLAROnFailure": {
 					"default": true,
@@ -4850,10 +5153,12 @@
 			"enum": [
 				"com.liferay.account.configuration.AccountEntryEmailConfiguration",
 				"com.liferay.account.configuration.AccountEntryEmailDomainsConfiguration",
+				"com.liferay.account.validator.vies.configuration.VIESAccountEntryValidatorConfiguration",
 				"com.liferay.adaptive.media.image.content.transformer.backwards.compatibility.internal.configuration.AMBackwardsCompatibilityHtmlContentTransformerConfiguration",
 				"com.liferay.adaptive.media.image.internal.configuration.AMImageCompanyConfiguration",
 				"com.liferay.ai.creator.openai.configuration.AICreatorOpenAICompanyConfiguration",
-				"com.liferay.ai.hub.configuration.AIHubConfiguration",
+				"com.liferay.ai.hub.cell.configuration.AIHubCellConfiguration",
+				"com.liferay.ai.hub.cell.translator.internal.configuration.AIHubCellTranslatorConfiguration",
 				"com.liferay.analytics.settings.configuration.AnalyticsConfiguration",
 				"com.liferay.asset.auto.tagger.google.cloud.natural.language.internal.configuration.GCloudNaturalLanguageAssetAutoTaggerCompanyConfiguration",
 				"com.liferay.asset.auto.tagger.internal.configuration.AssetAutoTaggerCompanyConfiguration",
@@ -4904,6 +5209,7 @@
 				"com.liferay.fragment.web.internal.configuration.FragmentPortletConfiguration",
 				"com.liferay.friendly.url.configuration.FriendlyURLRedirectionConfiguration",
 				"com.liferay.friendly.url.configuration.FriendlyURLSeparatorCompanyConfiguration",
+				"com.liferay.frontend.js.audiences.web.internal.configuration.FrontendJSAudiencesConfiguration",
 				"com.liferay.frontend.js.spa.web.internal.configuration.SPAConfiguration",
 				"com.liferay.frontend.js.web.internal.configuration.CustomDialogsSettingsConfiguration",
 				"com.liferay.frontend.js.web.internal.configuration.FrontendCachingConfiguration",
@@ -4916,11 +5222,13 @@
 				"com.liferay.layout.set.prototype.configuration.LayoutSetPrototypeConfiguration",
 				"com.liferay.mail.outlook.auth.connector.provider.internal.configuration.MailOutlookAuthConnectorCompanyConfiguration",
 				"com.liferay.mail.settings.configuration.MailSettingCompanyConfiguration",
+				"com.liferay.mcp.server.rest.internal.configuration.MCPServerConfiguration",
 				"com.liferay.multi.factor.authentication.email.otp.configuration.MFAEmailOTPConfiguration",
 				"com.liferay.multi.factor.authentication.fido2.web.internal.configuration.MFAFIDO2Configuration",
 				"com.liferay.multi.factor.authentication.ip.address.internal.configuration.MFAIPAddressConfiguration",
 				"com.liferay.multi.factor.authentication.sample.internal.configuration.MFASampleConfiguration",
 				"com.liferay.multi.factor.authentication.timebased.otp.web.internal.configuration.MFATimeBasedOTPConfiguration",
+				"com.liferay.oauth2.provider.rest.internal.configuration.OAuth2DynamicRegistrationConfiguration",
 				"com.liferay.oauth2.provider.rest.internal.configuration.OAuth2InAssertionConfiguration",
 				"com.liferay.oauth2.provider.rest.internal.endpoint.authorize.configuration.AuthorizeScreenConfiguration",
 				"com.liferay.object.configuration.ObjectConfiguration",
@@ -4958,8 +5266,11 @@
 				"com.liferay.segments.configuration.SegmentsCompanyConfiguration",
 				"com.liferay.segments.context.vocabulary.internal.configuration.SegmentsContextVocabularyCompanyConfiguration",
 				"com.liferay.sharepoint.rest.repository.internal.configuration.SharepointRepositoryConfiguration",
+				"com.liferay.sharing.configuration.SharingEntryCollaborationEmailConfiguration",
 				"com.liferay.sharing.internal.configuration.SharingCompanyConfiguration",
 				"com.liferay.site.cms.site.initializer.configuration.BulkActionTaskConfiguration",
+				"com.liferay.site.internal.configuration.LLMSCompanyConfiguration",
+				"com.liferay.site.internal.configuration.SiteVirtualHostConfiguration",
 				"com.liferay.site.internal.configuration.SitemapCompanyConfiguration",
 				"com.liferay.social.activity.internal.configuration.SocialActivityCompanyConfiguration",
 				"com.liferay.staging.configuration.StagingConfiguration",

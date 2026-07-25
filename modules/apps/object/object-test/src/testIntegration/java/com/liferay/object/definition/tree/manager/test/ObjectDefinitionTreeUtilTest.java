@@ -12,6 +12,7 @@ import com.liferay.object.constants.ObjectActionExecutorConstants;
 import com.liferay.object.constants.ObjectActionKeys;
 import com.liferay.object.constants.ObjectActionTriggerConstants;
 import com.liferay.object.constants.ObjectDefinitionConstants;
+import com.liferay.object.constants.ObjectDefinitionSettingConstants;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.definition.tree.util.ObjectDefinitionTreeUtil;
@@ -19,12 +20,14 @@ import com.liferay.object.exception.ObjectRelationshipEdgeException;
 import com.liferay.object.field.builder.TextObjectFieldBuilder;
 import com.liferay.object.model.ObjectAction;
 import com.liferay.object.model.ObjectDefinition;
+import com.liferay.object.model.ObjectDefinitionSetting;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectRelationship;
 import com.liferay.object.related.models.test.util.ObjectEntryTestUtil;
 import com.liferay.object.service.ObjectActionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalService;
+import com.liferay.object.service.ObjectDefinitionSettingLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
@@ -66,7 +69,6 @@ import com.liferay.portal.kernel.workflow.WorkflowInstance;
 import com.liferay.portal.kernel.workflow.WorkflowInstanceManager;
 import com.liferay.portal.kernel.workflow.WorkflowTask;
 import com.liferay.portal.kernel.workflow.WorkflowTaskManager;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -91,7 +93,6 @@ import org.junit.runner.RunWith;
  * @author Feliphe Marinho
  */
 @DataGuard(scope = DataGuard.Scope.METHOD)
-@FeatureFlag("LPD-34594")
 @RunWith(Arquillian.class)
 public class ObjectDefinitionTreeUtilTest {
 
@@ -592,6 +593,48 @@ public class ObjectDefinitionTreeUtilTest {
 	}
 
 	@Test
+	public void testBindObjectDefinitionsWithAllowStandaloneObjectEntrySetting()
+		throws Exception {
+
+		// Bind a draft object definition to a published object definition
+
+		ObjectDefinition objectDefinitionA =
+			ObjectDefinitionTestUtil.addCustomObjectDefinition("A");
+		ObjectDefinition objectDefinitionAA =
+			_addAndPublishCustomObjectDefinition("AA");
+
+		TreeTestUtil.bind(
+			objectDefinitionA.getObjectDefinitionId(),
+			objectDefinitionAA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		_assertAllowStandaloneObjectEntrySetting(
+			objectDefinitionAA, StringPool.TRUE);
+
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			_objectDefinitionLocalService, new String[] {"C_A", "C_AA"},
+			_objectEntryLocalService, _objectRelationshipLocalService);
+
+		// Bind a published object definition to a draft object definition
+
+		objectDefinitionA = _addAndPublishCustomObjectDefinition("A");
+		objectDefinitionAA = ObjectDefinitionTestUtil.addCustomObjectDefinition(
+			"AA");
+
+		TreeTestUtil.bind(
+			objectDefinitionA.getObjectDefinitionId(),
+			objectDefinitionAA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		_assertAllowStandaloneObjectEntrySetting(
+			objectDefinitionAA, StringPool.TRUE);
+
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			_objectDefinitionLocalService, new String[] {"C_A", "C_AA"},
+			_objectEntryLocalService, _objectRelationshipLocalService);
+	}
+
+	@Test
 	public void testBindObjectDefinitionsWithGreaterThanTreeMaxHeight()
 		throws Exception {
 
@@ -767,6 +810,93 @@ public class ObjectDefinitionTreeUtilTest {
 			objectDefinitionBBB.getObjectDefinitionId(),
 			objectDefinitionFF.getObjectDefinitionId(),
 			_objectRelationshipLocalService);
+	}
+
+	@Test
+	public void testBindObjectDefinitionsWithModifiableSystemObjectDefinition()
+		throws Exception {
+
+		// Modifiable system as child
+
+		ObjectDefinition modifiableSystemObjectDefinition =
+			ObjectDefinitionTestUtil.publishSystemObjectDefinition();
+
+		_testBindObjectDefinitions(
+			_objectDefinitionA, modifiableSystemObjectDefinition,
+			(objectDefinition1, objectDefinition2) ->
+				TreeTestUtil.assertRootObjectDefinitionIds(
+					LinkedHashMapBuilder.put(
+						objectDefinition1,
+						new ObjectDefinition[] {objectDefinition1}
+					).put(
+						objectDefinition2,
+						new ObjectDefinition[] {objectDefinition1}
+					).build()));
+
+		TreeTestUtil.unbind(
+			_objectDefinitionA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		ObjectRelationship objectRelationship =
+			ObjectRelationshipTestUtil.addObjectRelationship(
+				_objectRelationshipLocalService, _objectDefinitionA,
+				modifiableSystemObjectDefinition);
+
+		TreeTestUtil.bind(
+			_objectRelationshipLocalService,
+			Collections.singletonList(objectRelationship));
+
+		TreeTestUtil.assertRootObjectDefinitionIds(
+			LinkedHashMapBuilder.put(
+				_objectDefinitionA, new ObjectDefinition[] {_objectDefinitionA}
+			).put(
+				modifiableSystemObjectDefinition,
+				new ObjectDefinition[] {_objectDefinitionA}
+			).build());
+
+		TreeTestUtil.unbind(
+			_objectDefinitionA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		// Modifiable system as parent
+
+		_testBindObjectDefinitions(
+			modifiableSystemObjectDefinition, _objectDefinitionB,
+			(objectDefinition1, objectDefinition2) ->
+				TreeTestUtil.assertRootObjectDefinitionIds(
+					LinkedHashMapBuilder.put(
+						objectDefinition1,
+						new ObjectDefinition[] {objectDefinition1}
+					).put(
+						objectDefinition2,
+						new ObjectDefinition[] {objectDefinition1}
+					).build()));
+
+		TreeTestUtil.unbind(
+			modifiableSystemObjectDefinition.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		objectRelationship = ObjectRelationshipTestUtil.addObjectRelationship(
+			_objectRelationshipLocalService, modifiableSystemObjectDefinition,
+			_objectDefinitionB);
+
+		TreeTestUtil.bind(
+			_objectRelationshipLocalService,
+			Collections.singletonList(objectRelationship));
+
+		TreeTestUtil.assertRootObjectDefinitionIds(
+			LinkedHashMapBuilder.put(
+				modifiableSystemObjectDefinition,
+				new ObjectDefinition[] {modifiableSystemObjectDefinition}
+			).put(
+				_objectDefinitionB,
+				new ObjectDefinition[] {modifiableSystemObjectDefinition}
+			).build());
+
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			_objectDefinitionLocalService,
+			new String[] {modifiableSystemObjectDefinition.getName()},
+			_objectEntryLocalService, _objectRelationshipLocalService);
 	}
 
 	@Test
@@ -2242,6 +2372,13 @@ public class ObjectDefinitionTreeUtilTest {
 			).build(),
 			_objectDefinitionTreeFactory.create(rootNodeC.getPrimaryKey()),
 			_objectDefinitionLocalService);
+
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			_objectDefinitionLocalService,
+			new String[] {
+				"C_A", "C_AA", "C_B", "C_BB", "C_C", "C_CC", "C_D", "C_DD"
+			},
+			_objectEntryLocalService, _objectRelationshipLocalService);
 	}
 
 	@Test
@@ -2435,6 +2572,21 @@ public class ObjectDefinitionTreeUtilTest {
 			objectDefinition.getObjectDefinitionId(),
 			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
 			null, values, ServiceContextTestUtil.getServiceContext());
+	}
+
+	private void _assertAllowStandaloneObjectEntrySetting(
+		ObjectDefinition objectDefinition,
+		String expectedAllowStandaloneObjectEntrySetting) {
+
+		ObjectDefinitionSetting objectDefinitionSetting =
+			_objectDefinitionSettingLocalService.fetchObjectDefinitionSetting(
+				objectDefinition.getObjectDefinitionId(),
+				ObjectDefinitionSettingConstants.
+					NAME_ALLOW_STANDALONE_OBJECT_ENTRY);
+
+		Assert.assertEquals(
+			expectedAllowStandaloneObjectEntrySetting,
+			objectDefinitionSetting.getValue());
 	}
 
 	private void _assertRootObjectEntryIds(Map<ObjectEntry, Long> expectedMap)
@@ -2649,6 +2801,10 @@ public class ObjectDefinitionTreeUtilTest {
 
 	@Inject
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;
+
+	@Inject
+	private ObjectDefinitionSettingLocalService
+		_objectDefinitionSettingLocalService;
 
 	private ObjectDefinitionTreeFactory _objectDefinitionTreeFactory;
 

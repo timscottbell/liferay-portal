@@ -45,6 +45,7 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.odata.entity.EntityField;
@@ -135,7 +136,8 @@ public abstract class BasePostalAddressResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -145,7 +147,8 @@ public abstract class BasePostalAddressResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -208,8 +211,10 @@ public abstract class BasePostalAddressResourceTestCase {
 		PostalAddress postalAddress = randomPostalAddress();
 
 		postalAddress.setAddressCountry(regex);
+		postalAddress.setAddressCountryExternalReferenceCode(regex);
 		postalAddress.setAddressLocality(regex);
 		postalAddress.setAddressRegion(regex);
+		postalAddress.setAddressRegionExternalReferenceCode(regex);
 		postalAddress.setAddressSubtype(regex);
 		postalAddress.setAddressType(regex);
 		postalAddress.setExternalReferenceCode(regex);
@@ -227,8 +232,12 @@ public abstract class BasePostalAddressResourceTestCase {
 		postalAddress = PostalAddressSerDes.toDTO(json);
 
 		Assert.assertEquals(regex, postalAddress.getAddressCountry());
+		Assert.assertEquals(
+			regex, postalAddress.getAddressCountryExternalReferenceCode());
 		Assert.assertEquals(regex, postalAddress.getAddressLocality());
 		Assert.assertEquals(regex, postalAddress.getAddressRegion());
+		Assert.assertEquals(
+			regex, postalAddress.getAddressRegionExternalReferenceCode());
 		Assert.assertEquals(regex, postalAddress.getAddressSubtype());
 		Assert.assertEquals(regex, postalAddress.getAddressType());
 		Assert.assertEquals(regex, postalAddress.getExternalReferenceCode());
@@ -271,6 +280,7 @@ public abstract class BasePostalAddressResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		PostalAddress postalAddress1 =
 			testGraphQLDeletePostalAddress_addPostalAddress();
 
@@ -302,6 +312,7 @@ public abstract class BasePostalAddressResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		PostalAddress postalAddress2 =
 			testGraphQLDeletePostalAddress_addPostalAddress();
 
@@ -461,6 +472,7 @@ public abstract class BasePostalAddressResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		PostalAddress postalAddress1 =
 			testGraphQLDeletePostalAddressByExternalReferenceCode_addPostalAddress();
 
@@ -501,6 +513,7 @@ public abstract class BasePostalAddressResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		PostalAddress postalAddress2 =
 			testGraphQLDeletePostalAddressByExternalReferenceCode_addPostalAddress();
 
@@ -657,17 +670,9 @@ public abstract class BasePostalAddressResourceTestCase {
 		String externalReferenceCode =
 			testGetAccountByExternalReferenceCodePostalAddressesPage_getExternalReferenceCode();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountByExternalReferenceCodePostalAddresses",
-			new HashMap<String, Object>() {
-				{
-					put(
-						"externalReferenceCode",
-						"\"" + externalReferenceCode + "\"");
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountByExternalReferenceCodePostalAddressesPageAccountPostalAddress_getGraphQLField(
+				externalReferenceCode);
 
 		// No namespace
 
@@ -737,6 +742,24 @@ public abstract class BasePostalAddressResourceTestCase {
 				PostalAddressSerDes.toDTOs(
 					accountByExternalReferenceCodePostalAddressesJSONObject.
 						getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountByExternalReferenceCodePostalAddressesPageAccountPostalAddress_getGraphQLField(
+				String externalReferenceCode)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountByExternalReferenceCodePostalAddresses",
+			new HashMap<String, Object>() {
+				{
+					put(
+						"externalReferenceCode",
+						"\"" + externalReferenceCode + "\"");
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected PostalAddress
@@ -810,8 +833,9 @@ public abstract class BasePostalAddressResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-admin-user/v1.0/accounts/{accountId}/postal-addresses/batch".
-				replace("{accountId}", String.valueOf(accountId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-admin-user/v1.0/accounts/{accountId}/postal-addresses/batch").
+					replace("{accountId}", String.valueOf(accountId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -843,15 +867,9 @@ public abstract class BasePostalAddressResourceTestCase {
 	public void testGraphQLGetAccountPostalAddressesPage() throws Exception {
 		Long accountId = testGetAccountPostalAddressesPage_getAccountId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountPostalAddresses",
-			new HashMap<String, Object>() {
-				{
-					put("accountId", accountId);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountPostalAddressesPageAccountPostalAddress_getGraphQLField(
+				accountId);
 
 		// No namespace
 
@@ -912,6 +930,22 @@ public abstract class BasePostalAddressResourceTestCase {
 			Arrays.asList(
 				PostalAddressSerDes.toDTOs(
 					accountPostalAddressesJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountPostalAddressesPageAccountPostalAddress_getGraphQLField(
+				Long accountId)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountPostalAddresses",
+			new HashMap<String, Object>() {
+				{
+					put("accountId", accountId);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -1179,8 +1213,9 @@ public abstract class BasePostalAddressResourceTestCase {
 			public StringBuffer getRequestURL() {
 				return new StringBuffer(
 					StringBundler.concat(
-						"http://localhost:8080/o/v1.0/",
-						RandomTestUtil.randomString(), "/",
+						"http://localhost:",
+						String.valueOf(PortalUtil.getPortalServerPort(false)),
+						"/o/v1.0/", RandomTestUtil.randomString(), "/",
 						RandomTestUtil.randomString()));
 			}
 
@@ -1216,8 +1251,10 @@ public abstract class BasePostalAddressResourceTestCase {
 			@Override
 			public URI getRequestUri() {
 				return URI.create(
-					"http://localhost:8080/o/" + applicationPath +
-						resourcePath);
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath, resourcePath));
 			}
 
 			@Override
@@ -1237,7 +1274,11 @@ public abstract class BasePostalAddressResourceTestCase {
 
 			@Override
 			public URI getBaseUri() {
-				return URI.create("http://localhost:8080/o/" + applicationPath);
+				return URI.create(
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath));
 			}
 
 			@Override
@@ -1987,7 +2028,8 @@ public abstract class BasePostalAddressResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -2084,16 +2126,22 @@ public abstract class BasePostalAddressResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -2106,7 +2154,9 @@ public abstract class BasePostalAddressResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -2233,6 +2283,19 @@ public abstract class BasePostalAddressResourceTestCase {
 			}
 
 			if (Objects.equals(
+					"addressCountryExternalReferenceCode",
+					additionalAssertFieldName)) {
+
+				if (postalAddress.getAddressCountryExternalReferenceCode() ==
+						null) {
+
+					valid = false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals(
 					"addressCountry_i18n", additionalAssertFieldName)) {
 
 				if (postalAddress.getAddressCountry_i18n() == null) {
@@ -2252,6 +2315,19 @@ public abstract class BasePostalAddressResourceTestCase {
 
 			if (Objects.equals("addressRegion", additionalAssertFieldName)) {
 				if (postalAddress.getAddressRegion() == null) {
+					valid = false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals(
+					"addressRegionExternalReferenceCode",
+					additionalAssertFieldName)) {
+
+				if (postalAddress.getAddressRegionExternalReferenceCode() ==
+						null) {
+
 					valid = false;
 				}
 
@@ -2481,6 +2557,21 @@ public abstract class BasePostalAddressResourceTestCase {
 			}
 
 			if (Objects.equals(
+					"addressCountryExternalReferenceCode",
+					additionalAssertFieldName)) {
+
+				if (!Objects.deepEquals(
+						postalAddress1.getAddressCountryExternalReferenceCode(),
+						postalAddress2.
+							getAddressCountryExternalReferenceCode())) {
+
+					return false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals(
 					"addressCountry_i18n", additionalAssertFieldName)) {
 
 				if (!equals(
@@ -2508,6 +2599,21 @@ public abstract class BasePostalAddressResourceTestCase {
 				if (!Objects.deepEquals(
 						postalAddress1.getAddressRegion(),
 						postalAddress2.getAddressRegion())) {
+
+					return false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals(
+					"addressRegionExternalReferenceCode",
+					additionalAssertFieldName)) {
+
+				if (!Objects.deepEquals(
+						postalAddress1.getAddressRegionExternalReferenceCode(),
+						postalAddress2.
+							getAddressRegionExternalReferenceCode())) {
 
 					return false;
 				}
@@ -2795,6 +2901,53 @@ public abstract class BasePostalAddressResourceTestCase {
 			return sb.toString();
 		}
 
+		if (entityFieldName.equals("addressCountryExternalReferenceCode")) {
+			Object object =
+				postalAddress.getAddressCountryExternalReferenceCode();
+
+			String value = String.valueOf(object);
+
+			if (operator.equals("contains")) {
+				sb = new StringBundler();
+
+				sb.append("contains(");
+				sb.append(entityFieldName);
+				sb.append(",'");
+
+				if ((object != null) && (value.length() > 2)) {
+					sb.append(value.substring(1, value.length() - 1));
+				}
+				else {
+					sb.append(value);
+				}
+
+				sb.append("')");
+			}
+			else if (operator.equals("startswith")) {
+				sb = new StringBundler();
+
+				sb.append("startswith(");
+				sb.append(entityFieldName);
+				sb.append(",'");
+
+				if ((object != null) && (value.length() > 1)) {
+					sb.append(value.substring(0, value.length() - 1));
+				}
+				else {
+					sb.append(value);
+				}
+
+				sb.append("')");
+			}
+			else {
+				sb.append("'");
+				sb.append(value);
+				sb.append("'");
+			}
+
+			return sb.toString();
+		}
+
 		if (entityFieldName.equals("addressCountry_i18n")) {
 			throw new IllegalArgumentException(
 				"Invalid entity field " + entityFieldName);
@@ -2848,6 +3001,53 @@ public abstract class BasePostalAddressResourceTestCase {
 
 		if (entityFieldName.equals("addressRegion")) {
 			Object object = postalAddress.getAddressRegion();
+
+			String value = String.valueOf(object);
+
+			if (operator.equals("contains")) {
+				sb = new StringBundler();
+
+				sb.append("contains(");
+				sb.append(entityFieldName);
+				sb.append(",'");
+
+				if ((object != null) && (value.length() > 2)) {
+					sb.append(value.substring(1, value.length() - 1));
+				}
+				else {
+					sb.append(value);
+				}
+
+				sb.append("')");
+			}
+			else if (operator.equals("startswith")) {
+				sb = new StringBundler();
+
+				sb.append("startswith(");
+				sb.append(entityFieldName);
+				sb.append(",'");
+
+				if ((object != null) && (value.length() > 1)) {
+					sb.append(value.substring(0, value.length() - 1));
+				}
+				else {
+					sb.append(value);
+				}
+
+				sb.append("')");
+			}
+			else {
+				sb.append("'");
+				sb.append(value);
+				sb.append("'");
+			}
+
+			return sb.toString();
+		}
+
+		if (entityFieldName.equals("addressRegionExternalReferenceCode")) {
+			Object object =
+				postalAddress.getAddressRegionExternalReferenceCode();
 
 			String value = String.valueOf(object);
 
@@ -3329,7 +3529,9 @@ public abstract class BasePostalAddressResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -3363,9 +3565,13 @@ public abstract class BasePostalAddressResourceTestCase {
 			{
 				addressCountry = StringUtil.toLowerCase(
 					RandomTestUtil.randomString());
+				addressCountryExternalReferenceCode = StringUtil.toLowerCase(
+					RandomTestUtil.randomString());
 				addressLocality = StringUtil.toLowerCase(
 					RandomTestUtil.randomString());
 				addressRegion = StringUtil.toLowerCase(
+					RandomTestUtil.randomString());
+				addressRegionExternalReferenceCode = StringUtil.toLowerCase(
 					RandomTestUtil.randomString());
 				addressSubtype = StringUtil.toLowerCase(
 					RandomTestUtil.randomString());
@@ -3655,3 +3861,4 @@ public abstract class BasePostalAddressResourceTestCase {
 		_vulcanCRUDItemDelegateBuilderRegistry;
 
 }
+// LIFERAY-REST-BUILDER-HASH:1333195172

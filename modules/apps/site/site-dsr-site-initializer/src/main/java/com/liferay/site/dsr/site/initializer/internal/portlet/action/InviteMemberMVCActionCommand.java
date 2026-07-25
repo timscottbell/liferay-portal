@@ -5,11 +5,14 @@
 
 package com.liferay.site.dsr.site.initializer.internal.portlet.action;
 
+import com.liferay.account.service.AccountEntryUserRelLocalService;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.exception.NoSuchTicketException;
 import com.liferay.portal.kernel.exception.RoleAssignmentException;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
+import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.Ticket;
 import com.liferay.portal.kernel.model.User;
@@ -18,6 +21,7 @@ import com.liferay.portal.kernel.portlet.bridges.mvc.BaseTransactionalMVCActionC
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.RoleLocalService;
+import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextFactory;
 import com.liferay.portal.kernel.service.TicketLocalService;
 import com.liferay.portal.kernel.service.UserGroupRoleLocalService;
@@ -42,6 +46,8 @@ import com.liferay.site.dsr.site.initializer.internal.display.context.InviteMemb
 
 import jakarta.portlet.ActionRequest;
 import jakarta.portlet.ActionResponse;
+
+import java.util.Date;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -92,10 +98,17 @@ public class InviteMemberMVCActionCommand
 			WebKeys.PORTLET_DISPLAY_CONTEXT,
 			inviteDigitalSalesRoomRoomUserDisplayContext);
 
+		Date membershipExpirationDate = null;
+
+		if (!jsonObject.isNull("membershipExpirationDate")) {
+			membershipExpirationDate = new Date(
+				jsonObject.getLong("membershipExpirationDate"));
+		}
+
 		User user = _addUser(
-			actionRequest, ticket.getClassPK(),
-			jsonObject.getString("emailAddress"),
-			jsonObject.getString("roleKey"));
+			jsonObject.getLong("accountEntryId"), actionRequest,
+			ticket.getClassPK(), jsonObject.getString("emailAddress"),
+			membershipExpirationDate, jsonObject.getString("roleKey"));
 
 		if (user.getStatus() == WorkflowConstants.STATUS_APPROVED) {
 			SessionMessages.add(
@@ -114,8 +127,9 @@ public class InviteMemberMVCActionCommand
 	}
 
 	private User _addUser(
-			ActionRequest actionRequest, long digitalSalesRoomId,
-			String emailAddress, String roleKey)
+			long accountEntryId, ActionRequest actionRequest,
+			long digitalSalesRoomId, String emailAddress,
+			Date membershipExpirationDate, String roleKey)
 		throws Exception {
 
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
@@ -154,6 +168,11 @@ public class InviteMemberMVCActionCommand
 
 		_userLocalService.addGroupUser(digitalSalesRoomId, user.getUserId());
 
+		if (accountEntryId > 0) {
+			_accountEntryUserRelLocalService.addAccountEntryUserRel(
+				accountEntryId, user.getUserId());
+		}
+
 		if (Validator.isNotNull(roleKey)) {
 			Role role = _roleLocalService.fetchRole(
 				themeDisplay.getCompanyId(), roleKey);
@@ -173,6 +192,17 @@ public class InviteMemberMVCActionCommand
 
 		LiveUsers.joinGroup(
 			themeDisplay.getCompanyId(), digitalSalesRoomId, user.getUserId());
+
+		if (membershipExpirationDate != null) {
+			_ticketLocalService.addTicket(
+				themeDisplay.getCompanyId(), Group.class.getName(),
+				digitalSalesRoomId, DSRTicketConstants.TYPE_EXPIRE_MEMBERSHIP,
+				null,
+				JSONUtil.put(
+					"userId", user.getUserId()
+				).toString(),
+				membershipExpirationDate, new ServiceContext());
+		}
 
 		return user;
 	}
@@ -200,6 +230,9 @@ public class InviteMemberMVCActionCommand
 
 		return null;
 	}
+
+	@Reference
+	private AccountEntryUserRelLocalService _accountEntryUserRelLocalService;
 
 	@Reference
 	private GroupLocalService _groupLocalService;

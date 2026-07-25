@@ -221,6 +221,7 @@ public class CTCollectionServiceTest {
 				_ctCollection.getCtCollectionId()));
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"select count(*) as count from JournalArticle where id_ = ? " +
 					"and ctCollectionId = ?")) {
@@ -231,7 +232,7 @@ public class CTCollectionServiceTest {
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				Assert.assertTrue(resultSet.next());
 
-				Assert.assertEquals(0, resultSet.getInt("count"));
+				Assert.assertEquals(0, resultSet.getLong("count"));
 			}
 		}
 
@@ -520,40 +521,21 @@ public class CTCollectionServiceTest {
 	}
 
 	@Inject
-	private static BackgroundTaskDisplayFactory _backgroundTaskDisplayFactory;
-
-	@Inject
-	private static BackgroundTaskLocalService _backgroundTaskLocalService;
-
-	@Inject
-	private static ClassNameLocalService _classNameLocalService;
-
-	@Inject
-	private static CTCollectionLocalService _ctCollectionLocalService;
-
-	@Inject
-	private static CTCollectionService _ctCollectionService;
-
-	@Inject
-	private static CTEntryLocalService _ctEntryLocalService;
-
-	@Inject
-	private static CTProcessService _ctProcessService;
-
-	@Inject
-	private static JournalArticleLocalService _journalArticleLocalService;
-
-	@Inject
 	private static JournalFolderLocalService _journalFolderLocalService;
 
 	@Inject
-	private static ResourcePermissionLocalService
-		_resourcePermissionLocalService;
+	private BackgroundTaskDisplayFactory _backgroundTaskDisplayFactory;
 
 	@Inject
-	private static RoleLocalService _roleLocalService;
+	private BackgroundTaskLocalService _backgroundTaskLocalService;
+
+	@Inject
+	private ClassNameLocalService _classNameLocalService;
 
 	private CTCollection _ctCollection;
+
+	@Inject
+	private CTCollectionLocalService _ctCollectionLocalService;
 
 	@Inject(
 		filter = "model.class.name=com.liferay.change.tracking.model.CTCollection"
@@ -564,10 +546,30 @@ public class CTCollectionServiceTest {
 	@DeleteAfterTestRun
 	private final List<CTCollection> _ctCollections = new ArrayList<>();
 
+	@Inject
+	private CTCollectionService _ctCollectionService;
+
+	@Inject
+	private CTEntryLocalService _ctEntryLocalService;
+
+	@Inject
+	private CTProcessService _ctProcessService;
+
 	private Group _group;
+
+	@Inject
+	private JournalArticleLocalService _journalArticleLocalService;
+
 	private final JournalFolderFixture _journalFolderFixture =
 		new JournalFolderFixture(_journalFolderLocalService);
+
+	@Inject
+	private ResourcePermissionLocalService _resourcePermissionLocalService;
+
 	private Role _role;
+
+	@Inject
+	private RoleLocalService _roleLocalService;
 
 	@Inject
 	private Searcher _searcher;

@@ -5,8 +5,8 @@
 
 import {expect, mergeTests} from '@playwright/test';
 
-import {applicationsMenuPageTest} from '../../../fixtures/applicationsMenuPageTest';
 import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
+import {globalMenuPagesTest} from '../../../fixtures/globalMenuPagesTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {pageEditorPagesTest} from '../../../fixtures/pageEditorPagesTest';
 import {pagesAdminPagesTest} from '../../../fixtures/pagesAdminPagesTest';
@@ -15,15 +15,19 @@ import {sitesPageTest} from '../../../fixtures/sitesPageTest';
 import {uiElementsPageTest} from '../../../fixtures/uiElementsTest';
 import getRandomString from '../../../utils/getRandomString';
 import {reloadUntilVisible} from '../../../utils/reloadUntilVisible';
+import {sitesAdminPagesTest} from '../../site-admin-web/main/fixtures/sitesAdminPagesTest';
+import {layoutSetPrototypePageTest} from './fixtures/layoutSetPrototypePageTest';
 import createSiteTemplate from './utils/createSiteTemplate';
 
 export const test = mergeTests(
-	applicationsMenuPageTest,
+	globalMenuPagesTest,
 	dataApiHelpersTest,
+	layoutSetPrototypePageTest,
 	loginTest(),
 	pageEditorPagesTest,
 	pagesAdminPagesTest,
 	productMenuPageTest,
+	sitesAdminPagesTest,
 	sitesPageTest,
 	uiElementsPageTest
 );
@@ -33,11 +37,11 @@ test(
 	{tag: ['@LPD-49053', '@LPS-131903', '@LPS-132256']},
 	async ({
 		apiHelpers,
-		applicationsMenuPage,
 		page,
 		pageEditorPage,
 		pagesAdminPage,
 		productMenuPage,
+		sitesAdminPage,
 		sitesPage,
 		uiElementsPage,
 	}) => {
@@ -73,17 +77,17 @@ test(
 
 		// Create a site using the site template
 
-		await applicationsMenuPage.goToSites();
+		await sitesAdminPage.goto();
 
 		const siteName: string = 'Site-' + getRandomString();
 
-		const siteId = await sitesPage.createSite({
+		const {externalReferenceCode, siteId} = await sitesPage.createSite({
 			isCustom: true,
 			siteName,
 			templateName: siteTemplateName,
 		});
 
-		apiHelpers.data.push({id: siteId, type: 'site'});
+		apiHelpers.data.push({id: externalReferenceCode, type: 'site'});
 
 		// Check the Edit button of the dropdown is not visible
 
@@ -112,9 +116,7 @@ test(
 
 		await page.goto(href);
 
-		expect(await page.title()).toBe(
-			`${pageName} - ${siteName} - Liferay DXP`
-		);
+		expect(await page.title()).toBe(`${pageName} - ${siteName} - Liferay`);
 
 		await page
 			.locator('.control-menu-nav-item')
@@ -147,9 +149,7 @@ test(
 
 		await pageEditorPage.goto(layout, `/${siteName.toLowerCase()}`);
 
-		expect(await page.title()).toBe(
-			`${pageName} - ${siteName} - Liferay DXP`
-		);
+		expect(await page.title()).toBe(`${pageName} - ${siteName} - Liferay`);
 	}
 );
 
@@ -158,10 +158,10 @@ test(
 	{tag: '@LPD-70284'},
 	async ({
 		apiHelpers,
-		applicationsMenuPage,
 		page,
 		pagesAdminPage,
 		productMenuPage,
+		sitesAdminPage,
 		sitesPage,
 		uiElementsPage,
 	}) => {
@@ -196,17 +196,17 @@ test(
 
 		// Create site based on that template
 
-		await applicationsMenuPage.goToSites();
+		await sitesAdminPage.goto();
 
 		const siteName = 'Site-' + getRandomString();
 
-		const siteId = await sitesPage.createSite({
+		const {externalReferenceCode} = await sitesPage.createSite({
 			isCustom: true,
 			siteName,
 			templateName: siteTemplateName,
 		});
 
-		apiHelpers.data.push({id: siteId, type: 'site'});
+		apiHelpers.data.push({id: externalReferenceCode, type: 'site'});
 
 		// Add new page on created site
 
@@ -256,5 +256,46 @@ test(
 		await expect(
 			pagesAdminPage.getPageMenuItem(childPageName)
 		).toBeVisible();
+	}
+);
+
+test(
+	'Only one product menu toggle is visible on Site Template pages',
+	{tag: '@LPD-86999'},
+	async ({apiHelpers, globalMenuPage, layoutSetPrototypePage, page}) => {
+		const siteTemplateName: string = 'SiteTemplate-' + getRandomString();
+
+		await globalMenuPage.goToControlPanel('Site Templates');
+		await layoutSetPrototypePage.addSiteTemplate(siteTemplateName);
+		await globalMenuPage.goToControlPanel('Site Templates');
+
+		let layoutSetPrototypeId;
+
+		try {
+			const siteTemplateUrl =
+				await layoutSetPrototypePage.getSiteTemplateUrl(
+					siteTemplateName
+				);
+
+			expect(siteTemplateUrl).toBeTruthy();
+
+			layoutSetPrototypeId =
+				siteTemplateUrl!.match(/template-(\d+)/)?.[1];
+
+			expect(layoutSetPrototypeId).toBeTruthy();
+
+			await page.goto(siteTemplateUrl!);
+
+			await expect(
+				page.locator('.lexicon-icon-product-menu-open')
+			).toHaveCount(1);
+		}
+		finally {
+			if (layoutSetPrototypeId) {
+				await apiHelpers.jsonWebServicesLayoutSetPrototype.deleteLayoutSetPrototypes(
+					layoutSetPrototypeId
+				);
+			}
+		}
 	}
 );

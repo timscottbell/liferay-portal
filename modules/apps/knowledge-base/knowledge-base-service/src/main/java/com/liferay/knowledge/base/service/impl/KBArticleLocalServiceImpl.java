@@ -108,7 +108,7 @@ import com.liferay.portal.kernel.settings.GroupServiceSettingsLocator;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
 import com.liferay.portal.kernel.systemevent.SystemEventHierarchyEntryThreadLocal;
 import com.liferay.portal.kernel.transaction.Propagation;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
+import com.liferay.portal.kernel.transaction.TransactionCallbackUtil;
 import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Constants;
@@ -724,18 +724,18 @@ public class KBArticleLocalServiceImpl extends KBArticleLocalServiceBaseImpl {
 	public KBArticle fetchLatestKBArticleByExternalReferenceCode(
 		long groupId, String externalReferenceCode) {
 
-		return kbArticlePersistence.fetchByG_ERC_Last(
+		return kbArticlePersistence.fetchByG_ERC_First(
 			groupId, externalReferenceCode,
-			KBArticleVersionComparator.getInstance(false));
+			KBArticleVersionComparator.getInstance(true));
 	}
 
 	@Override
 	public KBArticle fetchLatestKBArticleByExternalReferenceCode(
 		long groupId, String externalReferenceCode, int status) {
 
-		KBArticle latestKBArticle = kbArticlePersistence.fetchByG_ERC_Last(
+		KBArticle latestKBArticle = kbArticlePersistence.fetchByG_ERC_First(
 			groupId, externalReferenceCode,
-			KBArticleVersionComparator.getInstance(false));
+			KBArticleVersionComparator.getInstance(true));
 
 		if ((latestKBArticle == null) ||
 			(status == WorkflowConstants.STATUS_ANY) ||
@@ -2636,7 +2636,7 @@ public class KBArticleLocalServiceImpl extends KBArticleLocalServiceBaseImpl {
 	}
 
 	private void _indexKBArticle(KBArticle kbArticle) {
-		TransactionCommitCallbackUtil.registerCallback(
+		TransactionCallbackUtil.registerCommitCallback(
 			() -> {
 				Indexer<KBArticle> indexer = _indexerRegistry.getIndexer(
 					KBArticle.class);

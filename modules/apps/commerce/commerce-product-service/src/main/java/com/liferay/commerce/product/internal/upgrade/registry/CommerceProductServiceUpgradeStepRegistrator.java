@@ -462,8 +462,12 @@ public class CommerceProductServiceUpgradeStepRegistrator
 
 			});
 
+		registry.register("5.13.0", "5.13.1", new DummyUpgradeProcess());
+
+		registry.register("5.13.1", "5.13.2", new DummyUpgradeProcess());
+
 		registry.register(
-			"5.13.0", "5.14.0",
+			"5.13.2", "5.14.0",
 			new CPDefinitionSpecificationOptionValueUpgradeProcess());
 
 		registry.register(
@@ -651,13 +655,15 @@ public class CommerceProductServiceUpgradeStepRegistrator
 
 		registry.register("5.27.0", "5.27.1", new DummyUpgradeStep());
 
+		registry.register("5.27.1", "5.27.2", new DummyUpgradeStep());
+
 		registry.register(
-			"5.27.1", "5.27.2",
-			new com.liferay.commerce.product.internal.upgrade.v5_27_2.
+			"5.27.2", "5.27.3",
+			new com.liferay.commerce.product.internal.upgrade.v5_27_3.
 				CPDefinitionSpecificationOptionValueUpgradeProcess());
 
 		registry.register(
-			"5.27.2", "5.28.0",
+			"5.27.3", "5.28.0",
 			new com.liferay.commerce.product.internal.upgrade.v5_28_0.
 				CPSpecificationOptionUpgradeProcess());
 
@@ -687,6 +693,11 @@ public class CommerceProductServiceUpgradeStepRegistrator
 				CommercePermissionUpgradeProcess(
 					_companyLocalService, _resourceActionLocalService,
 					_resourceLocalService, _resourcePermissionLocalService));
+
+		registry.register(
+			"6.4.0", "6.5.0",
+			new com.liferay.commerce.product.internal.upgrade.v6_5_0.
+				CommerceProductStatusUpgradeProcess());
 
 		if (_log.isInfoEnabled()) {
 			_log.info("Commerce product upgrade step registrator finished");

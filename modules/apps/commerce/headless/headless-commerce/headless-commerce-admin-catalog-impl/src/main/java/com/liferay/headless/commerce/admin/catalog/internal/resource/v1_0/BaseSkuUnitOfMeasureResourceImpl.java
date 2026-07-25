@@ -5,6 +5,7 @@
 
 package com.liferay.headless.commerce.admin.catalog.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.commerce.admin.catalog.dto.v1_0.SkuUnitOfMeasure;
 import com.liferay.headless.commerce.admin.catalog.resource.v1_0.SkuUnitOfMeasureResource;
 import com.liferay.petra.function.UnsafeBiConsumer;
@@ -75,9 +76,13 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Deletes the SKU unit of measure identified by id. Calls CPInstanceUnitOfMeasureService.deleteCPInstanceUnitOfMeasure. Validation -- Service-level NoSuchCPInstanceUnitOfMeasureException -> 404. Side effects -- Removes the unit of measure and its associated price entries."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -151,17 +156,23 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/by-externalReferenceCode/{externalReferenceCode}/sku-unit-of-measures'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Lists the unit of measure entries of the SKU identified by external reference code. Calls CPInstanceService.fetchCPInstanceByExternalReferenceCode + CPInstanceUnitOfMeasureService.getCPInstanceUnitOfMeasures. Validation -- NoSuchCPInstanceException -> 404 when SKU ERC not found."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Number of items per page. Defaults to the portal's configured page size when omitted; capped by the portal configuration to prevent unbounded reads.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -195,17 +206,23 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/{id}/sku-unit-of-measures'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Lists the unit of measure entries of the SKU identified by id. Calls CPInstanceUnitOfMeasureService.getCPInstanceUnitOfMeasures. Validation -- None at this layer (returns empty page when id is absent)."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Number of items per page. Defaults to the portal's configured page size when omitted; capped by the portal configuration to prevent unbounded reads.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -236,9 +253,13 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Fetches the SKU unit of measure identified by id. Calls CPInstanceUnitOfMeasureService.getCPInstanceUnitOfMeasure. Validation -- NoSuchCPInstanceUnitOfMeasureException -> 404 when id not found."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -268,9 +289,13 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}' -d $'{"active": ___, "basePrice": ___, "incrementalOrderQuantity": ___, "key": ___, "name": ___, "precision": ___, "pricingQuantity": ___, "primary": ___, "priority": ___, "promoPrice": ___, "rate": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Partially updates the SKU unit of measure identified by id, including base and promo prices when supplied. Calls CPInstanceUnitOfMeasureService.getCPInstanceUnitOfMeasure + updateCPInstanceUnitOfMeasure + SkuUnitOfMeasureUtil.updateCommercePriceEntry (base/promo). Validation -- NoSuchCPInstanceUnitOfMeasureException -> 404 when id not found. Side effects -- Updates the unit of measure record and may update base/promo price entries on the parent SKU."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -302,9 +327,13 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/by-externalReferenceCode/{externalReferenceCode}/sku-unit-of-measures' -d $'{"active": ___, "basePrice": ___, "incrementalOrderQuantity": ___, "key": ___, "name": ___, "precision": ___, "pricingQuantity": ___, "primary": ___, "priority": ___, "promoPrice": ___, "rate": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Creates or updates a unit of measure under the SKU identified by external reference code. Calls CPInstanceService.fetchCPInstanceByExternalReferenceCode + SkuUnitOfMeasureUtil.addOrUpdateCPInstanceUnitOfMeasure. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Validation -- NoSuchCPInstanceException -> 404 when SKU ERC not found. Side effects -- Creates or updates the unit of measure, plus any supplied price entries."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -338,9 +367,13 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 *
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/{id}/sku-unit-of-measures' -d $'{"active": ___, "basePrice": ___, "incrementalOrderQuantity": ___, "key": ___, "name": ___, "precision": ___, "pricingQuantity": ___, "primary": ___, "priority": ___, "promoPrice": ___, "rate": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Operation(
+		description = "Creates or updates a unit of measure under the SKU identified by id. Calls CPInstanceService.getCPInstance + SkuUnitOfMeasureUtil.addOrUpdateCPInstanceUnitOfMeasure. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Validation -- NoSuchCPInstanceException -> 404 when SKU id not found. Side effects -- Creates or updates the unit of measure, plus any supplied price entries."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -541,6 +574,15 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -1153,3 +1195,4 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 		LogFactoryUtil.getLog(BaseSkuUnitOfMeasureResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:180447831

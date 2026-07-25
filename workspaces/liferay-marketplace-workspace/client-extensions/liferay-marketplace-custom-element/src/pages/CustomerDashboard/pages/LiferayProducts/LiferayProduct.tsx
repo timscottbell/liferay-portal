@@ -3,160 +3,44 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {format} from 'date-fns';
 import {useEffect} from 'react';
-import {useParams} from 'react-router-dom';
+import {useOutletContext} from 'react-router-dom';
 
 import {breadcrumbStore} from '../../../../components/Breadcrumb/BreadcrumbStore';
-import {DetailedCard} from '../../../../components/DetailedCard/DetailedCard';
-import {PageRenderer} from '../../../../components/Page';
-import QATable from '../../../../components/QATable';
-import {
-	OrderCustomFields,
-	OrderWorkflowStatusCode,
-} from '../../../../enums/Order';
-import useGetProductByOrderId from '../../../../hooks/useGetProductByOrderId';
-import i18n from '../../../../i18n';
-import LiferayProductsAlerts from './LiferayProductsAlerts';
+import {OrderTypes} from '../../../../enums/Order';
+import AIHubDetails from './Details/AIHubDetails';
+import ActivationKeysDetails from './Details/ActivationKeysDetails';
+import AnalyticsDetails from './Details/AnalyticsDetails';
 
 const LiferayProduct = () => {
-	const {orderId} = useParams();
-	const {data, isLoading} = useGetProductByOrderId(orderId as string);
-
-	const placedOrder = data?.placedOrder;
-	const product = data?.product;
+	const {placedOrder, product} = useOutletContext<any>();
 
 	useEffect(() => {
 		breadcrumbStore.send({
-			replacements: {[orderId as string]: product?.name || ''},
+			replacements: {[placedOrder?.id]: product?.name || ''},
 			type: 'setReplacements',
 		});
-	}, [orderId, product?.name]);
+	}, [placedOrder?.id, product?.name]);
 
-	const orderStatusCode = placedOrder?.orderStatusInfo
-		?.code as OrderWorkflowStatusCode;
+	const orderTypeExternalReferenceCode =
+		placedOrder?.orderTypeExternalReferenceCode;
 
-	const isCompletedOrder =
-		orderStatusCode === OrderWorkflowStatusCode.COMPLETED;
+	if (orderTypeExternalReferenceCode === OrderTypes.AI_HUB) {
+		return <AIHubDetails />;
+	}
 
-	const orderMetadata = placedOrder
-		? JSON.parse(placedOrder.customFields[OrderCustomFields.ORDER_METADATA])
-		: {};
+	if (
+		[
+			OrderTypes.CMP,
+			OrderTypes.CMP_BETA,
+			OrderTypes.DSR,
+			OrderTypes.DXP,
+		].includes(orderTypeExternalReferenceCode)
+	) {
+		return <ActivationKeysDetails />;
+	}
 
-	const allowedEmailDomains =
-		orderMetadata?.provisioning?.allowedEmailDomains || [];
-
-	const incidentReportEmailAddresses =
-		orderMetadata?.provisioning?.incidentReportEmailAddresses || [];
-
-	return (
-		<PageRenderer className="mt-6" isLoading={isLoading}>
-			{!isCompletedOrder && (
-				<LiferayProductsAlerts orderStatusCode={orderStatusCode} />
-			)}
-
-			<div className="app-details-body-container">
-				<DetailedCard
-					cardIconAltText="Details Icon"
-					cardTitle={i18n.translate('details')}
-					clayIcon="order-form-tag"
-				>
-					<QATable
-						items={[
-							{
-								title: i18n.translate('order-id'),
-								value: orderId,
-							},
-							{
-								title: i18n.translate('order-date'),
-								value: format(
-									new Date(placedOrder?.createDate || ''),
-									'dd MMM, yyyy'
-								),
-							},
-							{
-								title: i18n.translate('account-name'),
-								value: placedOrder?.account,
-							},
-							{
-								title: i18n.translate('customer-project'),
-								value: '',
-							},
-							{
-								title: i18n.translate('purchased-by'),
-								value: placedOrder?.author,
-							},
-							{
-								title: i18n.translate('purchase-number'),
-								value: '',
-							},
-							{
-								title: i18n.translate('subscription-type'),
-								value: placedOrder?.placedOrderItems[0].sku,
-							},
-						]}
-					/>
-				</DetailedCard>
-
-				<DetailedCard
-					cardIconAltText="Summary Icon"
-					cardTitle={i18n.translate('workspace-info')}
-					clayIcon="polls"
-				>
-					<QATable
-						items={[
-							{
-								title: i18n.translate('workspace-name'),
-								value: orderMetadata?.provisioning
-									?.corpProjectName,
-							},
-							{
-								title: i18n.translate('workspace-owner-email'),
-								value: orderMetadata?.provisioning
-									?.ownerEmailAddress,
-							},
-							{
-								title: i18n.translate('data-center-location'),
-								value: orderMetadata?.provisioning
-									?.serverLocation,
-							},
-							{
-								title: i18n.translate('timezone'),
-								value: orderMetadata?.provisioning
-									?.serverLocation,
-							},
-							{
-								title: i18n.translate('workspace-friendly-url'),
-								value: orderMetadata?.provisioning?.friendlyURL,
-							},
-							{
-								title: i18n.translate('allowed-email-domains'),
-								value: allowedEmailDomains?.map(
-									(emailAddress: string) => (
-										<div key={emailAddress}>
-											{emailAddress}
-										</div>
-									)
-								),
-							},
-							{
-								title: i18n.translate(
-									'incident-report-contacts'
-								),
-								value: incidentReportEmailAddresses?.map(
-									(emailAddress: string) => (
-										<div key={emailAddress}>
-											{emailAddress}
-										</div>
-									)
-								),
-							},
-						]}
-					/>
-				</DetailedCard>
-			</div>
-		</PageRenderer>
-	);
+	return <AnalyticsDetails />;
 };
 
 export default LiferayProduct;

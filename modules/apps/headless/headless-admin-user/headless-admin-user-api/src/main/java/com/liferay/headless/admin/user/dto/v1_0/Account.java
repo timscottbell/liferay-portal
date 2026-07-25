@@ -46,6 +46,9 @@ import java.util.function.Supplier;
 	description = "An account represents an external account, for example a customer business.",
 	value = "Account"
 )
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "An account represents an external account, for example a customer business."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "Account")
 public class Account implements Serializable {
@@ -2314,3 +2317,4 @@ public class Account implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-289439876

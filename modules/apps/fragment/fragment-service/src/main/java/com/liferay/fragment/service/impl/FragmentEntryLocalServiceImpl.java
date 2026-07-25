@@ -5,6 +5,10 @@
 
 package com.liferay.fragment.service.impl;
 
+import com.liferay.depot.model.DepotEntry;
+import com.liferay.depot.model.DepotEntryGroupRel;
+import com.liferay.depot.service.DepotEntryGroupRelLocalService;
+import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.fragment.configuration.FragmentServiceConfiguration;
@@ -21,6 +25,7 @@ import com.liferay.fragment.service.FragmentEntryLinkLocalService;
 import com.liferay.fragment.service.base.FragmentEntryLocalServiceBaseImpl;
 import com.liferay.fragment.service.persistence.FragmentCollectionPersistence;
 import com.liferay.fragment.validator.FragmentEntryValidator;
+import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.aop.AopService;
@@ -46,6 +51,8 @@ import com.liferay.portal.kernel.portletfilerepository.PortletFileRepository;
 import com.liferay.portal.kernel.portletfilerepository.PortletFileRepositoryUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.repository.model.Folder;
+import com.liferay.portal.kernel.search.Indexable;
+import com.liferay.portal.kernel.search.IndexableType;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
@@ -82,6 +89,7 @@ import org.osgi.service.component.annotations.Reference;
 public class FragmentEntryLocalServiceImpl
 	extends FragmentEntryLocalServiceBaseImpl {
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry addFragmentEntry(
 			String externalReferenceCode, long userId, long groupId,
@@ -166,6 +174,7 @@ public class FragmentEntryLocalServiceImpl
 		return updatedDraftFragmentEntry;
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry copyFragmentEntry(
 			long userId, long groupId, long sourceFragmentEntryId,
@@ -299,6 +308,7 @@ public class FragmentEntryLocalServiceImpl
 		return draftFragmentEntry;
 	}
 
+	@Indexable(type = IndexableType.DELETE)
 	@Override
 	@SystemEvent(type = SystemEventConstants.TYPE_DELETE)
 	public FragmentEntry deleteFragmentEntry(FragmentEntry fragmentEntry)
@@ -349,6 +359,7 @@ public class FragmentEntryLocalServiceImpl
 		return delete(fragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.DELETE)
 	@Override
 	public FragmentEntry deleteFragmentEntry(long fragmentEntryId)
 		throws PortalException {
@@ -357,13 +368,20 @@ public class FragmentEntryLocalServiceImpl
 			getFragmentEntry(fragmentEntryId));
 	}
 
+	@Indexable(type = IndexableType.DELETE)
 	@Override
 	public FragmentEntry deleteFragmentEntry(
 			String externalReferenceCode, long groupId)
 		throws PortalException {
 
-		FragmentEntry fragmentEntry = fragmentEntryPersistence.findByERC_G_Head(
-			externalReferenceCode, groupId, true);
+		FragmentEntry fragmentEntry =
+			fragmentEntryPersistence.fetchByERC_G_Head(
+				externalReferenceCode, groupId, true);
+
+		if (fragmentEntry == null) {
+			fragmentEntry = fragmentEntryPersistence.findByERC_G_Head(
+				externalReferenceCode, groupId, false);
+		}
 
 		return fragmentEntryLocalService.deleteFragmentEntry(fragmentEntry);
 	}
@@ -573,6 +591,7 @@ public class FragmentEntryLocalServiceImpl
 		}
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry moveFragmentEntry(
 			long fragmentEntryId, long fragmentCollectionId)
@@ -596,6 +615,7 @@ public class FragmentEntryLocalServiceImpl
 		return fragmentEntryPersistence.update(fragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry publishDraft(FragmentEntry draftFragmentEntry)
 		throws PortalException {
@@ -613,6 +633,7 @@ public class FragmentEntryLocalServiceImpl
 		return _publishDraft(draftFragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry updateFragmentEntry(FragmentEntry fragmentEntry)
 		throws PortalException {
@@ -641,6 +662,7 @@ public class FragmentEntryLocalServiceImpl
 		return publishDraft(updatedDraftFragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry updateFragmentEntry(
 			long fragmentEntryId, boolean cacheable)
@@ -654,6 +676,7 @@ public class FragmentEntryLocalServiceImpl
 		return fragmentEntryPersistence.update(fragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry updateFragmentEntry(
 			long fragmentEntryId, long previewFileEntryId)
@@ -676,6 +699,7 @@ public class FragmentEntryLocalServiceImpl
 		return fragmentEntry;
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry updateFragmentEntry(
 			long userId, long fragmentEntryId, long fragmentCollectionId,
@@ -734,6 +758,7 @@ public class FragmentEntryLocalServiceImpl
 		return _publishDraft(fragmentEntry);
 	}
 
+	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public FragmentEntry updateFragmentEntry(long fragmentEntryId, String name)
 		throws PortalException {
@@ -875,6 +900,14 @@ public class FragmentEntryLocalServiceImpl
 		}
 	}
 
+	private DepotEntry _fetchGroupDepotEntry(Group group) {
+		if (!group.isDepot()) {
+			return null;
+		}
+
+		return _depotEntryLocalService.fetchGroupDepotEntry(group.getGroupId());
+	}
+
 	private Map<String, FileEntry> _getFileEntries(
 		long fragmentCollectionId, FragmentEntry fragmentEntry) {
 
@@ -913,8 +946,10 @@ public class FragmentEntryLocalServiceImpl
 			long userId)
 		throws Exception {
 
-		if (folderIdMap.containsKey(folderPath)) {
-			return folderIdMap.get(folderPath);
+		Long folderId = folderIdMap.get(folderPath);
+
+		if (folderId != null) {
+			return folderId;
 		}
 
 		String folderName = folderPath;
@@ -961,14 +996,28 @@ public class FragmentEntryLocalServiceImpl
 	private void _propagateChanges(FragmentEntry fragmentEntry)
 		throws PortalException {
 
+		Group group = _groupLocalService.getGroup(fragmentEntry.getGroupId());
+
 		ActionableDynamicQuery actionableDynamicQuery =
 			_fragmentEntryLinkLocalService.getActionableDynamicQuery();
-
-		Group group = _groupLocalService.getGroup(fragmentEntry.getGroupId());
 
 		actionableDynamicQuery.setAddCriteriaMethod(
 			dynamicQuery -> {
 				Conjunction conjunction = RestrictionsFactoryUtil.conjunction();
+
+				DepotEntry depotEntry = _fetchGroupDepotEntry(group);
+
+				if (depotEntry != null) {
+					List<Long> groupIds = TransformUtil.transform(
+						_depotEntryGroupRelLocalService.getDepotEntryGroupRels(
+							depotEntry),
+						DepotEntryGroupRel::getToGroupId);
+
+					groupIds.add(group.getGroupId());
+
+					conjunction.add(
+						RestrictionsFactoryUtil.in("groupId", groupIds));
+				}
 
 				conjunction.add(
 					RestrictionsFactoryUtil.eq(
@@ -1089,7 +1138,7 @@ public class FragmentEntryLocalServiceImpl
 			groupId, fragmentEntryKey);
 
 		if (fragmentEntry != null) {
-			throw new DuplicateFragmentEntryKeyException();
+			throw new DuplicateFragmentEntryKeyException(fragmentEntryKey);
 		}
 	}
 
@@ -1104,6 +1153,12 @@ public class FragmentEntryLocalServiceImpl
 
 	@Reference
 	private CustomSQL _customSQL;
+
+	@Reference
+	private DepotEntryGroupRelLocalService _depotEntryGroupRelLocalService;
+
+	@Reference
+	private DepotEntryLocalService _depotEntryLocalService;
 
 	@Reference
 	private DLAppLocalService _dlAppLocalService;

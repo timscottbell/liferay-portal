@@ -5,11 +5,13 @@
 
 package com.liferay.portal.tools.rest.builder.test.internal.resource.v1_0;
 
+import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.exception.DuplicateExternalReferenceCodeException;
 import com.liferay.portal.kernel.exception.NoSuchModelException;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.tools.rest.builder.test.dto.v1_0.SiteTestEntity;
@@ -60,23 +62,21 @@ public class SiteTestEntityResourceImpl extends BaseSiteTestEntityResourceImpl {
 
 		SiteTestEntity siteTestEntity = doGetSiteTestEntity(siteTestEntityId);
 
-		if (!_permissions.containsKey(siteTestEntity.getId())) {
-			_permissions.put(
-				siteTestEntity.getId(),
-				new Permission[] {
-					new Permission() {
-						{
-							setActionIds(
-								new String[] {
-									"DELETE", "PERMISSIONS", "UPDATE", "VIEW"
-								});
-							setRoleName("Owner");
-						}
+		Permission[] permissions = _permissions.computeIfAbsent(
+			siteTestEntity.getId(),
+			key -> new Permission[] {
+				new Permission() {
+					{
+						setActionIds(
+							new String[] {
+								"DELETE", "PERMISSIONS", "UPDATE", "VIEW"
+							});
+						setRoleName("Owner");
 					}
-				});
-		}
+				}
+			});
 
-		return Page.of(Arrays.asList(_permissions.get(siteTestEntity.getId())));
+		return Page.of(Arrays.asList(permissions));
 	}
 
 	@Override
@@ -113,8 +113,11 @@ public class SiteTestEntityResourceImpl extends BaseSiteTestEntityResourceImpl {
 				"createBatch",
 				HashMapBuilder.put(
 					"href",
-					"http://localhost:8080/o/test/v1.0/sites/" + siteId +
-						"/site-test-entities/batch"
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false),
+						"/o/portal-tools-rest-builder-test/v1.0/sites/", siteId,
+						"/site-test-entities/batch")
 				).put(
 					"method", "POST"
 				).build()

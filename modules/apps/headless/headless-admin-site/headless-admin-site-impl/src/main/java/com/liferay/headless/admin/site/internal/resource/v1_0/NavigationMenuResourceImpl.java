@@ -6,13 +6,15 @@
 package com.liferay.headless.admin.site.internal.resource.v1_0;
 
 import com.liferay.batch.engine.thread.local.BatchEngineThreadLocal;
+import com.liferay.exportimport.constants.ExportImportConstants;
+import com.liferay.exportimport.kernel.staging.MergeLayoutPrototypesThreadLocal;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.headless.admin.site.dto.v1_0.NavigationMenu;
 import com.liferay.headless.admin.site.dto.v1_0.NavigationMenuItem;
 import com.liferay.headless.admin.site.internal.odata.entity.v1_0.NavigationMenuEntityModel;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.GroupUtil;
 import com.liferay.headless.admin.site.resource.v1_0.NavigationMenuResource;
 import com.liferay.headless.common.spi.service.context.ServiceContextBuilder;
+import com.liferay.headless.common.spi.util.GroupUtil;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.search.Field;
@@ -47,7 +49,10 @@ import com.liferay.site.navigation.type.SiteNavigationMenuItemTypeRegistry;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 
+import java.io.Serializable;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +75,19 @@ public class NavigationMenuResourceImpl
 	implements ExportImportVulcanBatchEngineTaskItemDelegate<NavigationMenu> {
 
 	@Override
+	public void create(
+			Collection<NavigationMenu> navigationMenus,
+			Map<String, Serializable> parameters)
+		throws Exception {
+
+		if (MergeLayoutPrototypesThreadLocal.isInProgress()) {
+			return;
+		}
+
+		super.create(navigationMenus, parameters);
+	}
+
+	@Override
 	public void deleteSiteNavigationMenu(
 			String siteExternalReferenceCode,
 			String navigationMenuExternalReferenceCode)
@@ -78,7 +96,7 @@ public class NavigationMenuResourceImpl
 		_siteNavigationMenuService.deleteSiteNavigationMenu(
 			navigationMenuExternalReferenceCode,
 			GroupUtil.getGroupId(
-				true, contextCompany.getCompanyId(),
+				true, true, contextCompany.getCompanyId(),
 				siteExternalReferenceCode));
 	}
 
@@ -88,8 +106,10 @@ public class NavigationMenuResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<SiteNavigationMenu>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
 
 			@Override
 			public String getKey() {
@@ -102,8 +122,8 @@ public class NavigationMenuResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return SiteNavigationMenu.class.getName();
+			public Class<SiteNavigationMenu> getModelClass() {
+				return SiteNavigationMenu.class;
 			}
 
 			@Override
@@ -114,6 +134,11 @@ public class NavigationMenuResourceImpl
 			@Override
 			public Scope getScope() {
 				return Scope.SITE;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_SITE_BUILDER;
 			}
 
 			@Override
@@ -135,7 +160,7 @@ public class NavigationMenuResourceImpl
 				getSiteNavigationMenuByExternalReferenceCode(
 					navigationMenuExternalReferenceCode,
 					GroupUtil.getGroupId(
-						true, contextCompany.getCompanyId(),
+						true, true, contextCompany.getCompanyId(),
 						siteExternalReferenceCode)));
 	}
 
@@ -146,7 +171,8 @@ public class NavigationMenuResourceImpl
 		throws Exception {
 
 		long groupId = GroupUtil.getGroupId(
-			true, contextCompany.getCompanyId(), siteExternalReferenceCode);
+			true, true, contextCompany.getCompanyId(),
+			siteExternalReferenceCode);
 
 		return SearchUtil.search(
 			HashMapBuilder.put(
@@ -185,7 +211,8 @@ public class NavigationMenuResourceImpl
 		return _addNavigationMenu(
 			navigationMenu.getExternalReferenceCode(),
 			GroupUtil.getGroupId(
-				true, contextCompany.getCompanyId(), siteExternalReferenceCode),
+				true, true, contextCompany.getCompanyId(),
+				siteExternalReferenceCode),
 			navigationMenu);
 	}
 
@@ -197,7 +224,8 @@ public class NavigationMenuResourceImpl
 		throws Exception {
 
 		long groupId = GroupUtil.getGroupId(
-			true, contextCompany.getCompanyId(), siteExternalReferenceCode);
+			true, true, contextCompany.getCompanyId(),
+			siteExternalReferenceCode);
 
 		SiteNavigationMenu siteNavigationMenu =
 			_siteNavigationMenuLocalService.

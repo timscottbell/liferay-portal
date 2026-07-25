@@ -43,6 +43,9 @@ import java.util.function.Supplier;
  */
 @Generated("")
 @GraphQLName(description = "https://www.schema.org/SLA", value = "SLAResult")
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "https://www.schema.org/SLA"
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "SLAResult")
 public class SLAResult implements Serializable {
@@ -618,3 +621,4 @@ public class SLAResult implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-284706346

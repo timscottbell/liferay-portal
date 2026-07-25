@@ -777,6 +777,9 @@ export function sub(
 /* Returns the stored value of a cookie, undefined if not present */
 export function getCookie(name: string, type: TYPE_VALUES): string | undefined;
 
+/* Rewrites the inline script/style nonces in the given markup to the document nonce */
+export function setCSPNonce(html: string): string;
+
 /* Sets a cookie of a specific type if user has consented */
 export function setCookie(
 	name: string,
@@ -874,7 +877,8 @@ export {loadModule} from './utils/client_extensions/loadModule';
 /**
  * Utils
  */
-export {default as dateUtils} from './utils/dateUtils';
+export type {FirstDayOfWeekLocale} from './utils/date_time';
+export {default as dateUtils} from './utils/date_time';
 export {default as mimeTypeUtils} from './utils/mime_type';
 export {getObjectValueFromPath} from './utils/object/getObjectValueFromPath';
 export {default as pkceChallenge} from './utils/pkceChallenge';

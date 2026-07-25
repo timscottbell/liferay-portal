@@ -89,7 +89,6 @@ public class AccountGroupLocalServiceImpl
 		accountGroup.setDescription(description);
 		accountGroup.setName(name);
 		accountGroup.setType(AccountConstants.ACCOUNT_GROUP_TYPE_STATIC);
-		accountGroup.setExpandoBridgeAttributes(serviceContext);
 
 		if (_emptyModelManager.isEmptyModel()) {
 			accountGroup.setStatus(WorkflowConstants.STATUS_EMPTY);
@@ -97,6 +96,8 @@ public class AccountGroupLocalServiceImpl
 		else {
 			accountGroup.setStatus(WorkflowConstants.STATUS_APPROVED);
 		}
+
+		accountGroup.setExpandoBridgeAttributes(serviceContext);
 
 		accountGroup = accountGroupPersistence.update(accountGroup);
 
@@ -170,7 +171,7 @@ public class AccountGroupLocalServiceImpl
 		throws PortalException {
 
 		return accountGroupLocalService.deleteAccountGroup(
-			accountGroupLocalService.getAccountGroup(accountGroupId));
+			accountGroupPersistence.findByPrimaryKey(accountGroupId));
 	}
 
 	@Override
@@ -263,8 +264,10 @@ public class AccountGroupLocalServiceImpl
 	}
 
 	@Override
-	public AccountGroup getDefaultAccountGroup(long companyId) {
-		return accountGroupPersistence.fetchByC_D_First(companyId, true, null);
+	public AccountGroup getDefaultAccountGroup(long companyId)
+		throws PortalException {
+
+		return accountGroupPersistence.findByC_D_First(companyId, true, null);
 	}
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -348,7 +351,7 @@ public class AccountGroupLocalServiceImpl
 
 		_validateName(name);
 
-		AccountGroup accountGroup = accountGroupPersistence.fetchByPrimaryKey(
+		AccountGroup accountGroup = accountGroupPersistence.findByPrimaryKey(
 			accountGroupId);
 
 		accountGroup.setExternalReferenceCode(externalReferenceCode);

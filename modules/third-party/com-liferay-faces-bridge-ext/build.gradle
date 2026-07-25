@@ -1,5 +1,13 @@
-apply from: "../../build-jakarta-transformer.gradle"
+ext {
+	gitHash = "819633d57efa29366b41e361a08b7e86c77da005"
+	gitHubOwner = "liferay"
+	gitHubRepository = "liferay-faces-bridge-ext"
+	mvnJARInclude = "com.liferay.faces.bridge.ext-9.0.1.jar"
+	mvnTargetDir = "bridge-ext/target"
+}
 
-dependencies {
-	compileOnly group: "com.liferay.faces", name: "com.liferay.faces.bridge.ext", transitive: false, version: "6.1.1"
+apply from: "../build-maven.gradle"
+
+jarMVN {
+	workingDir = new File(mvnSourceDir, "bridge-ext")
 }

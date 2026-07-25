@@ -172,27 +172,6 @@ testray.build.type=EE Development (@{to.branch.name})</echo>
 	</macrodef>
 
 	<target name="all">
-		<if>
-			<not>
-				<or>
-					<equals arg1="${build.binaries.cache.dir}" arg2="" />
-					<available file="${project.dir}/${build.binaries.cache.dir}" type="dir" />
-				</or>
-			</not>
-			<then>
-				<property location="${project.dir}/${build.binaries.cache.dir}" name="build.binaries.cache.dir.absolute.path" />
-
-				<echo>
-Please clone the repository at https://github.com/liferay/${build.binaries.cache.repository.name}
-into ${build.binaries.cache.dir.absolute.path} to have a cached copy of all
-Gradle dependencies used during the build.
-
-Set the property "build.binaries.cache.dir" to an empty value to suppress this
-message.
-				</echo>
-			</then>
-		</if>
-
 		<property name="gradle.execute.silent" value="true" />
 
 		<antcall target="clean" />
@@ -257,29 +236,65 @@ message.
 
 		<setup-sdk />
 
-		<gradle-execute setupbinariescache="false" task="deployReleng">
+		<gradle-execute task="deployReleng">
 			<arg value="--build-file=${project.dir}/modules/releng.gradle" />
 		</gradle-execute>
 	</target>
 
 	<target name="clean">
-		<gradle-stop-daemon />
+		<exec executable="git" outputproperty="master.private.ref">
+			<arg value="for-each-ref" />
+			<arg value="--format=%(refname)" />
+			<arg value="refs/heads/master-private" />
+		</exec>
 
 		<if>
-			<available file="${project.dir}/.git" />
+			<equals arg1="${master.private.ref}" arg2="refs/heads/master-private" />
 			<then>
-				<execute>
-					${build.git.clean.command}
-				</execute>
+				<exec executable="git" outputproperty="master.private.merge.base">
+					<arg value="merge-base" />
+					<arg value="HEAD" />
+					<arg value="master-private" />
+				</exec>
+
+				<exec executable="git" outputproperty="master.private.unique.commits">
+					<arg value="rev-list" />
+					<arg value="--count" />
+					<arg value="master..${master.private.merge.base}" />
+				</exec>
 			</then>
-			<else>
-				<echo>Do not clean project because it is not in a Git repository.</echo>
-			</else>
 		</if>
 
-		<clean-liferay-home />
+		<if>
+			<and>
+				<isset property="master.private.unique.commits" />
+				<not>
+					<equals arg1="${master.private.unique.commits}" arg2="0" />
+				</not>
+			</and>
+			<then>
+				<echo>Skip clean because the current branch is based on master-private.</echo>
+			</then>
+			<else>
+				<gradle-stop-daemon />
 
-		<print-current-time />
+				<if>
+					<available file="${project.dir}/.git" />
+					<then>
+						<execute>
+							${build.git.clean.command}
+						</execute>
+					</then>
+					<else>
+						<echo>Do not clean project because it is not in a Git repository.</echo>
+					</else>
+				</if>
+
+				<clean-liferay-home />
+
+				<print-current-time />
+			</else>
+		</if>
 	</target>
 
 	<target name="compile">
@@ -362,6 +377,16 @@ message.
 
 		<deploy-properties />
 
+		<if>
+			<equals arg1="${build.profile}" arg2="cms-standalone" />
+			<then>
+				<echo file="${app.server.classes.portal.dir}/portal-bundle.properties">include-and-override=portal-cms-standalone.properties</echo>
+			</then>
+			<else>
+				<delete failonerror="false" file="${app.server.classes.portal.dir}/portal-bundle.properties" />
+			</else>
+		</if>
+
 		<antcall target="deploy-additional-jars" />
 
 		<antcall target="update-app-server-scripts" />
@@ -403,10 +428,21 @@ message.
 									to="*/.lfrbuild-ci"
 								/>
 							</present>
+
+							<exclude name="**/node_modules/**" />
 						</dirset>
 
 						<pathconvert pathsep=" " property="ci.build.module.deploy.tasks" refid="lfrbuild-ci.dirs">
-							<regexpmapper from=".*modules/([^/]+)/([^/]+)$" to=":\1:\2:deploy" />
+							<chainedmapper>
+								<regexpmapper from=".*/modules/(.+)$" to="\1" />
+								<filtermapper>
+									<replacestring from="/" to=":" />
+								</filtermapper>
+								<globmapper
+									from="*"
+									to=":*:deploy"
+								/>
+							</chainedmapper>
 						</pathconvert>
 
 						<gradle-execute dir="${project.dir}/modules" task="${ci.build.module.deploy.tasks}">
@@ -511,7 +547,7 @@ message.
 	<target name="deploy-portal-license-enterprise-app">
 		<property name="artifact.name" value="com.liferay.portal.license.enterprise.app" />
 
-		<gradle-execute outputproperty="jar.file" setupbinariescache="false" task="printDependencyPath">
+		<gradle-execute outputproperty="jar.file" task="printDependencyPath">
 			<arg value="--build-file=${project.dir}/modules/util.gradle" />
 			<arg value="--quiet" />
 			<arg value="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false" />
@@ -854,6 +890,10 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 
 		<mkdir dir="${project.dir}/dist" />
 
+		<property name="workspace.artifact.id.suffix" value="" />
+		<property name="workspace.includes" value="**/*" />
+		<property name="workspace.repository.url" value="https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-releases" />
+
 		<for param="workspace.dir">
 			<path>
 				<dirset
@@ -878,7 +918,15 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 
 				<local name="artifact.id" />
 
-				<property name="artifact.id" value="com.${processed.dir.name}" />
+				<if>
+					<equals arg1="${workspace.artifact.id.suffix}" arg2="" />
+					<then>
+						<property name="artifact.id" value="com.${processed.dir.name}" />
+					</then>
+					<else>
+						<property name="artifact.id" value="com.${processed.dir.name}.${workspace.artifact.id.suffix}" />
+					</else>
+				</if>
 
 				<delete dir="${user.home}/.m2/repository/com/liferay/workspaces/${artifact.id}" />
 				<delete file="${project.dir}/dist/${artifact.id}.pom" />
@@ -890,6 +938,7 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 				>
 					<zipfileset
 						dir="@{workspace.dir}"
+						includes="${workspace.includes}"
 					/>
 				</zip>
 
@@ -899,7 +948,7 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 
 				<artifact:deploy file="dist/${artifact.id}.zip">
 					<pom file="dist/${artifact.id}.pom" />
-					<remoteRepository url="https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-releases">
+					<remoteRepository url="${workspace.repository.url}">
 						<authentication password="${sonatype.release.password}" username="${sonatype.release.username}" />
 					</remoteRepository>
 				</artifact:deploy>
@@ -934,15 +983,10 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 				<setup-profile-dxp
 					to.branch.name="release-private"
 				/>
-			</then>
-			<else>
-				<setup-profile-dxp
-					to.branch.name="${git.working.branch.name}-private"
-				/>
-			</else>
-		</if>
 
-		<antcall inheritAll="false" target="update-gradle-properties" />
+				<antcall inheritAll="false" target="update-gradle-properties" />
+			</then>
+		</if>
 
 		<if>
 			<equals arg1="${build.patcher.replace.release.info.tokens}" arg2="true" />
@@ -1148,6 +1192,7 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 
 		<gradle-execute dir="${project.dir}/modules" task="updateYarnBinariesCache">
 			<arg value="--build-file=${project.dir}/modules/util.gradle" />
+			<arg value="-Pbuild.binaries.cache.dir=${build.binaries.cache.dir}" />
 		</gradle-execute>
 	</target>
 
@@ -1160,21 +1205,21 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 
 		<delete dir="${basedir}/.gradle" />
 
-		<setup-sdk setupbinariescache="false" />
+		<setup-sdk />
 
-		<gradle-execute dir="modules" forcedcacheenabled="false" setupbinariescache="false" task="clean">
+		<gradle-execute dir="modules" forcedcacheenabled="false" task="clean">
 			<arg value="--continue" />
 			<arg value="--parallel" />
 		</gradle-execute>
 
-		<gradle-execute dir="modules" forcedcacheenabled="false" setupbinariescache="false" task="classes">
+		<gradle-execute dir="modules" forcedcacheenabled="false" task="classes">
 			<arg value="--continue" />
 			<arg value="--parallel" />
 			<arg value="testClasses" />
 			<arg value="testIntegrationClasses" />
 		</gradle-execute>
 
-		<gradle-execute dir="modules/sdk/gradle-util" failonerror="false" forcedcacheenabled="false" setupbinariescache="false" task="spotbugsMain">
+		<gradle-execute dir="modules/sdk/gradle-util" failonerror="false" forcedcacheenabled="false" task="spotbugsMain">
 			<arg value="--continue" />
 			<arg value="--parallel" />
 		</gradle-execute>
@@ -1352,19 +1397,6 @@ This target has been renamed to "snapshot-bundle". Please call "snapshot-bundle"
 				<dtd location="${definitions.dir}/liferay-resource-action-mapping_7_2_0.dtd" publicId="-//Liferay//DTD Resource Action Mapping 7.2.0//EN" />
 				<dtd location="${definitions.dir}/liferay-resource-action-mapping_7_3_0.dtd" publicId="-//Liferay//DTD Resource Action Mapping 7.3.0//EN" />
 				<dtd location="${definitions.dir}/liferay-resource-action-mapping_7_4_0.dtd" publicId="-//Liferay//DTD Resource Action Mapping 7.4.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_3_5_0.dtd" publicId="-//Liferay//DTD Service Builder 3.5.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_3_6_1.dtd" publicId="-//Liferay//DTD Service Builder 3.6.1//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_4_0_0.dtd" publicId="-//Liferay//DTD Service Builder 4.0.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_4_2_0.dtd" publicId="-//Liferay//DTD Service Builder 4.2.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_4_3_0.dtd" publicId="-//Liferay//DTD Service Builder 4.3.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_4_3_3.dtd" publicId="-//Liferay//DTD Service Builder 4.3.3//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_4_4_0.dtd" publicId="-//Liferay//DTD Service Builder 4.4.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_5_0_0.dtd" publicId="-//Liferay//DTD Service Builder 5.0.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_5_1_0.dtd" publicId="-//Liferay//DTD Service Builder 5.1.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_5_2_0.dtd" publicId="-//Liferay//DTD Service Builder 5.2.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_6_0_0.dtd" publicId="-//Liferay//DTD Service Builder 6.0.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_6_1_0.dtd" publicId="-//Liferay//DTD Service Builder 6.1.0//EN" />
-				<dtd location="${definitions.dir}/liferay-service-builder_6_2_0.dtd" publicId="-//Liferay//DTD Service Builder 6.2.0//EN" />
 				<dtd location="${definitions.dir}/liferay-service-builder_7_0_0.dtd" publicId="-//Liferay//DTD Service Builder 7.0.0//EN" />
 				<dtd location="${definitions.dir}/liferay-service-builder_7_1_0.dtd" publicId="-//Liferay//DTD Service Builder 7.1.0//EN" />
 				<dtd location="${definitions.dir}/liferay-service-builder_7_2_0.dtd" publicId="-//Liferay//DTD Service Builder 7.2.0//EN" />

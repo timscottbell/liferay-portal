@@ -311,11 +311,7 @@ public class ExpandoBridgeIndexerImpl implements ExpandoBridgeIndexer {
 										ExpandoColumnTable.INSTANCE
 									).where(
 										ExpandoColumnTable.INSTANCE.
-											typeSettings.isNotNull(
-											).and(
-												ExpandoColumnTable.INSTANCE.
-													typeSettings.notLike("")
-											)
+											typeSettings.isNotNull()
 									),
 									false)) {
 
@@ -371,7 +367,7 @@ public class ExpandoBridgeIndexerImpl implements ExpandoBridgeIndexer {
 							classNameId -> {
 								ClassName classNameObject =
 									_classNameLocalService.fetchByClassNameId(
-										companyId);
+										classNameId);
 
 								if (classNameObject == null) {
 									return null;

@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.servlet.HttpMethods;
+import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.JavaConstants;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
@@ -136,6 +137,13 @@ public class I18nFilter extends BasePortalFilter {
 
 		String requestURI = httpServletRequest.getRequestURI();
 
+		if (!PropsValues.LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING_ENABLED &&
+			HttpComponentsUtil.isForwarded(httpServletRequest)) {
+
+			requestURI = (String)httpServletRequest.getAttribute(
+				JavaConstants.JAKARTA_SERVLET_FORWARD_REQUEST_URI);
+		}
+
 		if (Validator.isNotNull(contextPath) &&
 			requestURI.startsWith(contextPath)) {
 
@@ -229,6 +237,13 @@ public class I18nFilter extends BasePortalFilter {
 
 	protected String getRequestedLanguageId(
 		HttpServletRequest httpServletRequest, String userLanguageId) {
+
+		String doAsUserLanguageId = httpServletRequest.getParameter(
+			"doAsUserLanguageId");
+
+		if (Validator.isNotNull(doAsUserLanguageId)) {
+			return doAsUserLanguageId;
+		}
 
 		String requestedLanguageId = null;
 

@@ -12,9 +12,13 @@ import com.liferay.object.model.ObjectEntryFolder;
 import com.liferay.object.rest.manager.v1_0.DefaultObjectEntryManager;
 import com.liferay.object.rest.manager.v1_0.DefaultObjectEntryManagerProvider;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManagerRegistry;
-import com.liferay.object.service.ObjectEntryFolderLocalService;
+import com.liferay.object.service.ObjectEntryFolderService;
+import com.liferay.object.service.ObjectEntryService;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
+import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.site.cms.site.initializer.bulk.selection.BaseObjectBulkSelectionAction;
 import com.liferay.trash.TrashHelper;
@@ -48,44 +52,67 @@ public class DeleteObjectBulkSelectionAction
 				objectDefinitionLocalService.getObjectDefinition(
 					objectObjectEntry.getObjectDefinitionId());
 
-			DefaultObjectEntryManager defaultObjectEntryManager =
-				DefaultObjectEntryManagerProvider.provide(
-					_objectEntryManagerRegistry.getObjectEntryManager(
-						objectDefinition.getCompanyId(),
-						objectDefinition.getStorageType()));
+			ModelResourcePermission<ObjectEntry> modelResourcePermission =
+				_objectEntryService.getModelResourcePermission(
+					objectDefinition.getObjectDefinitionId());
 
-			defaultObjectEntryManager.deleteObjectEntry(
-				objectDefinition, objectObjectEntry.getObjectEntryId());
+			if (modelResourcePermission.contains(
+					PermissionThreadLocal.getPermissionChecker(),
+					objectObjectEntry, ActionKeys.DELETE)) {
+
+				DefaultObjectEntryManager defaultObjectEntryManager =
+					DefaultObjectEntryManagerProvider.provide(
+						_objectEntryManagerRegistry.getObjectEntryManager(
+							objectDefinition.getCompanyId(),
+							objectDefinition.getStorageType()));
+
+				defaultObjectEntryManager.deleteObjectEntry(
+					objectDefinition, objectObjectEntry.getObjectEntryId());
+			}
 		}
 		else {
 			ObjectEntryFolder objectEntryFolder = (ObjectEntryFolder)object;
 
-			_deleteObjectEntryFolder(user.getUserId(), objectEntryFolder);
+			if (_objectEntryFolderModelResourcePermission.contains(
+					PermissionThreadLocal.getPermissionChecker(),
+					objectEntryFolder.getObjectEntryFolderId(),
+					ActionKeys.DELETE)) {
+
+				_deleteObjectEntryFolder(objectEntryFolder);
+			}
 		}
 	}
 
-	private void _deleteObjectEntryFolder(
-			long userId, ObjectEntryFolder objectEntryFolder)
+	private void _deleteObjectEntryFolder(ObjectEntryFolder objectEntryFolder)
 		throws Exception {
 
 		if (FeatureFlagManagerUtil.isEnabled(
 				objectEntryFolder.getCompanyId(), "LPD-17564") &&
 			objectEntryFolder.isTrashable(_trashHelper)) {
 
-			_objectEntryFolderLocalService.moveObjectEntryFolderToTrash(
-				userId, objectEntryFolder, new ServiceContext());
+			_objectEntryFolderService.moveObjectEntryFolderToTrash(
+				objectEntryFolder, new ServiceContext());
 		}
 		else {
-			_objectEntryFolderLocalService.deleteObjectEntryFolder(
+			_objectEntryFolderService.deleteObjectEntryFolder(
 				objectEntryFolder.getObjectEntryFolderId());
 		}
 	}
 
+	@Reference(
+		target = "(model.class.name=com.liferay.object.model.ObjectEntryFolder)"
+	)
+	private ModelResourcePermission<ObjectEntryFolder>
+		_objectEntryFolderModelResourcePermission;
+
 	@Reference
-	private ObjectEntryFolderLocalService _objectEntryFolderLocalService;
+	private ObjectEntryFolderService _objectEntryFolderService;
 
 	@Reference
 	private ObjectEntryManagerRegistry _objectEntryManagerRegistry;
+
+	@Reference
+	private ObjectEntryService _objectEntryService;
 
 	@Reference
 	private TrashHelper _trashHelper;

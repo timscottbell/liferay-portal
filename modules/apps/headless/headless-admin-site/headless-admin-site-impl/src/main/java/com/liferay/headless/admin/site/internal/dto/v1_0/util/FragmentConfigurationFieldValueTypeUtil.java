@@ -19,8 +19,11 @@ public class FragmentConfigurationFieldValueTypeUtil {
 	public static FragmentConfigurationFieldValue.Type toExternalType(
 		String internalType) {
 
-		if (_internalToExternalValuesMap.containsKey(internalType)) {
-			return _internalToExternalValuesMap.get(internalType);
+		FragmentConfigurationFieldValue.Type fragmentConfigurationFieldType =
+			_internalToExternalValuesMap.get(internalType);
+
+		if (fragmentConfigurationFieldType != null) {
+			return fragmentConfigurationFieldType;
 		}
 
 		throw new UnsupportedOperationException();
@@ -62,6 +65,9 @@ public class FragmentConfigurationFieldValueTypeUtil {
 			FragmentConfigurationFieldValue.Type.NAVIGATION_MENU
 		).put(
 			"select", FragmentConfigurationFieldValue.Type.SELECT
+		).put(
+			"targetCollectionDisplay",
+			FragmentConfigurationFieldValue.Type.TARGET_COLLECTION_DISPLAY
 		).put(
 			"text", FragmentConfigurationFieldValue.Type.TEXT
 		).put(

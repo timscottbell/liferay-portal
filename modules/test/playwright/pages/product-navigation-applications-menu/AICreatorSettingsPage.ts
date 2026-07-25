@@ -3,40 +3,74 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {Locator, Page} from '@playwright/test';
+import {Locator, Page, expect} from '@playwright/test';
 
 import {waitForAlert} from '../../utils/waitForAlert';
-import {ApplicationsMenuPage} from './ApplicationsMenuPage';
+import {GlobalMenuPage} from './GlobalMenuPage';
 
 const MOCK_API_KEY = 'VALID_API_KEY';
 const STR_BLANK = '';
 
 export class AICreatorInstanceSettingsPage {
-	readonly applicationsMenuPage: ApplicationsMenuPage;
 	readonly apiKeyInput: Locator;
+	readonly chatGPTCheckbox: Locator;
 	readonly dalleCheckbox: Locator;
+	readonly globalMenuPage: GlobalMenuPage;
 	readonly page: Page;
 	readonly saveButton: Locator;
 
 	constructor(page: Page) {
 		this.page = page;
 
-		this.applicationsMenuPage = new ApplicationsMenuPage(page);
 		this.apiKeyInput = this.page.getByLabel('API Key');
-		this.dalleCheckbox = this.page.getByText(
+		this.chatGPTCheckbox = this.page.getByLabel(
+			'Enable ChatGPT to Create Content'
+		);
+		this.dalleCheckbox = this.page.getByLabel(
 			'Enable DALL-E to Create Images'
 		);
+		this.globalMenuPage = new GlobalMenuPage(page);
 		this.saveButton = this.page.getByRole('button', {name: 'Save'});
 	}
 
 	async goto() {
-		await this.applicationsMenuPage.goToAICreator();
+		await this.globalMenuPage.goToControlPanel(
+			'Instance Settings',
+			'AI Creator'
+		);
+	}
+
+	async disableChatGPTCreateContent() {
+		await this.goto();
+
+		await this.chatGPTCheckbox.uncheck();
+
+		await expect(this.chatGPTCheckbox).not.toBeChecked();
+
+		await this.saveButton.click();
+
+		await waitForAlert(this.page);
+	}
+
+	async enableChatGPTCreateContent() {
+		await this.goto();
+
+		await this.chatGPTCheckbox.check();
+
+		await expect(this.chatGPTCheckbox).toBeChecked();
+
+		await this.saveButton.click();
+
+		await waitForAlert(this.page);
 	}
 
 	async enableDalleCreateImages() {
 		await this.goto();
 
 		await this.dalleCheckbox.check();
+
+		await expect(this.dalleCheckbox).toBeChecked();
+
 		await this.saveButton.click();
 
 		await waitForAlert(this.page);
@@ -46,6 +80,9 @@ export class AICreatorInstanceSettingsPage {
 		await this.goto();
 
 		await this.dalleCheckbox.uncheck();
+
+		await expect(this.dalleCheckbox).not.toBeChecked();
+
 		await this.saveButton.click();
 
 		await waitForAlert(this.page);

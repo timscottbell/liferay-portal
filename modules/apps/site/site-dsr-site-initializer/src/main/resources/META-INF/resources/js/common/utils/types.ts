@@ -22,9 +22,39 @@ export interface IAccounts {
 	totalCount: number;
 }
 
+export interface IDuplicateRoomProps {
+	closeModal: () => void;
+	loadData: () => void;
+	name: string;
+	roomId: number;
+	siteId: number;
+}
+
+export interface IEngagementChartItem {
+	date: string;
+	numberOfVisits: number;
+	timeSpent: number;
+}
+
+export interface IEngagementChartProps {
+	data?: IEngagementChartItem[];
+}
+
+export interface IFrequencyChartItem {
+	frequencyType: string;
+	visitCount: number;
+}
+
+export interface IFrequencyChartProps {
+	frequencyChartItems?: IFrequencyChartItem[] | null;
+	isLoading?: boolean;
+}
+
 export interface IInvitedMember {
 	emailAddress: string;
 	id: number;
+	membershipExpirationDate?: string;
+	ownerId?: number;
 	roleKey?: string;
 }
 
@@ -86,6 +116,7 @@ export interface IRoomInitializerProps {
 
 export interface IRoomObjectEntry {
 	actions: any;
+	archiveDate: string;
 	creator: {
 		additionalName: string;
 		contentType: string;
@@ -99,7 +130,9 @@ export interface IRoomObjectEntry {
 	dateModified: string;
 	description: string;
 	externalReferenceCode: string;
+	friendlyURL: string;
 	id: number;
+	initialized: boolean;
 	name: string;
 	r_accountToDSRRooms_accountEntry: {
 		description: string;
@@ -110,6 +143,7 @@ export interface IRoomObjectEntry {
 		name: string;
 	};
 	r_accountToDSRRooms_accountEntryId: number;
+	roomStatus: number;
 	siteExternalReferenceCode: string;
 	siteId: number;
 	status: {
@@ -117,11 +151,35 @@ export interface IRoomObjectEntry {
 		label: string;
 		label_i18n: string;
 	};
+	trend: number;
 }
 
 export interface IRoomShareProps {
+	canAssignAllRoles?: boolean;
 	closeModal?: () => void;
+	readOnly?: boolean;
 	roomId: number;
+}
+
+export interface IRoomStatistics {
+	timeViewedMinutes?: number;
+	totalActions?: number;
+	totalComments?: number;
+	totalVisits?: number;
+	uniqueVisitors?: number;
+}
+
+export interface IRoomStatisticsItem {
+	className: string;
+	icon: string;
+	id: string;
+	label: string;
+	value: string | number;
+}
+
+export interface IRoomStatisticsProps {
+	data?: IRoomStatistics | null;
+	isLoading?: boolean;
 }
 
 export interface IRoomStepProps {
@@ -148,7 +206,9 @@ export interface IUserAccount {
 	id: number;
 	image?: string;
 	isInvitedMember?: boolean;
+	membershipExpirationDate?: string;
 	name: string;
+	ownerId?: number;
 	roleKey?: string;
 }
 
@@ -158,4 +218,31 @@ export type IUserAccountsDTO = {
 	page: number;
 	pageSize: number;
 	totalCount: number;
+};
+
+export type TLatestActivity = {
+	action: string;
+	createDate: string;
+	logoURL?: string;
+	name: string;
+};
+
+export type TRoomDocumentsStatistics = {
+	download: number;
+	lastViewed: string;
+	title: string;
+	totalTimeViewingAsset: number;
+	totalViews: number;
+	type: string;
+	userInvolved: number;
+};
+
+export type TRoomDocumentsStatisticsProps = TRoomDocumentsStatistics[];
+
+export type TVisitor = {
+	activitiesCount: number;
+	emailAddress: string;
+	firstName: string;
+	lastName: string;
+	logoURL?: string;
 };

@@ -32,6 +32,9 @@ import java.util.Set;
 	description = "The settings of a page set page.",
 	value = "PageSetPageSettings"
 )
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "The settings of a page set page."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "PageSetPageSettings")
 public class PageSetPageSettings extends PageSettings implements Serializable {
@@ -223,3 +226,4 @@ public class PageSetPageSettings extends PageSettings implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:520642502

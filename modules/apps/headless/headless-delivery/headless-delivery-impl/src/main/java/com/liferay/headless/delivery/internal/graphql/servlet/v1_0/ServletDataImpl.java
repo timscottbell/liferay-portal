@@ -7,6 +7,7 @@ package com.liferay.headless.delivery.internal.graphql.servlet.v1_0;
 
 import com.liferay.headless.delivery.internal.graphql.mutation.v1_0.Mutation;
 import com.liferay.headless.delivery.internal.graphql.query.v1_0.Query;
+import com.liferay.headless.delivery.internal.resource.v1_0.AssetEntryResourceImpl;
 import com.liferay.headless.delivery.internal.resource.v1_0.BlogPostingImageResourceImpl;
 import com.liferay.headless.delivery.internal.resource.v1_0.BlogPostingResourceImpl;
 import com.liferay.headless.delivery.internal.resource.v1_0.CommentResourceImpl;
@@ -34,6 +35,7 @@ import com.liferay.headless.delivery.internal.resource.v1_0.StructuredContentRes
 import com.liferay.headless.delivery.internal.resource.v1_0.WikiNodeResourceImpl;
 import com.liferay.headless.delivery.internal.resource.v1_0.WikiPageAttachmentResourceImpl;
 import com.liferay.headless.delivery.internal.resource.v1_0.WikiPageResourceImpl;
+import com.liferay.headless.delivery.resource.v1_0.AssetEntryResource;
 import com.liferay.headless.delivery.resource.v1_0.BlogPostingImageResource;
 import com.liferay.headless.delivery.resource.v1_0.BlogPostingResource;
 import com.liferay.headless.delivery.resource.v1_0.CommentResource;
@@ -86,6 +88,8 @@ public class ServletDataImpl implements ServletData {
 
 	@Activate
 	public void activate(BundleContext bundleContext) {
+		Mutation.setAssetEntryResourceComponentServiceObjects(
+			_assetEntryResourceComponentServiceObjects);
 		Mutation.setBlogPostingResourceComponentServiceObjects(
 			_blogPostingResourceComponentServiceObjects);
 		Mutation.setBlogPostingImageResourceComponentServiceObjects(
@@ -139,6 +143,8 @@ public class ServletDataImpl implements ServletData {
 		Mutation.setWikiPageAttachmentResourceComponentServiceObjects(
 			_wikiPageAttachmentResourceComponentServiceObjects);
 
+		Query.setAssetEntryResourceComponentServiceObjects(
+			_assetEntryResourceComponentServiceObjects);
 		Query.setBlogPostingResourceComponentServiceObjects(
 			_blogPostingResourceComponentServiceObjects);
 		Query.setBlogPostingImageResourceComponentServiceObjects(
@@ -229,6 +235,11 @@ public class ServletDataImpl implements ServletData {
 		_resourceMethodObjectValuePairs =
 			new HashMap<String, ObjectValuePair<Class<?>, String>>() {
 				{
+					put(
+						"mutation#createAssetEntriesPageExportBatch",
+						new ObjectValuePair<>(
+							AssetEntryResourceImpl.class,
+							"postAssetEntriesPageExportBatch"));
 					put(
 						"mutation#deleteBlogPosting",
 						new ObjectValuePair<>(
@@ -1866,6 +1877,11 @@ public class ServletDataImpl implements ServletData {
 							"postWikiPageWikiPageAttachmentsPageExportBatch"));
 
 					put(
+						"query#assetEntries",
+						new ObjectValuePair<>(
+							AssetEntryResourceImpl.class,
+							"getAssetEntriesPage"));
+					put(
 						"query#blogPosting",
 						new ObjectValuePair<>(
 							BlogPostingResourceImpl.class, "getBlogPosting"));
@@ -2700,6 +2716,11 @@ public class ServletDataImpl implements ServletData {
 							"getWikiPageWikiPageAttachmentsPage"));
 
 					put(
+						"query#StructuredContent.contentStructure",
+						new ObjectValuePair<>(
+							ContentStructureResourceImpl.class,
+							"getContentStructure"));
+					put(
 						"query#Document.folder",
 						new ObjectValuePair<>(
 							DocumentFolderResourceImpl.class,
@@ -2710,223 +2731,148 @@ public class ServletDataImpl implements ServletData {
 							MessageBoardSectionResourceImpl.class,
 							"getMessageBoardSection"));
 					put(
-						"query#Document.myRating",
+						"query#MessageBoardMessage.messageBoardThread",
 						new ObjectValuePair<>(
-							DocumentResourceImpl.class, "getDocumentMyRating"));
-					put(
-						"query#WikiPage.permissions",
-						new ObjectValuePair<>(
-							WikiPageResourceImpl.class,
-							"getWikiPagePermissionsPage"));
-					put(
-						"query#MessageBoardMessage.messageBoardAttachments",
-						new ObjectValuePair<>(
-							MessageBoardAttachmentResourceImpl.class,
-							"getMessageBoardMessageMessageBoardAttachmentsPage"));
-					put(
-						"query#DocumentFolder.documents",
-						new ObjectValuePair<>(
-							DocumentResourceImpl.class,
-							"getDocumentFolderDocumentsPage"));
-					put(
-						"query#StructuredContentFolder.permissions",
-						new ObjectValuePair<>(
-							StructuredContentFolderResourceImpl.class,
-							"getStructuredContentFolderPermissionsPage"));
-					put(
-						"query#WikiPage.wikiPageAttachments",
-						new ObjectValuePair<>(
-							WikiPageAttachmentResourceImpl.class,
-							"getWikiPageWikiPageAttachmentsPage"));
-					put(
-						"query#StructuredContent.renderedContentContentTemplate",
-						new ObjectValuePair<>(
-							StructuredContentResourceImpl.class,
-							"getStructuredContentRenderedContentContentTemplate"));
-					put(
-						"query#WikiNode.wikiPages",
-						new ObjectValuePair<>(
-							WikiPageResourceImpl.class,
-							"getWikiNodeWikiPagesPage"));
-					put(
-						"query#BlogPosting.permissions",
-						new ObjectValuePair<>(
-							BlogPostingResourceImpl.class,
-							"getBlogPostingPermissionsPage"));
-					put(
-						"query#DocumentFolder.documentFolders",
-						new ObjectValuePair<>(
-							DocumentFolderResourceImpl.class,
-							"getDocumentFolderDocumentFoldersPage"));
-					put(
-						"query#KnowledgeBaseFolder.knowledgeBaseArticles",
-						new ObjectValuePair<>(
-							KnowledgeBaseArticleResourceImpl.class,
-							"getKnowledgeBaseFolderKnowledgeBaseArticlesPage"));
-					put(
-						"query#StructuredContent.myRating",
-						new ObjectValuePair<>(
-							StructuredContentResourceImpl.class,
-							"getStructuredContentMyRating"));
-					put(
-						"query#KnowledgeBaseArticle.knowledgeBaseAttachments",
-						new ObjectValuePair<>(
-							KnowledgeBaseAttachmentResourceImpl.class,
-							"getKnowledgeBaseArticleKnowledgeBaseAttachmentsPage"));
-					put(
-						"query#StructuredContent.renderedContentByDisplayPageDisplayPageKey",
-						new ObjectValuePair<>(
-							StructuredContentResourceImpl.class,
-							"getStructuredContentRenderedContentByDisplayPageDisplayPageKey"));
-					put(
-						"query#MessageBoardMessage.myRating",
-						new ObjectValuePair<>(
-							MessageBoardMessageResourceImpl.class,
-							"getMessageBoardMessageMyRating"));
-					put(
-						"query#DocumentFolder.myRating",
-						new ObjectValuePair<>(
-							DocumentFolderResourceImpl.class,
-							"getDocumentFolderMyRating"));
-					put(
-						"query#Comment.comments",
-						new ObjectValuePair<>(
-							CommentResourceImpl.class,
-							"getCommentCommentsPage"));
-					put(
-						"query#StructuredContent.contentStructure",
-						new ObjectValuePair<>(
-							ContentStructureResourceImpl.class,
-							"getContentStructure"));
+							MessageBoardThreadResourceImpl.class,
+							"getMessageBoardThread"));
 					put(
 						"query#StructuredContent.folder",
 						new ObjectValuePair<>(
 							StructuredContentFolderResourceImpl.class,
 							"getStructuredContentFolder"));
 					put(
-						"query#MessageBoardMessage.permissions",
-						new ObjectValuePair<>(
-							MessageBoardMessageResourceImpl.class,
-							"getMessageBoardMessagePermissionsPage"));
-					put(
-						"query#KnowledgeBaseArticle.permissions",
-						new ObjectValuePair<>(
-							KnowledgeBaseArticleResourceImpl.class,
-							"getKnowledgeBaseArticlePermissionsPage"));
-					put(
-						"query#KnowledgeBaseFolder.permissions",
-						new ObjectValuePair<>(
-							KnowledgeBaseFolderResourceImpl.class,
-							"getKnowledgeBaseFolderPermissionsPage"));
-					put(
 						"query#WikiPage.wikiNode",
 						new ObjectValuePair<>(
 							WikiNodeResourceImpl.class, "getWikiNode"));
-					put(
-						"query#KnowledgeBaseArticle.knowledgeBaseArticles",
-						new ObjectValuePair<>(
-							KnowledgeBaseArticleResourceImpl.class,
-							"getKnowledgeBaseArticleKnowledgeBaseArticlesPage"));
-					put(
-						"query#MessageBoardThread.messageBoardAttachments",
-						new ObjectValuePair<>(
-							MessageBoardAttachmentResourceImpl.class,
-							"getMessageBoardThreadMessageBoardAttachmentsPage"));
-					put(
-						"query#MessageBoardSection.permissions",
-						new ObjectValuePair<>(
-							MessageBoardSectionResourceImpl.class,
-							"getMessageBoardSectionPermissionsPage"));
-					put(
-						"query#ContentStructure.permissions",
-						new ObjectValuePair<>(
-							ContentStructureResourceImpl.class,
-							"getContentStructurePermissionsPage"));
-					put(
-						"query#KnowledgeBaseFolder.knowledgeBaseFolders",
-						new ObjectValuePair<>(
-							KnowledgeBaseFolderResourceImpl.class,
-							"getKnowledgeBaseFolderKnowledgeBaseFoldersPage"));
-					put(
-						"query#ContentStructure.structuredContents",
-						new ObjectValuePair<>(
-							StructuredContentResourceImpl.class,
-							"getContentStructureStructuredContentsPage"));
-					put(
-						"query#BlogPosting.comments",
-						new ObjectValuePair<>(
-							CommentResourceImpl.class,
-							"getBlogPostingCommentsPage"));
-					put(
-						"query#WikiPage.wikiPages",
-						new ObjectValuePair<>(
-							WikiPageResourceImpl.class,
-							"getWikiPageWikiPagesPage"));
-					put(
-						"query#StructuredContent.comments",
-						new ObjectValuePair<>(
-							CommentResourceImpl.class,
-							"getStructuredContentCommentsPage"));
-					put(
-						"query#KnowledgeBaseArticle.myRating",
-						new ObjectValuePair<>(
-							KnowledgeBaseArticleResourceImpl.class,
-							"getKnowledgeBaseArticleMyRating"));
-					put(
-						"query#MessageBoardMessage.messageBoardThread",
-						new ObjectValuePair<>(
-							MessageBoardThreadResourceImpl.class,
-							"getMessageBoardThread"));
 					put(
 						"query#BlogPosting.myRating",
 						new ObjectValuePair<>(
 							BlogPostingResourceImpl.class,
 							"getBlogPostingMyRating"));
 					put(
+						"query#BlogPosting.permissions",
+						new ObjectValuePair<>(
+							BlogPostingResourceImpl.class,
+							"getBlogPostingPermissionsPage"));
+					put(
+						"query#BlogPosting.comments",
+						new ObjectValuePair<>(
+							CommentResourceImpl.class,
+							"getBlogPostingCommentsPage"));
+					put(
+						"query#Comment.comments",
+						new ObjectValuePair<>(
+							CommentResourceImpl.class,
+							"getCommentCommentsPage"));
+					put(
 						"query#Document.comments",
 						new ObjectValuePair<>(
 							CommentResourceImpl.class,
 							"getDocumentCommentsPage"));
 					put(
-						"query#StructuredContentFolder.structuredContents",
+						"query#StructuredContent.comments",
 						new ObjectValuePair<>(
-							StructuredContentResourceImpl.class,
-							"getStructuredContentFolderStructuredContentsPage"));
+							CommentResourceImpl.class,
+							"getStructuredContentCommentsPage"));
 					put(
-						"query#MessageBoardThread.permissions",
+						"query#ContentStructure.permissions",
 						new ObjectValuePair<>(
-							MessageBoardThreadResourceImpl.class,
-							"getMessageBoardThreadPermissionsPage"));
+							ContentStructureResourceImpl.class,
+							"getContentStructurePermissionsPage"));
 					put(
-						"query#StructuredContentFolder.structuredContentFolders",
+						"query#DocumentFolder.documents",
 						new ObjectValuePair<>(
-							StructuredContentFolderResourceImpl.class,
-							"getStructuredContentFolderStructuredContentFoldersPage"));
+							DocumentResourceImpl.class,
+							"getDocumentFolderDocumentsPage"));
+					put(
+						"query#Document.myRating",
+						new ObjectValuePair<>(
+							DocumentResourceImpl.class, "getDocumentMyRating"));
+					put(
+						"query#DocumentFolder.documentFolders",
+						new ObjectValuePair<>(
+							DocumentFolderResourceImpl.class,
+							"getDocumentFolderDocumentFoldersPage"));
+					put(
+						"query#DocumentFolder.myRating",
+						new ObjectValuePair<>(
+							DocumentFolderResourceImpl.class,
+							"getDocumentFolderMyRating"));
+					put(
+						"query#KnowledgeBaseArticle.knowledgeBaseArticles",
+						new ObjectValuePair<>(
+							KnowledgeBaseArticleResourceImpl.class,
+							"getKnowledgeBaseArticleKnowledgeBaseArticlesPage"));
+					put(
+						"query#KnowledgeBaseArticle.myRating",
+						new ObjectValuePair<>(
+							KnowledgeBaseArticleResourceImpl.class,
+							"getKnowledgeBaseArticleMyRating"));
+					put(
+						"query#KnowledgeBaseArticle.permissions",
+						new ObjectValuePair<>(
+							KnowledgeBaseArticleResourceImpl.class,
+							"getKnowledgeBaseArticlePermissionsPage"));
+					put(
+						"query#KnowledgeBaseFolder.knowledgeBaseArticles",
+						new ObjectValuePair<>(
+							KnowledgeBaseArticleResourceImpl.class,
+							"getKnowledgeBaseFolderKnowledgeBaseArticlesPage"));
+					put(
+						"query#KnowledgeBaseArticle.knowledgeBaseAttachments",
+						new ObjectValuePair<>(
+							KnowledgeBaseAttachmentResourceImpl.class,
+							"getKnowledgeBaseArticleKnowledgeBaseAttachmentsPage"));
+					put(
+						"query#KnowledgeBaseFolder.knowledgeBaseFolders",
+						new ObjectValuePair<>(
+							KnowledgeBaseFolderResourceImpl.class,
+							"getKnowledgeBaseFolderKnowledgeBaseFoldersPage"));
+					put(
+						"query#KnowledgeBaseFolder.permissions",
+						new ObjectValuePair<>(
+							KnowledgeBaseFolderResourceImpl.class,
+							"getKnowledgeBaseFolderPermissionsPage"));
+					put(
+						"query#MessageBoardMessage.messageBoardAttachments",
+						new ObjectValuePair<>(
+							MessageBoardAttachmentResourceImpl.class,
+							"getMessageBoardMessageMessageBoardAttachmentsPage"));
+					put(
+						"query#MessageBoardThread.messageBoardAttachments",
+						new ObjectValuePair<>(
+							MessageBoardAttachmentResourceImpl.class,
+							"getMessageBoardThreadMessageBoardAttachmentsPage"));
 					put(
 						"query#MessageBoardMessage.messageBoardMessages",
 						new ObjectValuePair<>(
 							MessageBoardMessageResourceImpl.class,
 							"getMessageBoardMessageMessageBoardMessagesPage"));
 					put(
+						"query#MessageBoardMessage.myRating",
+						new ObjectValuePair<>(
+							MessageBoardMessageResourceImpl.class,
+							"getMessageBoardMessageMyRating"));
+					put(
+						"query#MessageBoardMessage.permissions",
+						new ObjectValuePair<>(
+							MessageBoardMessageResourceImpl.class,
+							"getMessageBoardMessagePermissionsPage"));
+					put(
+						"query#MessageBoardThread.messageBoardMessages",
+						new ObjectValuePair<>(
+							MessageBoardMessageResourceImpl.class,
+							"getMessageBoardThreadMessageBoardMessagesPage"));
+					put(
 						"query#MessageBoardSection.messageBoardSections",
 						new ObjectValuePair<>(
 							MessageBoardSectionResourceImpl.class,
 							"getMessageBoardSectionMessageBoardSectionsPage"));
 					put(
-						"query#WikiNode.permissions",
+						"query#MessageBoardSection.permissions",
 						new ObjectValuePair<>(
-							WikiNodeResourceImpl.class,
-							"getWikiNodePermissionsPage"));
-					put(
-						"query#Document.renderedContentByDisplayPageDisplayPageKey",
-						new ObjectValuePair<>(
-							DocumentResourceImpl.class,
-							"getDocumentRenderedContentByDisplayPageDisplayPageKey"));
-					put(
-						"query#BlogPosting.renderedContentByDisplayPageDisplayPageKey",
-						new ObjectValuePair<>(
-							BlogPostingResourceImpl.class,
-							"getBlogPostingRenderedContentByDisplayPageDisplayPageKey"));
+							MessageBoardSectionResourceImpl.class,
+							"getMessageBoardSectionPermissionsPage"));
 					put(
 						"query#MessageBoardSection.messageBoardThreads",
 						new ObjectValuePair<>(
@@ -2938,10 +2884,80 @@ public class ServletDataImpl implements ServletData {
 							MessageBoardThreadResourceImpl.class,
 							"getMessageBoardThreadMyRating"));
 					put(
-						"query#MessageBoardThread.messageBoardMessages",
+						"query#MessageBoardThread.permissions",
 						new ObjectValuePair<>(
-							MessageBoardMessageResourceImpl.class,
-							"getMessageBoardThreadMessageBoardMessagesPage"));
+							MessageBoardThreadResourceImpl.class,
+							"getMessageBoardThreadPermissionsPage"));
+					put(
+						"query#ContentStructure.structuredContents",
+						new ObjectValuePair<>(
+							StructuredContentResourceImpl.class,
+							"getContentStructureStructuredContentsPage"));
+					put(
+						"query#StructuredContentFolder.structuredContents",
+						new ObjectValuePair<>(
+							StructuredContentResourceImpl.class,
+							"getStructuredContentFolderStructuredContentsPage"));
+					put(
+						"query#StructuredContent.myRating",
+						new ObjectValuePair<>(
+							StructuredContentResourceImpl.class,
+							"getStructuredContentMyRating"));
+					put(
+						"query#StructuredContentFolder.permissions",
+						new ObjectValuePair<>(
+							StructuredContentFolderResourceImpl.class,
+							"getStructuredContentFolderPermissionsPage"));
+					put(
+						"query#StructuredContentFolder.structuredContentFolders",
+						new ObjectValuePair<>(
+							StructuredContentFolderResourceImpl.class,
+							"getStructuredContentFolderStructuredContentFoldersPage"));
+					put(
+						"query#WikiNode.permissions",
+						new ObjectValuePair<>(
+							WikiNodeResourceImpl.class,
+							"getWikiNodePermissionsPage"));
+					put(
+						"query#WikiNode.wikiPages",
+						new ObjectValuePair<>(
+							WikiPageResourceImpl.class,
+							"getWikiNodeWikiPagesPage"));
+					put(
+						"query#WikiPage.permissions",
+						new ObjectValuePair<>(
+							WikiPageResourceImpl.class,
+							"getWikiPagePermissionsPage"));
+					put(
+						"query#WikiPage.wikiPages",
+						new ObjectValuePair<>(
+							WikiPageResourceImpl.class,
+							"getWikiPageWikiPagesPage"));
+					put(
+						"query#WikiPage.wikiPageAttachments",
+						new ObjectValuePair<>(
+							WikiPageAttachmentResourceImpl.class,
+							"getWikiPageWikiPageAttachmentsPage"));
+					put(
+						"query#BlogPosting.renderedContentByDisplayPageDisplayPageKey",
+						new ObjectValuePair<>(
+							BlogPostingResourceImpl.class,
+							"getBlogPostingRenderedContentByDisplayPageDisplayPageKey"));
+					put(
+						"query#Document.renderedContentByDisplayPageDisplayPageKey",
+						new ObjectValuePair<>(
+							DocumentResourceImpl.class,
+							"getDocumentRenderedContentByDisplayPageDisplayPageKey"));
+					put(
+						"query#StructuredContent.renderedContentByDisplayPageDisplayPageKey",
+						new ObjectValuePair<>(
+							StructuredContentResourceImpl.class,
+							"getStructuredContentRenderedContentByDisplayPageDisplayPageKey"));
+					put(
+						"query#StructuredContent.renderedContentContentTemplate",
+						new ObjectValuePair<>(
+							StructuredContentResourceImpl.class,
+							"getStructuredContentRenderedContentContentTemplate"));
 
 					put(
 						"query#Comment.parentComment",
@@ -2983,6 +2999,10 @@ public class ServletDataImpl implements ServletData {
 							WikiPageResourceImpl.class, "getWikiPage"));
 				}
 			};
+
+	@Reference(scope = ReferenceScope.PROTOTYPE_REQUIRED)
+	private ComponentServiceObjects<AssetEntryResource>
+		_assetEntryResourceComponentServiceObjects;
 
 	@Reference(scope = ReferenceScope.PROTOTYPE_REQUIRED)
 	private ComponentServiceObjects<BlogPostingResource>
@@ -3093,3 +3113,4 @@ public class ServletDataImpl implements ServletData {
 		_contentSetElementResourceComponentServiceObjects;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-502818875

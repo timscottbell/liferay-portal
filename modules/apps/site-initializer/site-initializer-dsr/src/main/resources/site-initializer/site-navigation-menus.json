@@ -10,16 +10,9 @@
 				"type": "layout"
 			},
 			{
-				"displayIcon": "squares",
+				"displayIcon": "grid",
 				"externalReferenceCode": "DSRPRIMARYNAVIGATION2",
 				"friendlyURL": "/rooms",
-				"privateLayout": false,
-				"type": "layout"
-			},
-			{
-				"displayIcon": "books",
-				"externalReferenceCode": "DSRPRIMARYNAVIGATION3",
-				"friendlyURL": "/templates",
 				"privateLayout": false,
 				"type": "layout"
 			},

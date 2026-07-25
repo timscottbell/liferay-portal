@@ -9,36 +9,49 @@ import ListView from '../../../../components/ListView';
 import OrderStatus from '../../../../components/OrderStatus';
 import Page from '../../../../components/Page';
 import SearchBuilder from '../../../../core/SearchBuilder';
-import {OrderTypes, PaymentStatus} from '../../../../enums/Order';
+import {
+	OrderTypes,
+	OrderWorkflowStatusCode,
+	orderTypeDocumentationURL,
+} from '../../../../enums/Order';
 import i18n from '../../../../i18n';
 import {Liferay} from '../../../../liferay/liferay';
-import PaymentStatusBadge from '../../../FinanceDashboard/components/PaymentStatus/PaymentStatusBadge';
+import {getSiteURL} from '../../../../utils/site';
+import {safeJSONParse} from '../../../../utils/util';
+import {useProductPurchaseOutletContext} from '../../../ProductPurchase/ProductPurchaseOutlet';
+import {ProductPurchaseAIHubToken} from '../../../ProductPurchase/services/ProductPurchaseAIHubToken';
 import {useCustomerDashboardOutletContext} from '../../CustomerDashboardOutlet';
 
 const searchParams = new URLSearchParams({
 	filter: SearchBuilder.in('orderTypeExternalReferenceCode', [
 		OrderTypes.ADDONS,
+		OrderTypes.AI_HUB,
 		OrderTypes.CMP,
+		OrderTypes.CMP_BETA,
+		OrderTypes.DSR,
 		OrderTypes.DXP,
 	]),
 	nestedFields: 'placedOrderItems',
 	sort: 'createDate:desc',
 });
 
-const getViewDetailsPath = (orderId: string, orderType: string) => {
-	let path = orderId;
-
-	if ([OrderTypes.CMP, OrderTypes.DXP].includes(orderType as OrderTypes)) {
-		path = `${orderId}/activation-keys`;
-	}
-
-	return path;
+const getViewDetailsPath = (placedOrder: PlacedOrder) => {
+	return `${placedOrder.id}`;
 };
 
 const LiferayProductsListView = () => {
 	const {selectedAccount} = useCustomerDashboardOutletContext();
-
+	const {handlePurchase, product} = useProductPurchaseOutletContext();
 	const navigate = useNavigate();
+
+	const onClickBuyLiferayTokens = () => {
+		const productPurchase = new ProductPurchaseAIHubToken(
+			selectedAccount,
+			product
+		);
+
+		handlePurchase(productPurchase);
+	};
 
 	return (
 		<Page
@@ -64,10 +77,72 @@ const LiferayProductsListView = () => {
 						actions: [
 							{
 								name: i18n.translate('view-details'),
-								onClick: (row: PlacedOrder) =>
-									navigate(
-										`${getViewDetailsPath(String(row.id), row.orderTypeExternalReferenceCode)}`
+								onClick: (placedOrder: PlacedOrder) =>
+									navigate(getViewDetailsPath(placedOrder)),
+							},
+							{
+								hidden: (row: PlacedOrder) =>
+									!orderTypeDocumentationURL[
+										row.orderTypeExternalReferenceCode as OrderTypes
+									],
+								name: i18n.translate('documentation'),
+								onClick: (row: PlacedOrder) => {
+									const url =
+										orderTypeDocumentationURL[
+											row.orderTypeExternalReferenceCode as OrderTypes
+										];
+
+									if (url) {
+										window.open(
+											url,
+											'_blank',
+											'noopener,noreferrer'
+										);
+									}
+								},
+							},
+							{
+								hidden: (row: PlacedOrder) =>
+									row.orderTypeExternalReferenceCode !==
+									OrderTypes.CMP,
+								name: i18n.translate('create-license-key'),
+								onClick: (placedOrder: PlacedOrder) =>
+									navigate(getViewDetailsPath(placedOrder)),
+							},
+							{
+								hidden: (row: PlacedOrder) =>
+									![
+										OrderTypes.AI_HUB,
+										OrderTypes.CMP_BETA,
+										OrderTypes.DSR,
+									].includes(
+										row.orderTypeExternalReferenceCode as OrderTypes
 									),
+								name: i18n.translate('share-your-feedback'),
+								onClick: (row: PlacedOrder) =>
+									Liferay.Util.navigate(
+										`${getSiteURL()}/product-feedback?orderId=${row.id}`
+									),
+							},
+							{
+								hidden: (placedOrder: PlacedOrder) => {
+									const {
+										orderStatusInfo,
+										orderTypeExternalReferenceCode,
+									} = placedOrder;
+
+									const isNotAIHub =
+										orderTypeExternalReferenceCode !==
+										OrderTypes.AI_HUB;
+
+									const isNotActive =
+										orderStatusInfo?.code !==
+										OrderWorkflowStatusCode.COMPLETED;
+
+									return isNotAIHub || isNotActive;
+								},
+								name: i18n.translate('buy-liferay-tokens'),
+								onClick: onClickBuyLiferayTokens,
 							},
 						],
 						columns: [
@@ -79,17 +154,51 @@ const LiferayProductsListView = () => {
 									const placedOrderItem =
 										placedOrderItems[0] || [];
 
-									return (
-										<div style={{width: 200}}>
-											<img
-												alt="App Image"
-												className="order-details-publisher-table-icon"
-												src={placedOrderItem?.thumbnail}
-											/>
+									const options = safeJSONParse<
+										{skuOptionValueKey: string}[]
+									>(placedOrderItem.options, []);
 
-											<span className="font-weight-semi-bold ml-2">
-												{placedOrderItem?.name}
-											</span>
+									const betaOption = options.find(
+										(option) =>
+											option.skuOptionValueKey === 'beta'
+									);
+
+									const privateBetaOption = options.find(
+										(option) =>
+											option.skuOptionValueKey ===
+											'private-beta'
+									);
+
+									return (
+										<div style={{width: 300}}>
+											<div className="d-flex">
+												<img
+													alt="App Image"
+													className="order-details-publisher-table-icon"
+													src={
+														placedOrderItem?.thumbnail
+													}
+												/>
+
+												<div className="d-flex flex-column ml-1">
+													<span className="align-items-center d-flex font-weight-semi-bold">
+														{placedOrderItem?.name}
+
+														{(betaOption ||
+															privateBetaOption) && (
+															<span className="beta-badge-label ml-2">
+																{betaOption
+																	? 'Beta'
+																	: 'Private Beta'}
+															</span>
+														)}
+													</span>
+
+													<span className="text-black-50">
+														By Liferay
+													</span>
+												</div>
+											</div>
 										</div>
 									);
 								},
@@ -125,25 +234,12 @@ const LiferayProductsListView = () => {
 								id: 'orderStatusInfo',
 								name: 'Status',
 								render: (_, item) => {
-									if (
-										item.paymentStatus ===
-										PaymentStatus.PENDING
-									) {
-										return (
-											<PaymentStatusBadge
-												paymentStatus={
-													PaymentStatus.PENDING
-												}
-											/>
-										);
-									}
-
 									return <OrderStatus placedOrder={item} />;
 								},
 							},
 						],
-						navigateTo: (item) =>
-							`${getViewDetailsPath(String(item.id), item.orderTypeExternalReferenceCode)}`,
+						navigateTo: (placedOrder) =>
+							getViewDetailsPath(placedOrder),
 					}}
 				/>
 			</div>

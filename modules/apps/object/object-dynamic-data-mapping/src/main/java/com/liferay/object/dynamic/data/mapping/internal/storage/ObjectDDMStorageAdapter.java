@@ -5,7 +5,7 @@
 
 package com.liferay.object.dynamic.data.mapping.internal.storage;
 
-import com.liferay.document.library.kernel.service.DLAppService;
+import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.dynamic.data.mapping.exception.StorageException;
 import com.liferay.dynamic.data.mapping.form.field.type.constants.DDMFormFieldTypeConstants;
 import com.liferay.dynamic.data.mapping.model.DDMForm;
@@ -203,7 +203,7 @@ public class ObjectDDMStorageAdapter implements DDMStorageAdapter {
 					objectDefinition));
 
 			for (Long fileEntryId : fileEntryIds) {
-				_dlAppService.deleteFileEntry(fileEntryId);
+				_dlAppLocalService.deleteFileEntry(fileEntryId);
 			}
 
 			return DDMStorageAdapterSaveResponse.Builder.newBuilder(
@@ -446,15 +446,16 @@ public class ObjectDDMStorageAdapter implements DDMStorageAdapter {
 				if (objectField.compareBusinessType(
 						ObjectFieldConstants.BUSINESS_TYPE_ATTACHMENT)) {
 
-					String fileSource = ObjectFieldSettingUtil.getValue(
-						ObjectFieldSettingConstants.NAME_FILE_SOURCE,
-						objectField.getObjectFieldSettings());
+					long fileEntryId = GetterUtil.getLong(valueString);
 
-					if (!Objects.equals(
-							fileSource,
+					if ((fileEntryId > 0) &&
+						!Objects.equals(
+							ObjectFieldSettingUtil.getValue(
+								ObjectFieldSettingConstants.NAME_FILE_SOURCE,
+								objectField.getObjectFieldSettings()),
 							ObjectFieldSettingConstants.VALUE_DOCS_AND_MEDIA)) {
 
-						fileEntryIds.add(GetterUtil.getLong(valueString));
+						fileEntryIds.add(fileEntryId);
 					}
 
 					properties.put(objectField.getName(), valueString);
@@ -525,7 +526,7 @@ public class ObjectDDMStorageAdapter implements DDMStorageAdapter {
 		ObjectDDMStorageAdapter.class);
 
 	@Reference
-	private DLAppService _dlAppService;
+	private DLAppLocalService _dlAppLocalService;
 
 	@Reference
 	private GroupLocalService _groupLocalService;

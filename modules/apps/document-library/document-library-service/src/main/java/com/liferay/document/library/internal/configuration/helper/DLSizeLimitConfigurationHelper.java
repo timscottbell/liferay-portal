@@ -8,14 +8,12 @@ package com.liferay.document.library.internal.configuration.helper;
 import com.liferay.document.library.internal.configuration.DLSizeLimitConfiguration;
 import com.liferay.document.library.internal.util.MimeTypeSizeLimitUtil;
 import com.liferay.petra.string.CharPool;
-import com.liferay.petra.string.StringUtil;
 import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.kernel.util.Validator;
 
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -67,9 +65,7 @@ public class DLSizeLimitConfigurationHelper {
 			return sizeLimit;
 		}
 
-		List<String> parts = StringUtil.split(mimeType, CharPool.SLASH);
-
-		return map.getOrDefault(String.format("%s/*", parts.get(0)), 0L);
+		return map.getOrDefault(_getType(mimeType) + "/*", 0L);
 	}
 
 	public long getGroupFileMaxSize(long companyId, long groupId) {
@@ -113,9 +109,7 @@ public class DLSizeLimitConfigurationHelper {
 			return sizeLimit;
 		}
 
-		List<String> parts = StringUtil.split(mimeType, CharPool.SLASH);
-
-		return map.getOrDefault(String.format("%s/*", parts.get(0)), 0L);
+		return map.getOrDefault(_getType(mimeType) + "/*", 0L);
 	}
 
 	public long getSystemFileMaxSize() {
@@ -131,18 +125,37 @@ public class DLSizeLimitConfigurationHelper {
 			_computeMimeTypeSizeLimit(_systemDLSizeLimitConfiguration));
 	}
 
-	public void unmapPid(String pid) {
-		if (_companyIds.containsKey(pid)) {
-			long companyId = _companyIds.remove(pid);
+	public long getSystemMimeTypeSizeLimit(String mimeType) {
+		if (Validator.isNull(mimeType)) {
+			return 0;
+		}
 
+		Map<String, Long> map = getSystemMimeTypeSizeLimit();
+
+		long sizeLimit = map.getOrDefault(mimeType, 0L);
+
+		if (sizeLimit != 0) {
+			return sizeLimit;
+		}
+
+		return map.getOrDefault(_getType(mimeType) + "/*", 0L);
+	}
+
+	public void unmapPid(String pid) {
+		Long companyId = _companyIds.remove(pid);
+
+		if (companyId != null) {
 			_companyConfigurationBeans.remove(companyId);
 			_companyMimeTypeSizeLimitsMap.remove(companyId);
 
 			_groupMimeTypeSizeLimitsMap.clear();
-		}
-		else if (_groupKeys.containsKey(pid)) {
-			String groupKey = _groupKeys.remove(pid);
 
+			return;
+		}
+
+		String groupKey = _groupKeys.remove(pid);
+
+		if (groupKey != null) {
 			_groupConfigurationBeans.remove(groupKey);
 			_groupMimeTypeSizeLimitsMap.remove(groupKey);
 		}
@@ -221,8 +234,11 @@ public class DLSizeLimitConfigurationHelper {
 		T key, Map<T, DLSizeLimitConfiguration> configurationBeans,
 		Supplier<DLSizeLimitConfiguration> supplier) {
 
-		if (configurationBeans.containsKey(key)) {
-			return configurationBeans.get(key);
+		DLSizeLimitConfiguration dlSizeLimitConfiguration =
+			configurationBeans.get(key);
+
+		if (dlSizeLimitConfiguration != null) {
+			return dlSizeLimitConfiguration;
 		}
 
 		return supplier.get();
@@ -238,6 +254,16 @@ public class DLSizeLimitConfigurationHelper {
 
 	private String _getGroupKey(long companyId, long groupId) {
 		return companyId + "--" + groupId;
+	}
+
+	private String _getType(String mimeType) {
+		int index = mimeType.indexOf(CharPool.SLASH);
+
+		if (index < 0) {
+			return mimeType;
+		}
+
+		return mimeType.substring(0, index);
 	}
 
 	private final Map<Long, DLSizeLimitConfiguration>

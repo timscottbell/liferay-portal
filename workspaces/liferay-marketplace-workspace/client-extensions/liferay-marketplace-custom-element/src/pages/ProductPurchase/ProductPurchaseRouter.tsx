@@ -29,9 +29,17 @@ import ContactSalesPage from './pages/App/InsuficientResources/ContactSales';
 import ContactSalesForm from './pages/App/InsuficientResources/ContactSalesForm';
 import License from './pages/App/License';
 import PaymentMethod from './pages/App/PaymentMethod';
-import ActivationKeyForm from './pages/LiferayProduct/ActivationKeyForm/ActivationKeyForm';
-import LDPProvisioning from './pages/LiferayProduct/LDPProvisioningForm';
-import OrderSummary from './pages/LiferayProduct/OrderSummary';
+import OrderSummary from './pages/App/PaymentMethod/OrderSummary/OrderSummary';
+import AIHubForm from './pages/LiferayProduct/AIHub/AIHubForm';
+import AIHubOpenBetaForm from './pages/LiferayProduct/AIHub/AIHubOpenBetaForm';
+import AIHubOrderSummary from './pages/LiferayProduct/AIHub/AIHubOrderSummary';
+import AIHubPaymentMethod from './pages/LiferayProduct/AIHub/AIHubPaymentMethod';
+import AIHubTokenOrderSummary from './pages/LiferayProduct/AIHub/AIHubTokenOrderSummary';
+import AIHubTokenSelection from './pages/LiferayProduct/AIHub/AIHubTokenSelection';
+import ActivationKeyForm from './pages/LiferayProduct/ActivationKeyForm';
+import DSRLicenseKeyForm from './pages/LiferayProduct/DSRLicenseKeyForm';
+import LDPAccountSelection from './pages/LiferayProduct/LDP/LDPAccountSelection';
+import LDPProvisioning from './pages/LiferayProduct/LDP/LDPProvisioningForm';
 import ProjectSelection from './pages/LiferayProduct/Project';
 import NextSteps from './pages/NextSteps';
 import SolutionProvisioningForm from './pages/Solution';
@@ -84,7 +92,10 @@ export const productTypeRoutes = {
 			tinyStepsDisplay: true,
 			useCart: true,
 		},
-		routes: (product: DeliveryProduct) => {
+		routes: (
+			product: DeliveryProduct,
+			searchParams = new URLSearchParams()
+		) => {
 			const marketplaceDeliveryProduct = new MarketplaceDeliveryProduct(
 				product
 			);
@@ -92,7 +103,71 @@ export const productTypeRoutes = {
 			const solutionType =
 				marketplaceDeliveryProduct.specificationValues.SOLUTION_TYPE;
 
-			if (solutionType === SolutionTypes.DXP) {
+			if (solutionType === SolutionTypes.AI_HUB) {
+				return [
+					{
+						element: ProductPurchaseAccountSelection,
+						index: true,
+						title: i18n.translate('account'),
+					},
+					{
+						element: AIHubForm,
+						path: 'ai-hub-form',
+						title: i18n.translate('ai-hub'),
+					},
+				];
+			}
+
+			if (solutionType === SolutionTypes.AI_HUB_OPEN_BETA) {
+				if (searchParams.has('aiHubTokens')) {
+					return [
+						{
+							element: AIHubTokenSelection,
+							index: true,
+							title: i18n.translate('tokens-amount'),
+						},
+						{
+							element: AIHubPaymentMethod,
+							path: 'payment-method',
+							title: i18n.translate('payment-method'),
+						},
+						{
+							element: AIHubTokenOrderSummary,
+							path: 'summary',
+							title: i18n.translate('summary'),
+						},
+					];
+				}
+
+				return [
+					{
+						element: ProductPurchaseAccountSelection,
+						index: true,
+						title: i18n.translate('account'),
+					},
+					{
+						element: ProjectSelection,
+						path: 'project',
+						title: i18n.translate('project'),
+					},
+					{
+						element: AIHubOpenBetaForm,
+						path: 'ai-hub-open-beta-form',
+						title: i18n.translate('account-details'),
+					},
+					{
+						element: AIHubOrderSummary,
+						path: 'summary',
+						title: i18n.translate('summary'),
+					},
+				];
+			}
+
+			if (
+				[SolutionTypes.CMP, SolutionTypes.DXP].includes(
+					solutionType as SolutionTypes
+				)
+			) {
 				return [
 					{
 						element: ProductPurchaseAccountSelection,
@@ -107,29 +182,32 @@ export const productTypeRoutes = {
 				];
 			}
 
-			if (solutionType === SolutionTypes.LIFERAY_DATA_PLATFORM) {
+			if (solutionType === SolutionTypes.DSR) {
 				return [
 					{
 						element: ProductPurchaseAccountSelection,
 						index: true,
 						title: i18n.translate('account'),
 					},
-
 					{
-						element: ProjectSelection,
-						path: 'project',
-						title: i18n.translate('project'),
+						element: DSRLicenseKeyForm,
+						path: 'activation-key-form',
+						title: i18n.translate('activation-key'),
 					},
+				];
+			}
 
+			if (solutionType === SolutionTypes.LIFERAY_DATA_PLATFORM) {
+				return [
+					{
+						element: LDPAccountSelection,
+						index: true,
+						title: i18n.translate('account'),
+					},
 					{
 						element: LDPProvisioning,
 						path: 'provisioning',
 						title: i18n.translate('provisioning'),
-					},
-					{
-						element: OrderSummary,
-						path: 'summary',
-						title: i18n.translate('summary'),
 					},
 				];
 			}
@@ -163,11 +241,10 @@ const ProductPurchaseRouter = () => {
 	// The productId that comes from the property can be used to hide the productId
 	// search param is some places
 
+	const searchParams = new URLSearchParams(window.location.search);
+
 	const productId =
-		pageProductId ||
-		(new URLSearchParams(window.location.search).get(
-			'productId'
-		) as unknown as string);
+		pageProductId || (searchParams.get('productId') as unknown as string);
 
 	const {data: product, isLoading} = useDeliveryProduct(productId);
 
@@ -199,7 +276,7 @@ const ProductPurchaseRouter = () => {
 
 	const routes =
 		typeof _routes === 'function'
-			? _routes(product as DeliveryProduct)
+			? _routes(product as DeliveryProduct, searchParams)
 			: _routes;
 
 	return (

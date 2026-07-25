@@ -4,7 +4,7 @@
 		"node-scripts": "./bin.js"
 	},
 	"com.liferay": {
-		"sha256": "6de7920f9ebce4907520051df799e3f9d8f9009258be857df8355621557dbfd2"
+		"sha256": "9e0a1c7faedf56349cbe1cba52961ec00d56235c44ffc86c3532feb9b08b246a"
 	},
 	"dependencies": {
 		"@babel/preset-env": "7.24.7",
@@ -46,7 +46,7 @@
 		"liferay-theme-tasks": "11.5.6",
 		"micromatch": "4.0.2",
 		"minimist": "^1.2.8",
-		"prettier": "^3.2.5",
+		"prettier": "3.2.5",
 		"react-test-renderer": "18.2.0",
 		"react-test-renderer-16.12.0": "npm:react-test-renderer@16.12.0",
 		"regenerator-runtime": "0.11.1",
@@ -61,12 +61,12 @@
 	},
 	"exports": {
 		".": "./index.js",
-		"./theme": "./exports/theme.js"
+		"./theme": "./api/exports/theme.js"
 	},
 	"name": "@liferay/node-scripts",
 	"scripts": {
-		"checkFormat": "node-scripts format:self --check",
-		"format": "node-scripts format:self",
+		"checkFormat": "node-scripts format --check",
+		"format": "node-scripts format",
 		"install": "node-scripts setup"
 	},
 	"version": "1.0.0"

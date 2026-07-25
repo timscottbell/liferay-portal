@@ -121,7 +121,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 
 	@Override
 	public Role fetchRole(long roleId) throws PortalException {
-		Role role = roleLocalService.fetchRole(roleId);
+		Role role = rolePersistence.fetchByPrimaryKey(roleId);
 
 		if (role != null) {
 			RolePermissionUtil.check(
@@ -133,7 +133,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 
 	@Override
 	public Role fetchRole(long companyId, String name) throws PortalException {
-		Role role = roleLocalService.fetchRole(companyId, name);
+		Role role = rolePersistence.fetchByC_N(companyId, name);
 
 		if (role != null) {
 			RolePermissionUtil.check(
@@ -148,7 +148,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		Role role = roleLocalService.fetchRoleByExternalReferenceCode(
+		Role role = rolePersistence.fetchByERC_C(
 			externalReferenceCode, companyId);
 
 		if (role != null) {
@@ -175,22 +175,22 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 	@Override
 	public List<Role> getGroupRolesAndTeamRoles(
 		long companyId, String name, List<String> excludedNames, String title,
-		String description, int[] types, long excludedTeamRoleId,
-		long teamGroupId, int start, int end) {
+		String description, int[] types, String subtype,
+		long excludedTeamRoleId, long teamGroupId, int start, int end) {
 
 		return roleFinder.filterFindByGroupRoleAndTeamRole(
-			companyId, name, excludedNames, title, description, types,
+			companyId, name, excludedNames, title, description, types, subtype,
 			excludedTeamRoleId, teamGroupId, start, end);
 	}
 
 	@Override
 	public int getGroupRolesAndTeamRolesCount(
 		long companyId, String name, List<String> excludedNames, String title,
-		String description, int[] types, long excludedTeamRoleId,
-		long teamGroupId) {
+		String description, int[] types, String subtype,
+		long excludedTeamRoleId, long teamGroupId) {
 
 		return roleFinder.filterCountByGroupRoleAndTeamRole(
-			companyId, name, excludedNames, title, description, types,
+			companyId, name, excludedNames, title, description, types, subtype,
 			excludedTeamRoleId, teamGroupId);
 	}
 
@@ -226,7 +226,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 		RolePermissionUtil.check(
 			getPermissionChecker(), roleId, ActionKeys.VIEW);
 
-		return roleLocalService.getRole(roleId);
+		return rolePersistence.findByPrimaryKey(roleId);
 	}
 
 	/**
@@ -243,7 +243,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 	 */
 	@Override
 	public Role getRole(long companyId, String name) throws PortalException {
-		Role role = roleLocalService.getRole(companyId, name);
+		Role role = rolePersistence.findByC_N(companyId, name);
 
 		RolePermissionUtil.check(
 			getPermissionChecker(), role.getRoleId(), ActionKeys.VIEW);
@@ -256,7 +256,7 @@ public class RoleServiceImpl extends RoleServiceBaseImpl {
 			String externalReferenceCode, long companyId)
 		throws PortalException {
 
-		Role role = roleLocalService.getRoleByExternalReferenceCode(
+		Role role = rolePersistence.findByERC_C(
 			externalReferenceCode, companyId);
 
 		RolePermissionUtil.check(

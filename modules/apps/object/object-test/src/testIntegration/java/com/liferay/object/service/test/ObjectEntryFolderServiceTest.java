@@ -119,7 +119,7 @@ public class ObjectEntryFolderServiceTest {
 			PrincipalException.MustHavePermission.class,
 			StringBundler.concat(
 				"User ", _user.getUserId(),
-				" must have ADD_ENTRY permission for ",
+				" must have ADD_OBJECT_ENTRY_FOLDER permission for ",
 				ObjectEntryFolder.class.getName(), " ",
 				parentObjectEntryFolder2.getObjectEntryFolderId()),
 			() -> _addObjectEntryFolder(
@@ -127,7 +127,7 @@ public class ObjectEntryFolderServiceTest {
 				parentObjectEntryFolder2.getObjectEntryFolderId(),
 				_user.getUserId()));
 
-		User user = UserTestUtil.addUser(
+		User user = UserTestUtil.addCompanyUser(
 			_companyLocalService.getCompany(TestPropsValues.getCompanyId()),
 			RoleConstants.CMS_ADMINISTRATOR);
 

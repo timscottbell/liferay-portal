@@ -40,6 +40,9 @@ const BalloonEditor = ({
 				...getDefaultEditorConfig({
 					editorVariant: EEditorVariant.BALLOON,
 					preset: config?.preset || EEditorConfigPreset.ADVANCED,
+					showAICreator: config?.showAICreator,
+					showPasteFromOfficeEnhanced:
+						config?.showPasteFromOfficeEnhanced,
 				}),
 				...config,
 			}}

@@ -28,6 +28,7 @@ import getRandomString from '../../../utils/getRandomString';
 import {goToObjectEntity} from '../../setup/page-management-site/main/utils/goToObjectEntity';
 import {cmsPagesTest} from '../../site-cms-site-initializer/main/fixtures/cmsPagesTest';
 import {structureBuilderPagesTest} from '../../site-cms-site-initializer/structure-builder/fixtures/structureBuilderPagesTest';
+import chooseFileFromCMSLibrary from '../main/utils/chooseFileFromCMSLibrary';
 import chooseFileFromDocumentLibrary from '../main/utils/chooseFileFromDocumentLibrary';
 import getFormContainerDefinition from '../main/utils/getFormContainerDefinition';
 import getFragmentDefinition from '../main/utils/getFragmentDefinition';
@@ -40,7 +41,7 @@ const test = mergeTests(
 	displayPageTemplatesPagesTest,
 	documentLibraryPagesTest,
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 		'LPD-17564': {enabled: true},
 		'LPD-60546': {enabled: true},
 		'LPS-178052': {enabled: true},
@@ -199,6 +200,148 @@ test(
 		await expect(page.locator('input.ddm-field-text')).toHaveValue(
 			'text español'
 		);
+	}
+);
+
+test(
+	'Can translate the Email input',
+	{tag: '@LPD-89586'},
+	async ({apiHelpers, page, site}) => {
+
+		// Create object definition with a localized email field
+
+		const objectDefinitionAPIClient =
+			await apiHelpers.buildRestClient(ObjectDefinitionAPI);
+
+		const {body: objectDefinition} =
+			await objectDefinitionAPIClient.postObjectDefinition({
+				active: true,
+				enableLocalization: true,
+				externalReferenceCode: 'emailContactERC',
+				label: {
+					en_US: 'Email Contact',
+				},
+				name: 'EmailContact',
+				objectFields: [
+					{
+						DBType: 'String',
+						businessType: 'Text',
+						externalReferenceCode: 'emailERC',
+						indexed: true,
+						indexedAsKeyword: true,
+						label: {
+							en_US: 'Email',
+						},
+						localized: true,
+						name: 'email',
+						required: false,
+					},
+				],
+				pluralLabel: {
+					en_US: 'Email Contacts',
+				},
+				portlet: true,
+				scope: 'company',
+				status: {
+					code: 0,
+				},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		// Create a page with a Form fragment with an Email input
+
+		const localizationSelectDefinition = getFragmentDefinition({
+			id: getRandomString(),
+			key: 'localization-select',
+		});
+
+		const emailInputDefinition = getFragmentDefinition({
+			fragmentConfig: {
+				inputFieldId: 'ObjectField_email',
+			},
+			id: getRandomString(),
+			key: 'INPUTS-email-input',
+		});
+
+		const submitFragmentDefinition = getFragmentDefinition({
+			id: getRandomString(),
+			key: 'INPUTS-submit-button',
+		});
+
+		const formDefinition = getFormContainerDefinition({
+			id: getRandomString(),
+			objectDefinitionClassName: objectDefinition.className,
+			pageElements: [
+				localizationSelectDefinition,
+				emailInputDefinition,
+				submitFragmentDefinition,
+			],
+		});
+
+		const layout = await apiHelpers.headlessDelivery.createSitePage({
+			pageDefinition: getPageDefinition([formDefinition]),
+			siteId: site.id,
+			title: getRandomString(),
+		});
+
+		// Go to view mode and fill the English value
+
+		await page.goto(`/web${site.friendlyUrlPath}${layout.friendlyUrlPath}`);
+
+		const emailInput = page.getByRole('combobox', {
+			exact: true,
+			name: 'Email',
+		});
+
+		await emailInput.fill('user@gmail.com');
+
+		// Switch to Spanish and fill the translation
+
+		const translationSelector = page.getByLabel(
+			'Select a language, current language:'
+		);
+
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: page.getByRole('option').filter({hasText: 'es-ES'}),
+			trigger: translationSelector,
+		});
+
+		await emailInput.fill('usuario@gmail.com');
+
+		// Switch back to English and check that the original value is preserved
+
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: page.getByRole('option').filter({hasText: 'en-US'}),
+			trigger: translationSelector,
+		});
+
+		await expect(emailInput).toHaveValue('user@gmail.com');
+
+		// Submit the form and verify both translations via API
+
+		await page.getByRole('button', {name: 'Submit'}).click();
+
+		await expect(
+			page.getByText(
+				'Thank you. Your information was successfully received.'
+			)
+		).toBeVisible();
+
+		const {items} =
+			await apiHelpers.objectEntry.getObjectDefinitionObjectEntries(
+				'c/emailcontacts'
+			);
+
+		expect(items[0].email_i18n).toStrictEqual({
+			en_US: 'user@gmail.com',
+			es_ES: 'usuario@gmail.com',
+		});
 	}
 );
 
@@ -1221,6 +1364,7 @@ test(
 	'Can translate attachment form fields',
 	{tag: '@LPD-46482'},
 	async ({
+		apiHelpers,
 		contentsPage,
 		localizationSelectPage,
 		page,
@@ -1297,6 +1441,46 @@ test(
 
 		await contentsPage.fillData([{label: 'Title', value: contentTitle}]);
 
+		// Create documents in Document Library via API
+
+		const fileBase64 = 'R0lGODlhAQABAAAAACw=';
+
+		const document3 = await apiHelpers.objectEntry.postObjectEntry(
+			{
+				file: {
+					fileBase64,
+					name: 'file_upload_image_3.jpg',
+				},
+				objectEntryFolderExternalReferenceCode: 'L_FILES',
+				title: 'file_upload_image_3.jpg',
+			},
+			'cms/basic-documents',
+			'Default'
+		);
+
+		apiHelpers.data.push({
+			id: document3.file.id,
+			type: 'document',
+		});
+
+		const document4 = await apiHelpers.objectEntry.postObjectEntry(
+			{
+				file: {
+					fileBase64,
+					name: 'file_upload_image_4.jpg',
+				},
+				objectEntryFolderExternalReferenceCode: 'L_FILES',
+				title: 'file_upload_image_4.jpg',
+			},
+			'cms/basic-documents',
+			'Default'
+		);
+
+		apiHelpers.data.push({
+			id: document4.file.id,
+			type: 'document',
+		});
+
 		// Select files for default language
 
 		const filePath1 = path.join(
@@ -1306,14 +1490,6 @@ test(
 		const filePath2 = path.join(
 			__dirname,
 			'../main/dependencies/file_upload_image_2.jpg'
-		);
-		const filePath3 = path.join(
-			__dirname,
-			'../main/dependencies/file_upload_image_3.jpg'
-		);
-		const filePath4 = path.join(
-			__dirname,
-			'../main/dependencies/file_upload_image_4.jpg'
 		);
 
 		// Select file from computer in the default language
@@ -1330,8 +1506,8 @@ test(
 
 		const dmFileFragment = page.locator('.file-upload').nth(1);
 
-		await chooseFileFromDocumentLibrary({
-			filePath: filePath3,
+		await chooseFileFromCMSLibrary({
+			fileName: document3.title,
 			page,
 			trigger: dmFileFragment.getByText('Select File', {
 				exact: true,
@@ -1352,8 +1528,8 @@ test(
 			await localizationSelectPage.switchLanguage('es-ES');
 
 			await expect(async () => {
-				await chooseFileFromDocumentLibrary({
-					filePath: filePath4,
+				await chooseFileFromCMSLibrary({
+					fileName: document4.title,
 					page,
 					trigger: dmFileFragment.getByText('Select File', {
 						exact: true,
@@ -1870,6 +2046,19 @@ test(
 						required: false,
 					},
 					{
+						DBType: 'String',
+						businessType: 'EmailAddress',
+						externalReferenceCode: 'plantEmailERC',
+						indexed: true,
+						indexedAsKeyword: false,
+						label: {
+							en_US: 'Email',
+						},
+						localized: false,
+						name: 'email',
+						required: false,
+					},
+					{
 						DBType: 'Clob',
 						businessType: 'RichText',
 						externalReferenceCode: 'descriptionERC',
@@ -2095,6 +2284,10 @@ test(
 		).toBeVisible();
 
 		await expect(
+			page.getByLabel('Email field cannot be localized')
+		).toBeVisible();
+
+		await expect(
 			page.getByLabel('Description field cannot be localized')
 		).toBeVisible();
 
@@ -2138,6 +2331,10 @@ test(
 
 		await expect(
 			page.getByRole('textbox', {name: 'Country'})
+		).toBeDisabled();
+
+		await expect(
+			page.getByRole('combobox', {name: 'Email'})
 		).toBeDisabled();
 
 		const richTextToolbarButton = page
@@ -2191,6 +2388,10 @@ test(
 			.getByText('Country')
 			.getByText('(Read Only)');
 
+		const emailReadOnlyLabel = page
+			.getByText('Email')
+			.getByText('(Read Only)');
+
 		const textareaReadOnlyLabel = page
 			.getByText('Scientific Name')
 			.getByText('(Read Only)');
@@ -2221,6 +2422,7 @@ test(
 
 		await expect(checkboxReadOnlyLabel).not.toBeVisible();
 		await expect(inputTextReadOnlyLabel).not.toBeVisible();
+		await expect(emailReadOnlyLabel).not.toBeVisible();
 		await expect(textareaReadOnlyLabel).not.toBeVisible();
 		await expect(selectReadOnlyLabel).not.toBeVisible();
 		await expect(multiSelectReadOnlyLabel).not.toBeVisible();
@@ -2265,10 +2467,11 @@ test(
 
 		await expect(
 			page.getByLabel('field is not localizable message')
-		).toHaveCount(10);
+		).toHaveCount(11);
 
 		await expect(checkboxReadOnlyLabel).toBeVisible();
 		await expect(inputTextReadOnlyLabel).toBeVisible();
+		await expect(emailReadOnlyLabel).toBeVisible();
 		await expect(textareaReadOnlyLabel).toBeVisible();
 		await expect(selectReadOnlyLabel).toBeVisible();
 		await expect(multiSelectReadOnlyLabel).toBeVisible();
@@ -2278,6 +2481,10 @@ test(
 		await expect(dateTimeReadOnlyLabel).toBeVisible();
 
 		await expect(page.getByLabel('Country')).toHaveAttribute('readonly');
+
+		await expect(
+			page.getByRole('combobox', {name: 'Email'})
+		).toHaveAttribute('readonly');
 
 		await expect(richTextToolbarButton).toBeDisabled();
 

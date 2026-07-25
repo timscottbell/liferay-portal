@@ -9,6 +9,7 @@ import {
 	IAssetObjectEntry,
 	ISearchAssetObjectEntry,
 } from '../../../common/types/AssetType';
+import {IBreadcrumbProps} from '../../props_transformer/AssetsFDSPropsTransformer';
 
 export interface IAssetTypeInfoPanelContext {
 	actions: ISearchAssetObjectEntry['actions'];
@@ -18,9 +19,16 @@ export interface IAssetTypeInfoPanelContext {
 		groupId: number;
 		name: string;
 	};
+	breadcrumbProps: IBreadcrumbProps;
+	cmpProjectLinkObjectDefinitionId?: number | null;
+	cmpProjectObjectDefinitionId?: number | null;
+	cmpProjectViewURL?: string;
+	cmpTaskObjectDefinitionId?: number | null;
+	cmpTaskViewURL?: string;
 	cmsGroupId: number | string;
 	commentsProps: any;
 	dataSetId?: string;
+	entryClassName?: string;
 	selectedAssets: ISearchAssetObjectEntry[];
 	type: string;
 }

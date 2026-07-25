@@ -62,6 +62,8 @@ public interface ObjectEntry
 
 	public ObjectDefinition getObjectDefinition();
 
+	public java.util.Date getPublishDate();
+
 	public java.util.Map<java.util.Locale, String> getTitleMap()
 		throws com.liferay.portal.kernel.exception.PortalException;
 
@@ -92,3 +94,4 @@ public interface ObjectEntry
 	public void setValues(java.util.Map<String, java.io.Serializable> values);
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:1856044374

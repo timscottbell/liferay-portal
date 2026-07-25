@@ -43,6 +43,23 @@ public abstract class BaseParentBuild extends BaseBuild implements ParentBuild {
 	}
 
 	@Override
+	public void addDownstreamBuild(Build build) {
+		if (build == null) {
+			return;
+		}
+
+		if (_downstreamBuilds == null) {
+			getDownstreamBuilds();
+		}
+
+		if (build.isBuildCached() && _downstreamBuilds.contains(build)) {
+			return;
+		}
+
+		_downstreamBuilds.add(build);
+	}
+
+	@Override
 	public void addDownstreamBuilds(Map<String, String> urlAxisNames) {
 		if (urlAxisNames.isEmpty()) {
 			return;
@@ -511,11 +528,8 @@ public abstract class BaseParentBuild extends BaseBuild implements ParentBuild {
 
 			String jenkinsMasterName = jenkinsMaster.getName();
 
-			if (!callableGroupCounter.containsKey(jenkinsMasterName)) {
-				callableGroupCounter.put(jenkinsMasterName, 0);
-			}
-
-			Integer buildCounter = callableGroupCounter.get(jenkinsMasterName);
+			Integer buildCounter = callableGroupCounter.computeIfAbsent(
+				jenkinsMasterName, key -> 0);
 
 			String sequentialCallableGroupName = jenkinsMasterName;
 
@@ -595,22 +609,6 @@ public abstract class BaseParentBuild extends BaseBuild implements ParentBuild {
 
 	protected BaseParentBuild(String buildURL, Build parentBuild) {
 		super(buildURL, parentBuild);
-	}
-
-	protected void addDownstreamBuild(Build build) {
-		if (build == null) {
-			return;
-		}
-
-		if (_downstreamBuilds == null) {
-			getDownstreamBuilds();
-		}
-
-		if (build.isBuildCached() && _downstreamBuilds.contains(build)) {
-			return;
-		}
-
-		_downstreamBuilds.add(build);
 	}
 
 	protected void addDownstreamBuilds(Collection<Build> builds) {

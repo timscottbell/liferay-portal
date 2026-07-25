@@ -5,51 +5,101 @@
 
 package com.liferay.site.internal.manager;
 
+import com.liferay.asset.kernel.model.AssetCategory;
+import com.liferay.journal.model.JournalArticle;
 import com.liferay.layout.admin.kernel.model.LayoutTypePortletConstants;
+import com.liferay.object.model.ObjectEntry;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
+import com.liferay.petra.function.UnsafeBiConsumer;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.language.Language;
+import com.liferay.portal.kernel.lock.DuplicateLockException;
+import com.liferay.portal.kernel.lock.Lock;
+import com.liferay.portal.kernel.lock.LockManager;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.messaging.Message;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutSet;
 import com.liferay.portal.kernel.model.LayoutTypeController;
+import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.module.util.SystemBundleUtil;
+import com.liferay.portal.kernel.scheduler.SchedulerEngineHelper;
+import com.liferay.portal.kernel.scheduler.SchedulerException;
+import com.liferay.portal.kernel.scheduler.StorageType;
+import com.liferay.portal.kernel.scheduler.TriggerFactory;
+import com.liferay.portal.kernel.scheduler.messaging.SchedulerResponse;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.security.permission.PermissionChecker;
+import com.liferay.portal.kernel.security.permission.PermissionCheckerFactory;
+import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
+import com.liferay.portal.kernel.service.ClassNameLocalService;
+import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.LayoutSetLocalService;
+import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.servlet.DirectRequestDispatcherFactoryUtil;
+import com.liferay.portal.kernel.servlet.HttpMethods;
+import com.liferay.portal.kernel.servlet.ServletContextPool;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.Http;
+import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PropsKeys;
+import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.PropsValues;
+import com.liferay.portal.kernel.util.ProxyFactory;
+import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.TextFormatter;
+import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.xml.Attribute;
 import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReader;
+import com.liferay.portal.lock.service.LockLocalService;
+import com.liferay.portal.theme.ThemeDisplayFactory;
 import com.liferay.portal.util.LayoutTypeControllerTracker;
+import com.liferay.redirect.provider.RedirectProvider;
 import com.liferay.site.configuration.manager.SitemapConfigurationManager;
+import com.liferay.site.constants.SitemapConstants;
+import com.liferay.site.internal.constants.SitemapDestinationNames;
 import com.liferay.site.manager.SitemapManager;
 import com.liferay.site.provider.SitemapURLProvider;
+import com.liferay.site.storage.helper.SitemapStorageHelper;
+
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
+import java.nio.charset.StandardCharsets;
 
 import java.text.DateFormat;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -73,7 +123,33 @@ public class SitemapManagerImpl implements SitemapManager {
 	public void addURLElement(
 		Element element, String url,
 		UnicodeProperties typeSettingsUnicodeProperties, Date modifiedDate,
-		String canonicalURL, Map<Locale, String> alternateURLs) {
+		String canonicalURL, Map<Locale, String> alternateURLs, long groupId) {
+
+		String path = HttpComponentsUtil.getPath(url);
+		String contextPath = _portal.getPathContext();
+
+		if (Validator.isNotNull(contextPath) && path.startsWith(contextPath)) {
+			path = path.substring(contextPath.length());
+		}
+
+		String friendlyURL = _getFriendlyURL(groupId, path);
+
+		if (friendlyURL.startsWith(StringPool.SLASH)) {
+			friendlyURL = friendlyURL.substring(1);
+		}
+
+		String fullURL = path;
+
+		if (fullURL.startsWith(StringPool.SLASH)) {
+			fullURL = fullURL.substring(1);
+		}
+
+		RedirectProvider.Redirect redirect = _redirectProvider.getRedirect(
+			groupId, friendlyURL, fullURL, null);
+
+		if (redirect != null) {
+			return;
+		}
 
 		Element urlElement = element.addElement("url");
 
@@ -82,11 +158,11 @@ public class SitemapManagerImpl implements SitemapManager {
 		locElement.addText(encodeXML(url));
 
 		if (modifiedDate != null) {
-			Element modifiedDateElement = urlElement.addElement("lastmod");
-
 			DateFormat iso8601DateFormat = DateUtil.getISO8601Format();
 
-			modifiedDateElement.addText(iso8601DateFormat.format(modifiedDate));
+			Element lastmodElement = urlElement.addElement("lastmod");
+
+			lastmodElement.addText(iso8601DateFormat.format(modifiedDate));
 		}
 
 		if (typeSettingsUnicodeProperties == null) {
@@ -161,12 +237,60 @@ public class SitemapManagerImpl implements SitemapManager {
 			Element alternateURLElement = urlElement.addElement(
 				"xhtml:link", "http://www.w3.org/1999/xhtml");
 
-			alternateURLElement.addAttribute("rel", "alternate");
-			alternateURLElement.addAttribute("hreflang", "x-default");
 			alternateURLElement.addAttribute("href", canonicalURL);
+			alternateURLElement.addAttribute("hreflang", "x-default");
+			alternateURLElement.addAttribute("rel", "alternate");
 		}
 
-		_removeOldestElement(element, urlElement);
+		if (element.attributeValue(_ATTRIBUTE_NAME_PAGE) == null) {
+			_removeOldestElement(element, urlElement);
+
+			return;
+		}
+
+		_addEntryAndPaginate(element, urlElement);
+	}
+
+	@Override
+	public void deleteRegenerateSitemapScheduledJobs(long companyId)
+		throws PortalException {
+
+		for (SchedulerResponse schedulerResponse :
+				_schedulerEngineHelper.getScheduledJobs(
+					StorageType.PERSISTED)) {
+
+			if (!Objects.equals(
+					schedulerResponse.getGroupName(),
+					SitemapDestinationNames.SITEMAP_REGENERATION)) {
+
+				continue;
+			}
+
+			Message message = schedulerResponse.getMessage();
+
+			if ((message == null) ||
+				(message.getLong("companyId") != companyId)) {
+
+				continue;
+			}
+
+			try {
+				_schedulerEngineHelper.delete(
+					schedulerResponse.getJobName(),
+					schedulerResponse.getGroupName(), StorageType.PERSISTED);
+			}
+			catch (SchedulerException schedulerException) {
+				SchedulerResponse existingSchedulerResponse =
+					_schedulerEngineHelper.getScheduledJob(
+						schedulerResponse.getJobName(),
+						schedulerResponse.getGroupName(),
+						StorageType.PERSISTED);
+
+				if (existingSchedulerResponse != null) {
+					throw schedulerException;
+				}
+			}
+		}
 	}
 
 	@Override
@@ -185,6 +309,16 @@ public class SitemapManagerImpl implements SitemapManager {
 	}
 
 	@Override
+	public long getAssetTypeClassNameId(String assetTypeKey) {
+		return GetterUtil.getLong(_assetTypeClassNameIds.get(assetTypeKey));
+	}
+
+	@Override
+	public Map<Long, String> getAssetTypeKeys() {
+		return _assetTypeKeys;
+	}
+
+	@Override
 	public String getSitemap(
 			long groupId, boolean privateLayout, ThemeDisplay themeDisplay)
 		throws PortalException {
@@ -194,9 +328,42 @@ public class SitemapManagerImpl implements SitemapManager {
 
 	@Override
 	public String getSitemap(
-			String layoutUuid, long groupId, boolean privateLayout,
-			ThemeDisplay themeDisplay)
+			long assetTypeClassNameId, String layoutUuid, long groupId,
+			boolean privateLayout, ThemeDisplay themeDisplay)
 		throws PortalException {
+
+		return getSitemap(
+			assetTypeClassNameId, layoutUuid, groupId, 1, privateLayout,
+			themeDisplay);
+	}
+
+	@Override
+	public String getSitemap(
+			long assetTypeClassNameId, String layoutUuid, long groupId,
+			int page, boolean privateLayout, ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		if (assetTypeClassNameId > 0) {
+			long companyId = themeDisplay.getCompanyId();
+
+			SitemapURLProvider sitemapURLProvider =
+				_serviceTrackerMap.getService(assetTypeClassNameId);
+
+			if ((sitemapURLProvider == null) ||
+				!_sitemapConfigurationManager.xmlSitemapIndexCompanyEnabled(
+					companyId) ||
+				!StringUtil.equals(
+					_sitemapConfigurationManager.xmlSitemapIndexMode(companyId),
+					SitemapConstants.INDEX_MODE_ASSET_TYPE) ||
+				!sitemapURLProvider.isInclude(companyId, groupId)) {
+
+				return null;
+			}
+
+			return _getAssetTypeSitemap(
+				assetTypeClassNameId, groupId, page, privateLayout,
+				themeDisplay);
+		}
 
 		if (Validator.isNull(layoutUuid) &&
 			_sitemapConfigurationManager.xmlSitemapIndexCompanyEnabled(
@@ -205,18 +372,198 @@ public class SitemapManagerImpl implements SitemapManager {
 			return _getIndexSitemap(groupId, privateLayout, themeDisplay);
 		}
 
-		return _getSitemap(layoutUuid, groupId, privateLayout, themeDisplay);
+		return _getSitemap(groupId, layoutUuid, privateLayout, themeDisplay);
+	}
+
+	@Override
+	public String getSitemap(
+			String layoutUuid, long groupId, boolean privateLayout,
+			ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		return getSitemap(0, layoutUuid, groupId, privateLayout, themeDisplay);
+	}
+
+	@Override
+	public InputStream getSitemapInputStream(
+			String assetTypeKey, String layoutUuid, long groupId, int page,
+			boolean privateLayout, ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		long companyId = themeDisplay.getCompanyId();
+
+		if (_sitemapConfigurationManager.cachedGenerationCompanyEnabled(
+				companyId) &&
+			_sitemapConfigurationManager.xmlSitemapIndexCompanyEnabled(
+				companyId) &&
+			StringUtil.equals(
+				_sitemapConfigurationManager.xmlSitemapIndexMode(companyId),
+				SitemapConstants.INDEX_MODE_ASSET_TYPE)) {
+
+			try {
+				if (assetTypeKey == null) {
+					return _sitemapStorageHelper.getSitemapInputStream(
+						companyId, groupId);
+				}
+
+				return _sitemapStorageHelper.getSitemapInputStream(
+					companyId, groupId, assetTypeKey, page);
+			}
+			catch (PortalException portalException) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(portalException);
+				}
+			}
+		}
+
+		String xml = getSitemap(
+			getAssetTypeClassNameId(assetTypeKey), layoutUuid, groupId, page,
+			privateLayout, themeDisplay);
+
+		if (xml == null) {
+			return null;
+		}
+
+		return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@Override
+	public boolean isRegenerateSitemapInProgress(long companyId) {
+		List<com.liferay.portal.lock.model.Lock> serviceBuilderLocks =
+			_lockLocalService.getLocks(
+				companyId, SitemapManagerImpl.class.getName());
+
+		for (com.liferay.portal.lock.model.Lock serviceBuilderLock :
+				serviceBuilderLocks) {
+
+			if (!serviceBuilderLock.isExpired()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	@Override
+	public void regenerateSitemap(
+			String assetTypeKey, long companyId, long groupId)
+		throws PortalException {
+
+		if (!_sitemapConfigurationManager.indexModeAssetTypeCompanyEnabled(
+				companyId)) {
+
+			return;
+		}
+
+		long assetTypeClassNameId = getAssetTypeClassNameId(assetTypeKey);
+
+		if (assetTypeClassNameId <= 0) {
+			return;
+		}
+
+		SitemapURLProvider sitemapURLProvider = _serviceTrackerMap.getService(
+			assetTypeClassNameId);
+
+		if ((sitemapURLProvider == null) ||
+			!sitemapURLProvider.isInclude(companyId, groupId)) {
+
+			return;
+		}
+
+		Lock lock = _lockRegenerateSitemap(assetTypeKey, companyId, groupId);
+
+		if ((lock == null) || !lock.isNew()) {
+			return;
+		}
+
+		try {
+			ThemeDisplay themeDisplay = _createThemeDisplay(companyId, groupId);
+
+			_regenerateAssetTypeSitemap(
+				assetTypeClassNameId, groupId, false, themeDisplay);
+
+			_getIndexSitemap(groupId, false, themeDisplay);
+		}
+		finally {
+			_unlockRegenerateSitemap(assetTypeKey, companyId, groupId);
+		}
+	}
+
+	@Override
+	public void scheduleRegenerateSitemap(
+		String assetTypeKey, long companyId, long groupId, Date startDate) {
+
+		try {
+			if (!_sitemapConfigurationManager.cachedGenerationCompanyEnabled(
+					companyId) ||
+				!_sitemapConfigurationManager.indexModeAssetTypeCompanyEnabled(
+					companyId)) {
+
+				return;
+			}
+
+			boolean force = false;
+
+			if (startDate != null) {
+				force = true;
+			}
+
+			if (startDate == null) {
+				long xmlSitemapRegenerationDelay =
+					_sitemapConfigurationManager.getXMLSitemapRegenerationDelay(
+						companyId);
+
+				startDate = new Date(
+					System.currentTimeMillis() +
+						(xmlSitemapRegenerationDelay * Time.SECOND));
+			}
+
+			Group group = _groupLocalService.fetchGroup(groupId);
+
+			if ((group == null) || group.isCompany()) {
+				_scheduleCompanyRegenerateSitemap(
+					assetTypeKey, companyId, force, startDate);
+			}
+			else {
+				_scheduleGroupRegenerateSitemap(
+					assetTypeKey, companyId, force, groupId, startDate);
+			}
+		}
+		catch (PortalException portalException) {
+			_log.error(portalException);
+		}
 	}
 
 	@Activate
 	protected void activate(BundleContext bundleContext) {
+		_maximumEntries = MAXIMUM_ENTRIES;
+
+		Map<String, Long> assetTypeClassNameIds = new HashMap<>();
+		Map<Long, String> assetTypeKeys = new HashMap<>();
+
+		for (Map.Entry<String, String> entry :
+				_assetTypeKeysByClassName.entrySet()) {
+
+			long classNameId = _classNameLocalService.getClassNameId(
+				entry.getKey());
+
+			assetTypeClassNameIds.put(entry.getValue(), classNameId);
+			assetTypeKeys.put(classNameId, entry.getValue());
+		}
+
+		_assetTypeClassNameIds = Collections.unmodifiableMap(
+			assetTypeClassNameIds);
+		_assetTypeKeys = Collections.unmodifiableMap(assetTypeKeys);
+
 		_serviceTrackerMap = ServiceTrackerMapFactory.openSingleValueMap(
 			_bundleContext, SitemapURLProvider.class, null,
 			(serviceReference, emitter) -> {
 				SitemapURLProvider sitemapURLProvider =
 					_bundleContext.getService(serviceReference);
 
-				emitter.emit(sitemapURLProvider.getClassName());
+				emitter.emit(
+					_classNameLocalService.getClassNameId(
+						sitemapURLProvider.getClassName()));
 			});
 	}
 
@@ -225,30 +572,539 @@ public class SitemapManagerImpl implements SitemapManager {
 		_serviceTrackerMap.close();
 	}
 
-	private String _getIndexSitemap(
-			long groupId, boolean privateLayout, ThemeDisplay themeDisplay)
-		throws PortalException {
+	private void _addEntryAndPaginate(Element element, Element newElement) {
+		int entries =
+			GetterUtil.getInteger(element.attributeValue("entries")) + 1;
+
+		int newElementSize = _getSize(newElement);
+
+		int size =
+			GetterUtil.getInteger(element.attributeValue("size")) +
+				newElementSize;
+
+		if ((entries <= _maximumEntries) && (size < _MAXIMUM_SIZE)) {
+			element.addAttribute("entries", String.valueOf(entries));
+			element.addAttribute("size", String.valueOf(size));
+
+			return;
+		}
+
+		element.remove(newElement);
+
+		int page = GetterUtil.getInteger(
+			element.attributeValue(_ATTRIBUTE_NAME_PAGE));
+
+		_consumePage(element, page);
+
+		element.clearContent();
+
+		_initEntriesAndSize(element);
+
+		String assetTypeKey = element.attributeValue(
+			_ATTRIBUTE_NAME_ASSET_TYPE_KEY);
+		long companyId = GetterUtil.getLong(
+			element.attributeValue(_ATTRIBUTE_NAME_COMPANY_ID));
+		long groupId = GetterUtil.getLong(
+			element.attributeValue(_ATTRIBUTE_NAME_GROUP_ID));
+
+		_initPagination(assetTypeKey, companyId, element, groupId);
+
+		element.addAttribute(_ATTRIBUTE_NAME_PAGE, String.valueOf(page + 1));
+
+		element.add(newElement);
+
+		element.addAttribute("entries", "1");
+		element.addAttribute(
+			"size",
+			String.valueOf(
+				GetterUtil.getInteger(element.attributeValue("size")) +
+					newElementSize));
+	}
+
+	private void _addSitemapElement(
+		String assetTypeKey, Element element, long groupId, Date modifiedDate,
+		int page, boolean privateLayout, String url) {
+
+		Element sitemapElement = element.addElement("sitemap");
+
+		Element locElement = sitemapElement.addElement("loc");
+
+		StringBundler sb = new StringBundler(10);
+
+		sb.append(url);
+		sb.append(_portal.getPathContext());
+		sb.append("/sitemap-");
+		sb.append(assetTypeKey);
+		sb.append(".xml?groupId=");
+		sb.append(groupId);
+		sb.append("&privateLayout=");
+		sb.append(privateLayout);
+
+		if (page > 0) {
+			sb.append("&page=");
+			sb.append(page);
+		}
+
+		locElement.addText(sb.toString());
+
+		if (modifiedDate != null) {
+			DateFormat iso8601DateFormat = DateUtil.getISO8601Format();
+
+			Element lastmodElement = sitemapElement.addElement("lastmod");
+
+			lastmodElement.addText(iso8601DateFormat.format(modifiedDate));
+		}
+	}
+
+	private void _consumePage(Element element, int page) {
+		_removeEntriesAndSize(element);
+		_removePaginationAttributes(element);
+
+		Document document = element.getDocument();
+
+		try {
+			UnsafeBiConsumer<Integer, String, PortalException>
+				unsafeBiConsumer = _unsafeBiConsumerThreadLocal.get();
+
+			unsafeBiConsumer.accept(page, document.asXML());
+		}
+		catch (Exception exception) {
+			if (_log.isWarnEnabled()) {
+				_log.warn(exception);
+			}
+		}
+	}
+
+	private HttpServletRequest _createMockHttpServletRequest() {
+		Map<String, Object> attributes = new HashMap<>();
+
+		return ProxyUtil.newDelegateProxyInstance(
+			HttpServletRequest.class.getClassLoader(), HttpServletRequest.class,
+			new Object() {
+
+				public Object getAttribute(String name) {
+					return attributes.get(name);
+				}
+
+				public Enumeration<String> getAttributeNames() {
+					return Collections.enumeration(attributes.keySet());
+				}
+
+				public String getContextPath() {
+					return _portal.getPathContext();
+				}
+
+				public Cookie[] getCookies() {
+					return new Cookie[0];
+				}
+
+				public Enumeration<String> getHeaderNames() {
+					return Collections.emptyEnumeration();
+				}
+
+				public String getMethod() {
+					return HttpMethods.GET;
+				}
+
+				public Map<String, String[]> getParameterMap() {
+					return Collections.emptyMap();
+				}
+
+				public String[] getParameterValues(String name) {
+					return new String[0];
+				}
+
+				public RequestDispatcher getRequestDispatcher(String path) {
+					return DirectRequestDispatcherFactoryUtil.
+						getRequestDispatcher(
+							ServletContextPool.get(
+								_portal.getServletContextName()),
+							path);
+				}
+
+				public String getRequestURI() {
+					return StringPool.SLASH;
+				}
+
+				public String getScheme() {
+					return Http.HTTP;
+				}
+
+				public ServletContext getServletContext() {
+					return ServletContextPool.get(
+						_portal.getServletContextName());
+				}
+
+				public void removeAttribute(String name) {
+					attributes.remove(name);
+				}
+
+				public void setAttribute(String name, Object value) {
+					attributes.put(name, value);
+				}
+
+			},
+			ProxyFactory.newDummyInstance(HttpServletRequest.class));
+	}
+
+	private Document _createSitemapDocument(
+		String rootElementName, String rootElementNamespace) {
 
 		Document document = _saxReader.createDocument();
 
 		document.setXMLEncoding(StringPool.UTF8);
 
 		Element rootElement = document.addElement(
-			"sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9");
+			rootElementName, rootElementNamespace);
 
 		rootElement.addAttribute("xmlns:xhtml", "http://www.w3.org/1999/xhtml");
+		rootElement.addAttribute(
+			"xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+		rootElement.addAttribute(
+			"xsi:schemaLocation",
+			"http://www.w3.org/1999/xhtml " +
+				"http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd");
+
+		return document;
+	}
+
+	private ThemeDisplay _createThemeDisplay(long companyId, long groupId)
+		throws PortalException {
+
+		ThemeDisplay themeDisplay = ThemeDisplayFactory.create();
+
+		Company company = _companyLocalService.getCompany(companyId);
+
+		themeDisplay.setCompany(company);
+
+		Locale locale = _portal.getSiteDefaultLocale(groupId);
+
+		themeDisplay.setLanguageId(LocaleUtil.toLanguageId(locale));
+
+		themeDisplay.setLayoutSet(
+			_layoutSetLocalService.getLayoutSet(groupId, false));
+		themeDisplay.setLocale(locale);
+
+		String virtualHostname = company.getVirtualHostname();
+
+		if (Validator.isNull(virtualHostname)) {
+			virtualHostname = "localhost";
+		}
+
+		themeDisplay.setPortalDomain(virtualHostname);
+
+		boolean secure = _isSecure();
+
+		int portalServerPort = _portal.getPortalServerPort(secure);
+
+		themeDisplay.setPortalURL(
+			_portal.getPortalURL(virtualHostname, portalServerPort, secure));
+
+		themeDisplay.setRequest(_createMockHttpServletRequest());
+		themeDisplay.setScopeGroupId(groupId);
+		themeDisplay.setServerName(virtualHostname);
+		themeDisplay.setServerPort(portalServerPort);
+		themeDisplay.setSiteDefaultLocale(locale);
+		themeDisplay.setSiteGroupId(groupId);
+		themeDisplay.setUser(_userLocalService.getGuestUser(companyId));
+
+		return themeDisplay;
+	}
+
+	private void _generateAssetTypeSitemap(
+			long assetTypeClassNameId, long groupId, boolean privateLayout,
+			ThemeDisplay themeDisplay,
+			UnsafeBiConsumer<Integer, String, PortalException> unsafeBiConsumer)
+		throws PortalException {
+
+		PermissionChecker originalPermissionChecker =
+			PermissionThreadLocal.getPermissionChecker();
+
+		_unsafeBiConsumerThreadLocal.set(unsafeBiConsumer);
+
+		try {
+			long companyId = themeDisplay.getCompanyId();
+
+			PermissionThreadLocal.setPermissionChecker(
+				_permissionCheckerFactory.create(
+					_userLocalService.getGuestUser(companyId)));
+
+			Document document = _createSitemapDocument(
+				"urlset", "http://www.sitemaps.org/schemas/sitemap/0.9");
+
+			Element rootElement = document.getRootElement();
+
+			_initEntriesAndSize(rootElement);
+
+			String assetTypeKey = _assetTypeKeys.get(assetTypeClassNameId);
+
+			_initPagination(assetTypeKey, companyId, rootElement, groupId);
+
+			SitemapURLProvider sitemapURLProvider =
+				_serviceTrackerMap.getService(assetTypeClassNameId);
+
+			for (LayoutSet curLayoutSet :
+					_getLayoutSets(
+						groupId, null, privateLayout, themeDisplay)) {
+
+				sitemapURLProvider.visitLayoutSet(
+					rootElement, curLayoutSet, themeDisplay);
+			}
+
+			_consumePage(
+				rootElement,
+				GetterUtil.getInteger(
+					rootElement.attributeValue(_ATTRIBUTE_NAME_PAGE)));
+		}
+		finally {
+			PermissionThreadLocal.setPermissionChecker(
+				originalPermissionChecker);
+
+			_unsafeBiConsumerThreadLocal.remove();
+		}
+	}
+
+	private Date _getAssetTypeModifiedDate(
+			long classNameId, long companyId, long groupId)
+		throws PortalException {
+
+		SitemapURLProvider sitemapURLProvider = _serviceTrackerMap.getService(
+			classNameId);
+
+		if (sitemapURLProvider == null) {
+			return null;
+		}
+
+		return sitemapURLProvider.getModifiedDate(companyId, groupId);
+	}
+
+	private int _getAssetTypePageCount(
+			String assetTypeKey, long companyId, long groupId)
+		throws PortalException {
+
+		int pageCount = 1;
+
+		while (_sitemapStorageHelper.hasSitemapFile(
+					companyId, groupId, assetTypeKey, pageCount + 1)) {
+
+			pageCount++;
+		}
+
+		return pageCount;
+	}
+
+	private String _getAssetTypeSitemap(
+			long assetTypeClassNameId, long groupId, int page,
+			boolean privateLayout, ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		long companyId = themeDisplay.getCompanyId();
+
+		if (!_sitemapConfigurationManager.cachedGenerationCompanyEnabled(
+				companyId)) {
+
+			String[] xml = {null};
+
+			_generateAssetTypeSitemap(
+				assetTypeClassNameId, groupId, privateLayout, themeDisplay,
+				(curPage, curXML) -> {
+					if (curPage == page) {
+						xml[0] = curXML;
+					}
+				});
+
+			return xml[0];
+		}
+
+		String assetTypeKey = _assetTypeKeys.get(assetTypeClassNameId);
+
+		if (!_sitemapStorageHelper.hasSitemapFile(
+				companyId, groupId, assetTypeKey, page)) {
+
+			_regenerateAssetTypeSitemap(
+				assetTypeClassNameId, groupId, privateLayout, themeDisplay);
+		}
+
+		try {
+			return StringUtil.read(
+				_sitemapStorageHelper.getSitemapInputStream(
+					companyId, groupId, assetTypeKey, page));
+		}
+		catch (Exception exception) {
+			if (_log.isWarnEnabled()) {
+				_log.warn(exception);
+			}
+		}
+
+		return null;
+	}
+
+	private String _getFriendlyURL(long groupId, String path) {
+		int[] groupFriendlyURLIndex = _portal.getGroupFriendlyURLIndex(path);
+
+		if (groupFriendlyURLIndex != null) {
+			if (groupFriendlyURLIndex[1] < path.length()) {
+				return path.substring(groupFriendlyURLIndex[1]);
+			}
+
+			return StringPool.BLANK;
+		}
+
+		long companyId = CompanyThreadLocal.getCompanyId();
+
+		if (companyId == 0) {
+			try {
+				Group group = _groupLocalService.getGroup(groupId);
+
+				companyId = group.getCompanyId();
+			}
+			catch (PortalException portalException) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(portalException);
+				}
+
+				companyId = 0;
+			}
+		}
+
+		for (Locale availableLocale :
+				_language.getAvailableLocales(companyId)) {
+
+			String i18nPath =
+				StringPool.SLASH + LocaleUtil.toLanguageId(availableLocale);
+
+			if (path.startsWith(i18nPath + StringPool.SLASH) ||
+				path.equals(i18nPath)) {
+
+				path = path.substring(i18nPath.length());
+
+				groupFriendlyURLIndex = _portal.getGroupFriendlyURLIndex(path);
+
+				if (groupFriendlyURLIndex != null) {
+					if (groupFriendlyURLIndex[1] < path.length()) {
+						return path.substring(groupFriendlyURLIndex[1]);
+					}
+
+					return StringPool.BLANK;
+				}
+
+				return path;
+			}
+		}
+
+		return path;
+	}
+
+	private String _getIndexSitemap(
+			long groupId, boolean privateLayout, ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		Document document = _createSitemapDocument(
+			"sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9");
+
+		Element rootElement = document.getRootElement();
 
 		_initEntriesAndSize(rootElement);
 
-		for (LayoutSet layoutSet :
-				_getLayoutSets(groupId, null, privateLayout, themeDisplay)) {
+		long companyId = themeDisplay.getCompanyId();
 
-			_visitLayoutSet(rootElement, layoutSet, themeDisplay);
+		String xmlSitemapIndexMode =
+			_sitemapConfigurationManager.xmlSitemapIndexMode(companyId);
+
+		boolean cachedGenerationCompanyEnabled =
+			_sitemapConfigurationManager.cachedGenerationCompanyEnabled(
+				companyId);
+
+		if (StringUtil.equals(
+				xmlSitemapIndexMode, SitemapConstants.INDEX_MODE_ASSET_TYPE)) {
+
+			String portalURL = themeDisplay.getPortalURL();
+
+			for (Map.Entry<Long, String> entry : _assetTypeKeys.entrySet()) {
+				long assetTypeClassNameId = entry.getKey();
+
+				SitemapURLProvider sitemapURLProvider =
+					_serviceTrackerMap.getService(assetTypeClassNameId);
+
+				if ((sitemapURLProvider == null) ||
+					!sitemapURLProvider.isInclude(companyId, groupId)) {
+
+					continue;
+				}
+
+				int assetTypePageCount = 0;
+
+				String assetTypeKey = entry.getValue();
+
+				if (cachedGenerationCompanyEnabled) {
+					if (!_sitemapStorageHelper.hasSitemapFile(
+							companyId, groupId, assetTypeKey, 1)) {
+
+						_regenerateAssetTypeSitemap(
+							assetTypeClassNameId, groupId, privateLayout,
+							themeDisplay);
+					}
+
+					assetTypePageCount = _getAssetTypePageCount(
+						assetTypeKey, companyId, groupId);
+				}
+				else {
+					int[] assetTypePageCountArray = {0};
+
+					_generateAssetTypeSitemap(
+						assetTypeClassNameId, groupId, privateLayout,
+						themeDisplay,
+						(page, xml) -> assetTypePageCountArray[0]++);
+
+					assetTypePageCount = assetTypePageCountArray[0];
+				}
+
+				Date assetTypeModifiedDate = _getAssetTypeModifiedDate(
+					assetTypeClassNameId, companyId, groupId);
+
+				if (assetTypePageCount <= 1) {
+					_addSitemapElement(
+						assetTypeKey, rootElement, groupId,
+						assetTypeModifiedDate, 0, privateLayout, portalURL);
+				}
+				else {
+					for (int page = 1; page <= assetTypePageCount; page++) {
+						_addSitemapElement(
+							assetTypeKey, rootElement, groupId,
+							assetTypeModifiedDate, page, privateLayout,
+							portalURL);
+					}
+				}
+			}
+		}
+		else {
+			for (LayoutSet layoutSet :
+					_getLayoutSets(
+						groupId, null, privateLayout, themeDisplay)) {
+
+				_visitLayoutSet(rootElement, layoutSet, themeDisplay);
+			}
 		}
 
 		_removeEntriesAndSize(rootElement);
 
-		return document.asXML();
+		String xml = document.asXML();
+
+		if (StringUtil.equals(
+				xmlSitemapIndexMode, SitemapConstants.INDEX_MODE_ASSET_TYPE) &&
+			cachedGenerationCompanyEnabled) {
+
+			try {
+				_sitemapStorageHelper.storeSitemapFile(companyId, groupId, xml);
+			}
+			catch (Exception exception) {
+				if (_log.isWarnEnabled()) {
+					_log.warn(exception);
+				}
+			}
+		}
+
+		return xml;
 	}
 
 	private List<LayoutSet> _getLayoutSets(
@@ -314,35 +1170,29 @@ public class SitemapManagerImpl implements SitemapManager {
 		return Collections.emptyList();
 	}
 
+	private String _getSchedulerJobName(
+		String assetTypeKey, long companyId, long groupId) {
+
+		return StringBundler.concat(
+			assetTypeKey, StringPool.SLASH, groupId, StringPool.AT, companyId);
+	}
+
 	private String _getSitemap(
-			String layoutUuid, long groupId, boolean privateLayout,
+			long groupId, String layoutUuid, boolean privateLayout,
 			ThemeDisplay themeDisplay)
 		throws PortalException {
 
-		Document document = _saxReader.createDocument();
-
-		document.setXMLEncoding(StringPool.UTF8);
-
-		Element rootElement = document.addElement(
+		Document document = _createSitemapDocument(
 			"urlset", "http://www.sitemaps.org/schemas/sitemap/0.9");
 
-		rootElement.addAttribute(
-			"xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-		rootElement.addAttribute(
-			"xsi:schemaLocation",
-			"http://www.w3.org/1999/xhtml " +
-				"http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd");
-		rootElement.addAttribute("xmlns:xhtml", "http://www.w3.org/1999/xhtml");
+		Element rootElement = document.getRootElement();
 
 		_initEntriesAndSize(rootElement);
 
 		_visitLayoutSets(
+			rootElement,
 			_getLayoutSets(groupId, layoutUuid, privateLayout, themeDisplay),
-			layoutUuid, rootElement, themeDisplay);
-
-		if (!rootElement.hasContent()) {
-			return StringPool.BLANK;
-		}
+			layoutUuid, themeDisplay);
 
 		_removeEntriesAndSize(rootElement);
 
@@ -352,7 +1202,7 @@ public class SitemapManagerImpl implements SitemapManager {
 	private List<SitemapURLProvider> _getSitemapURLProviders() {
 		return TransformUtil.transform(
 			_serviceTrackerMap.keySet(),
-			className -> _serviceTrackerMap.getService(className));
+			classNameId -> _serviceTrackerMap.getService(classNameId));
 	}
 
 	private int _getSize(Element element) {
@@ -377,12 +1227,22 @@ public class SitemapManagerImpl implements SitemapManager {
 		return bytes.length - offset;
 	}
 
-	private void _initEntriesAndSize(Element rootElement) {
-		rootElement.addAttribute("entries", "0");
+	private void _initEntriesAndSize(Element element) {
+		element.addAttribute("entries", "0");
 
-		int size = _getSize(rootElement);
+		int size = _getSize(element);
 
-		rootElement.addAttribute("size", String.valueOf(size));
+		element.addAttribute("size", String.valueOf(size));
+	}
+
+	private void _initPagination(
+		String assetTypeKey, long companyId, Element element, long groupId) {
+
+		element.addAttribute(_ATTRIBUTE_NAME_ASSET_TYPE_KEY, assetTypeKey);
+		element.addAttribute(
+			_ATTRIBUTE_NAME_COMPANY_ID, String.valueOf(companyId));
+		element.addAttribute(_ATTRIBUTE_NAME_GROUP_ID, String.valueOf(groupId));
+		element.addAttribute(_ATTRIBUTE_NAME_PAGE, "1");
 	}
 
 	private boolean _isCompanyVirtualHostname(ThemeDisplay themeDisplay) {
@@ -397,9 +1257,77 @@ public class SitemapManagerImpl implements SitemapManager {
 		return Objects.equals(virtualHostname, themeDisplay.getServerName());
 	}
 
-	private void _removeEntriesAndSize(Element rootElement) {
-		Attribute entriesAttribute = rootElement.attribute("entries");
-		Attribute sizeAttribute = rootElement.attribute("size");
+	private boolean _isSecure() {
+		if (Objects.equals(
+				Http.HTTPS,
+				PropsUtil.get(PropsKeys.PORTAL_INSTANCE_PROTOCOL)) ||
+			Objects.equals(
+				Http.HTTPS, PropsUtil.get(PropsKeys.WEB_SERVER_PROTOCOL))) {
+
+			return true;
+		}
+
+		return false;
+	}
+
+	private Lock _lockRegenerateSitemap(
+			String assetTypeKey, long companyId, long groupId)
+		throws PortalException {
+
+		try {
+			User guestUser = _userLocalService.getGuestUser(companyId);
+
+			return _lockManager.lock(
+				guestUser.getUserId(), SitemapManagerImpl.class.getName(),
+				_getSchedulerJobName(assetTypeKey, companyId, groupId),
+				SitemapManagerImpl.class.getName(), false, Time.MINUTE * 20,
+				false);
+		}
+		catch (DuplicateLockException duplicateLockException) {
+			if (_log.isDebugEnabled()) {
+				_log.debug(duplicateLockException);
+			}
+
+			return null;
+		}
+	}
+
+	private void _regenerateAssetTypeSitemap(
+			long assetTypeClassNameId, long groupId, boolean privateLayout,
+			ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		long companyId = themeDisplay.getCompanyId();
+
+		String assetTypeKey = _assetTypeKeys.get(assetTypeClassNameId);
+
+		try {
+			_sitemapStorageHelper.deleteSitemaps(
+				companyId, groupId, assetTypeKey);
+		}
+		catch (Exception exception) {
+			if (_log.isWarnEnabled()) {
+				_log.warn(exception);
+			}
+		}
+
+		_generateAssetTypeSitemap(
+			assetTypeClassNameId, groupId, privateLayout, themeDisplay,
+			(page, xml) -> _sitemapStorageHelper.storeSitemapFile(
+				companyId, groupId, assetTypeKey, page, xml));
+	}
+
+	private void _removeAttribute(Element element, String name) {
+		Attribute attribute = element.attribute(name);
+
+		if (attribute != null) {
+			element.remove(attribute);
+		}
+	}
+
+	private void _removeEntriesAndSize(Element element) {
+		Attribute entriesAttribute = element.attribute("entries");
+		Attribute sizeAttribute = element.attribute("size");
 
 		if (_log.isDebugEnabled()) {
 			StringBundler sb = new StringBundler(4);
@@ -429,35 +1357,105 @@ public class SitemapManagerImpl implements SitemapManager {
 			_log.debug(sb.toString());
 		}
 
-		if (entriesAttribute != null) {
-			rootElement.remove(entriesAttribute);
-		}
-
-		if (sizeAttribute != null) {
-			rootElement.remove(sizeAttribute);
-		}
+		_removeAttribute(element, "entries");
+		_removeAttribute(element, "size");
 	}
 
-	private void _removeOldestElement(Element rootElement, Element newElement) {
-		int entries = GetterUtil.getInteger(
-			rootElement.attributeValue("entries"));
-		int size = GetterUtil.getInteger(rootElement.attributeValue("size"));
+	private void _removeOldestElement(Element element, Element newElement) {
+		int entries = GetterUtil.getInteger(element.attributeValue("entries"));
+		int size = GetterUtil.getInteger(element.attributeValue("size"));
 
 		entries++;
 		size += _getSize(newElement);
 
-		while ((entries > MAXIMUM_ENTRIES) || (size >= _MAXIMUM_SIZE)) {
-			Element oldestUrlElement = rootElement.element(
-				newElement.getName());
+		while ((entries > _maximumEntries) || (size >= _MAXIMUM_SIZE)) {
+			Element oldestUrlElement = element.element(newElement.getName());
 
 			entries--;
 			size -= _getSize(oldestUrlElement);
 
-			rootElement.remove(oldestUrlElement);
+			element.remove(oldestUrlElement);
 		}
 
-		rootElement.addAttribute("entries", String.valueOf(entries));
-		rootElement.addAttribute("size", String.valueOf(size));
+		element.addAttribute("entries", String.valueOf(entries));
+		element.addAttribute("size", String.valueOf(size));
+	}
+
+	private void _removePaginationAttributes(Element element) {
+		_removeAttribute(element, _ATTRIBUTE_NAME_ASSET_TYPE_KEY);
+		_removeAttribute(element, _ATTRIBUTE_NAME_COMPANY_ID);
+		_removeAttribute(element, _ATTRIBUTE_NAME_GROUP_ID);
+		_removeAttribute(element, _ATTRIBUTE_NAME_PAGE);
+	}
+
+	private void _scheduleCompanyRegenerateSitemap(
+			String assetTypeKey, long companyId, boolean force, Date startDate)
+		throws PortalException {
+
+		for (Group group :
+				_groupLocalService.getGroups(
+					companyId, GroupConstants.ANY_PARENT_GROUP_ID, true)) {
+
+			_scheduleGroupRegenerateSitemap(
+				assetTypeKey, companyId, force, group.getGroupId(), startDate);
+		}
+	}
+
+	private void _scheduleGroupRegenerateSitemap(
+			String assetTypeKey, long companyId, boolean force, long groupId,
+			Date startDate)
+		throws PortalException {
+
+		SitemapURLProvider sitemapURLProvider = _serviceTrackerMap.getService(
+			getAssetTypeClassNameId(assetTypeKey));
+
+		if ((sitemapURLProvider == null) ||
+			!sitemapURLProvider.isInclude(companyId, groupId)) {
+
+			return;
+		}
+
+		String schedulerJobName = _getSchedulerJobName(
+			assetTypeKey, companyId, groupId);
+
+		SchedulerResponse schedulerResponse =
+			_schedulerEngineHelper.getScheduledJob(
+				schedulerJobName, SitemapDestinationNames.SITEMAP_REGENERATION,
+				StorageType.PERSISTED);
+
+		if (schedulerResponse != null) {
+			if (!force) {
+				return;
+			}
+
+			_schedulerEngineHelper.delete(
+				schedulerJobName, SitemapDestinationNames.SITEMAP_REGENERATION,
+				StorageType.PERSISTED);
+		}
+
+		Message message = new Message();
+
+		message.put("assetTypeKey", assetTypeKey);
+		message.put("companyId", companyId);
+		message.put("groupId", groupId);
+
+		_schedulerEngineHelper.schedule(
+			_triggerFactory.createTrigger(
+				schedulerJobName, SitemapDestinationNames.SITEMAP_REGENERATION,
+				startDate, null, 0, null),
+			StorageType.PERSISTED,
+			StringBundler.concat(
+				"Sitemap regeneration for group ", groupId, " and asset type ",
+				assetTypeKey),
+			SitemapDestinationNames.SITEMAP_REGENERATION, message);
+	}
+
+	private void _unlockRegenerateSitemap(
+		String assetTypeKey, long companyId, long groupId) {
+
+		_lockManager.unlock(
+			SitemapManagerImpl.class.getName(),
+			_getSchedulerJobName(assetTypeKey, companyId, groupId));
 	}
 
 	private void _visitLayoutSet(
@@ -505,9 +1503,9 @@ public class SitemapManagerImpl implements SitemapManager {
 
 				Element sitemapElement = element.addElement("sitemap");
 
-				Element locationElement = sitemapElement.addElement("loc");
+				Element locElement = sitemapElement.addElement("loc");
 
-				locationElement.addText(
+				locElement.addText(
 					StringBundler.concat(
 						portalURL, _portal.getPathContext(),
 						"/sitemap.xml?p_l_id=", layout.getPlid(),
@@ -521,7 +1519,7 @@ public class SitemapManagerImpl implements SitemapManager {
 	}
 
 	private void _visitLayoutSets(
-			List<LayoutSet> layoutSets, String layoutUuid, Element rootElement,
+			Element element, List<LayoutSet> layoutSets, String layoutUuid,
 			ThemeDisplay themeDisplay)
 		throws PortalException {
 
@@ -542,15 +1540,24 @@ public class SitemapManagerImpl implements SitemapManager {
 			if (Validator.isNull(layoutUuid)) {
 				for (LayoutSet curLayoutSet : layoutSets) {
 					sitemapURLProvider.visitLayoutSet(
-						rootElement, curLayoutSet, themeDisplay);
+						element, curLayoutSet, themeDisplay);
 				}
 			}
 			else {
 				sitemapURLProvider.visitLayout(
-					rootElement, layoutUuid, layoutSets.get(0), themeDisplay);
+					element, layoutUuid, layoutSets.get(0), themeDisplay);
 			}
 		}
 	}
+
+	private static final String _ATTRIBUTE_NAME_ASSET_TYPE_KEY =
+		"_assetTypeKey";
+
+	private static final String _ATTRIBUTE_NAME_COMPANY_ID = "_companyId";
+
+	private static final String _ATTRIBUTE_NAME_GROUP_ID = "_groupId";
+
+	private static final String _ATTRIBUTE_NAME_PAGE = "_page";
 
 	private static final byte[] _ATTRIBUTE_XHTML =
 		" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\"".getBytes();
@@ -563,8 +1570,24 @@ public class SitemapManagerImpl implements SitemapManager {
 	private static final Log _log = LogFactoryUtil.getLog(
 		SitemapManagerImpl.class.getName());
 
+	private static final Map<String, String> _assetTypeKeysByClassName = Map.of(
+		AssetCategory.class.getName(),
+		SitemapConstants.ASSET_TYPE_KEY_CATEGORIES,
+		JournalArticle.class.getName(),
+		SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, Layout.class.getName(),
+		SitemapConstants.ASSET_TYPE_KEY_PAGES, ObjectEntry.class.getName(),
+		SitemapConstants.ASSET_TYPE_KEY_OBJECT_ENTRIES);
 	private static final BundleContext _bundleContext =
 		SystemBundleUtil.getBundleContext();
+
+	private Map<String, Long> _assetTypeClassNameIds;
+	private Map<Long, String> _assetTypeKeys;
+
+	@Reference
+	private ClassNameLocalService _classNameLocalService;
+
+	@Reference
+	private CompanyLocalService _companyLocalService;
 
 	@Reference
 	private GroupLocalService _groupLocalService;
@@ -579,14 +1602,44 @@ public class SitemapManagerImpl implements SitemapManager {
 	private LayoutSetLocalService _layoutSetLocalService;
 
 	@Reference
+	private LockLocalService _lockLocalService;
+
+	@Reference
+	private LockManager _lockManager;
+
+	private int _maximumEntries;
+
+	@Reference
+	private PermissionCheckerFactory _permissionCheckerFactory;
+
+	@Reference
 	private Portal _portal;
+
+	@Reference
+	private RedirectProvider _redirectProvider;
 
 	@Reference
 	private SAXReader _saxReader;
 
-	private ServiceTrackerMap<String, SitemapURLProvider> _serviceTrackerMap;
+	@Reference
+	private SchedulerEngineHelper _schedulerEngineHelper;
+
+	private ServiceTrackerMap<Long, SitemapURLProvider> _serviceTrackerMap;
 
 	@Reference
 	private SitemapConfigurationManager _sitemapConfigurationManager;
+
+	@Reference
+	private SitemapStorageHelper _sitemapStorageHelper;
+
+	@Reference
+	private TriggerFactory _triggerFactory;
+
+	private final ThreadLocal
+		<UnsafeBiConsumer<Integer, String, PortalException>>
+			_unsafeBiConsumerThreadLocal = new ThreadLocal<>();
+
+	@Reference
+	private UserLocalService _userLocalService;
 
 }

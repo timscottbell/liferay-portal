@@ -689,3 +689,4 @@ public class Configuration implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:437247950

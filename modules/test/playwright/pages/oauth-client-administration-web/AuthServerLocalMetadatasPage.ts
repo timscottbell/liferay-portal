@@ -6,12 +6,11 @@
 import {Locator, Page, expect} from '@playwright/test';
 
 import {clickAndExpectToBeVisible} from '../../utils/clickAndExpectToBeVisible';
-import {ApplicationsMenuPage} from '../product-navigation-applications-menu/ApplicationsMenuPage';
+import {GlobalMenuPage} from '../product-navigation-applications-menu/GlobalMenuPage';
 
 export class AuthServerLocalMetadatasPage {
 	readonly addOAuthAuthorizationServerButton: Locator;
-	readonly allowedScopes: Locator;
-	readonly applicationsMenuPage: ApplicationsMenuPage;
+	readonly globalMenuPage: GlobalMenuPage;
 	readonly authServerLocalMetadataTab: Locator;
 	readonly authorizationEndpoint: Locator;
 	readonly enabledField: Locator;
@@ -24,6 +23,7 @@ export class AuthServerLocalMetadatasPage {
 	readonly page: Page;
 	readonly saveButton: Locator;
 	readonly subjectTypesSupported: Locator;
+	readonly supportedScopes: Locator;
 	readonly successMessage: Locator;
 	readonly tokenEndpoint: Locator;
 	readonly userinfoEnpoint: Locator;
@@ -33,8 +33,7 @@ export class AuthServerLocalMetadatasPage {
 		this.addOAuthAuthorizationServerButton = page.getByRole('link', {
 			name: 'Add OAuth Authorization',
 		});
-		this.allowedScopes = page.getByLabel('Allowed Scopes');
-		this.applicationsMenuPage = new ApplicationsMenuPage(page);
+		this.globalMenuPage = new GlobalMenuPage(page);
 		this.authServerLocalMetadataTab = page.getByRole('link', {
 			name: 'Auth Server Local Metadata',
 		});
@@ -60,15 +59,26 @@ export class AuthServerLocalMetadatasPage {
 		this.successMessage = page.getByText(
 			'Your request completed successfully'
 		);
+		this.supportedScopes = page.getByLabel('Supported Scopes');
 		this.tokenEndpoint = page.getByLabel('Token Endpoint');
 		this.userinfoEnpoint = page.getByLabel('Userinfo enpoint');
 		this.urlErrorMessage = page.getByText('Close Error: The URL is not a');
 	}
 
-	async addAuthServerLocalMetadata(issuer: string, expectedMessage?: string) {
+	async addAuthServerLocalMetadata(
+		issuer: string,
+		{
+			expectedMessage,
+			supportedScopes,
+		}: {expectedMessage?: string; supportedScopes?: string} = {}
+	) {
 		await this.addOAuthAuthorizationServerButton.click();
 
 		await this.issuer.fill(issuer);
+
+		if (supportedScopes !== undefined) {
+			await this.supportedScopes.fill(supportedScopes);
+		}
 
 		await this.saveButton.click();
 
@@ -93,7 +103,7 @@ export class AuthServerLocalMetadatasPage {
 		}
 		else {
 			await expect(await this.successMessage).toBeVisible();
-			await this.page.getByLabel('Close').click();
+			await this.page.locator('.alert').getByLabel('Close').click();
 		}
 	}
 
@@ -117,13 +127,15 @@ export class AuthServerLocalMetadatasPage {
 
 			await expect(await this.successMessage).toBeVisible();
 
-			await this.page.getByLabel('Close').click();
+			await this.page.locator('.alert').getByLabel('Close').click();
 		}
 	}
 
 	async goTo() {
 		if (await this.oAuthAuthorizatoinServerTab.isHidden()) {
-			await this.applicationsMenuPage.goToOAuthClientAdministration();
+			await this.globalMenuPage.goToControlPanel(
+				'OAuth Client Administration'
+			);
 		}
 
 		await this.authServerLocalMetadataTab.click();
@@ -133,5 +145,12 @@ export class AuthServerLocalMetadatasPage {
 		await expect(
 			await this.addOAuthAuthorizationServerButton
 		).toBeVisible();
+	}
+
+	async openAuthServerLocalMetadata(wellKnownURI: string) {
+		await clickAndExpectToBeVisible({
+			target: this.supportedScopes,
+			trigger: this.page.getByRole('link', {name: wellKnownURI}),
+		});
 	}
 }

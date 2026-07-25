@@ -35,10 +35,11 @@ public class OAuthClientEntryServiceImpl
 
 	@Override
 	public OAuthClientEntry addOAuthClientEntry(
-			long userId, String authRequestParametersJSON,
-			String authServerWellKnownURI, String customClaimsJSON,
-			String infoJSON, String matcherField, long metadataCacheTime,
-			String oidcUserInfoMapperJSON, String tokenRequestParametersJSON)
+			String externalReferenceCode, long userId,
+			String authRequestParametersJSON, String authServerWellKnownURI,
+			String customClaimsJSON, String infoJSON, String matcherField,
+			long metadataCacheTime, String oidcUserInfoMapperJSON,
+			int tokenConnectionTimeout, String tokenRequestParametersJSON)
 		throws PortalException {
 
 		ModelResourcePermissionUtil.check(
@@ -47,9 +48,10 @@ public class OAuthClientEntryServiceImpl
 			OAuthClientPersistenceActionKeys.ACTION_ADD_OAUTH_CLIENT_ENTRY);
 
 		return oAuthClientEntryLocalService.addOAuthClientEntry(
-			userId, authRequestParametersJSON, authServerWellKnownURI,
-			customClaimsJSON, infoJSON, matcherField, metadataCacheTime,
-			oidcUserInfoMapperJSON, tokenRequestParametersJSON);
+			externalReferenceCode, userId, authRequestParametersJSON,
+			authServerWellKnownURI, customClaimsJSON, infoJSON, matcherField,
+			metadataCacheTime, oidcUserInfoMapperJSON, tokenConnectionTimeout,
+			tokenRequestParametersJSON);
 	}
 
 	@Override
@@ -57,8 +59,7 @@ public class OAuthClientEntryServiceImpl
 		throws PortalException {
 
 		OAuthClientEntry oAuthClientEntry =
-			oAuthClientEntryLocalService.getOAuthClientEntry(
-				oAuthClientEntryId);
+			oAuthClientEntryPersistence.findByPrimaryKey(oAuthClientEntryId);
 
 		_oAuthClientEntryModelResourcePermission.check(
 			getPermissionChecker(), oAuthClientEntry, ActionKeys.DELETE);
@@ -73,7 +74,7 @@ public class OAuthClientEntryServiceImpl
 		throws PortalException {
 
 		OAuthClientEntry oAuthClientEntry =
-			oAuthClientEntryLocalService.getOAuthClientEntry(
+			oAuthClientEntryPersistence.findByC_A_C(
 				companyId, authServerWellKnownURI, clientId);
 
 		_oAuthClientEntryModelResourcePermission.check(
@@ -81,6 +82,24 @@ public class OAuthClientEntryServiceImpl
 
 		return oAuthClientEntryLocalService.deleteOAuthClientEntry(
 			oAuthClientEntry);
+	}
+
+	@Override
+	public OAuthClientEntry fetchOAuthClientEntryByExternalReferenceCode(
+			String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		OAuthClientEntry oAuthClientEntry =
+			oAuthClientEntryLocalService.
+				fetchOAuthClientEntryByExternalReferenceCode(
+					externalReferenceCode, companyId);
+
+		if (oAuthClientEntry != null) {
+			_oAuthClientEntryModelResourcePermission.check(
+				getPermissionChecker(), oAuthClientEntry, ActionKeys.VIEW);
+		}
+
+		return oAuthClientEntry;
 	}
 
 	@Override
@@ -121,8 +140,24 @@ public class OAuthClientEntryServiceImpl
 		throws PortalException {
 
 		OAuthClientEntry oAuthClientEntry =
-			oAuthClientEntryLocalService.getOAuthClientEntry(
+			oAuthClientEntryPersistence.findByC_A_C(
 				companyId, authServerWellKnownURI, clientId);
+
+		_oAuthClientEntryModelResourcePermission.check(
+			getPermissionChecker(), oAuthClientEntry, ActionKeys.VIEW);
+
+		return oAuthClientEntry;
+	}
+
+	@Override
+	public OAuthClientEntry getOAuthClientEntryByExternalReferenceCode(
+			String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		OAuthClientEntry oAuthClientEntry =
+			oAuthClientEntryLocalService.
+				getOAuthClientEntryByExternalReferenceCode(
+					externalReferenceCode, companyId);
 
 		_oAuthClientEntryModelResourcePermission.check(
 			getPermissionChecker(), oAuthClientEntry, ActionKeys.VIEW);
@@ -148,7 +183,8 @@ public class OAuthClientEntryServiceImpl
 			long oAuthClientEntryId, String authRequestParametersJSON,
 			String authServerWellKnownURI, String customClaimsJSON,
 			String infoJSON, String matcherField, long metadataCacheTime,
-			String oidcUserInfoMapperJSON, String tokenRequestParametersJSON)
+			String oidcUserInfoMapperJSON, int tokenConnectionTimeout,
+			String tokenRequestParametersJSON)
 		throws PortalException {
 
 		_oAuthClientEntryModelResourcePermission.check(
@@ -157,7 +193,7 @@ public class OAuthClientEntryServiceImpl
 		return oAuthClientEntryLocalService.updateOAuthClientEntry(
 			oAuthClientEntryId, authRequestParametersJSON,
 			authServerWellKnownURI, customClaimsJSON, infoJSON, matcherField,
-			metadataCacheTime, oidcUserInfoMapperJSON,
+			metadataCacheTime, oidcUserInfoMapperJSON, tokenConnectionTimeout,
 			tokenRequestParametersJSON);
 	}
 

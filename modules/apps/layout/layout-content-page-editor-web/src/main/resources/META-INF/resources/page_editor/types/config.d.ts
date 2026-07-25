@@ -7,6 +7,7 @@ import type {LayoutType} from '../app/config/constants/layoutTypes';
 import type {SidebarPanel} from './SidebarPanel';
 export interface Config {
 	actionableInfoItemSelectorURL: string;
+	addFragmentCollectionURL: string;
 	addFragmentCompositionURL: string;
 	addFragmentEntryLinkCommentURL: string;
 	addFragmentEntryLinkURL: string;
@@ -58,6 +59,7 @@ export interface Config {
 			label: string;
 			tooltip?: string;
 		}>;
+		key: string;
 		label: string;
 	}>;
 	collectionSelectorURL: string;
@@ -127,6 +129,10 @@ export interface Config {
 	}>;
 	fragmentCompositionDescriptionMaxLength: number;
 	fragmentCompositionNameMaxLength: number;
+	fragmentCollections: Array<{
+		fragmentCollectionId: number;
+		name: string;
+	}>;
 	fragmentPortletNamespace: string;
 	fragmentsImportURL: string;
 	freeTier: boolean;
@@ -207,6 +213,7 @@ export interface Config {
 	searchContainerPageMaxDelta: number;
 
 	selectedMappingTypes?: {
+		formEnabled: boolean;
 		subtype: {
 			id: string;
 			label: string;

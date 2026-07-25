@@ -55,7 +55,7 @@ import org.osgi.service.component.annotations.ReferenceScope;
  * @generated
  */
 @Component(
-	property = "resource.locator.key=/test/v1.0/Schema",
+	property = "resource.locator.key=/portal-tools-rest-builder-test/v1.0/Schema",
 	service = SchemaResource.Factory.class
 )
 @Generated("")
@@ -324,3 +324,4 @@ public class SchemaResourceFactoryImpl implements SchemaResource.Factory {
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:-608413867

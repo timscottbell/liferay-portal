@@ -5,19 +5,23 @@
 
 import {FrameLocator, Locator, Page, expect} from '@playwright/test';
 
-import {ApplicationsMenuPage} from '../../product-navigation-applications-menu/ApplicationsMenuPage';
+import {waitForAlert} from '../../../utils/waitForAlert';
+import {GlobalMenuPage} from '../../product-navigation-applications-menu/GlobalMenuPage';
 import {CommerceDNDTablePage} from '../commerceDNDTablePage';
 
 export class CommerceAdminProductPage extends CommerceDNDTablePage {
 	readonly addButton: Locator;
 	readonly addVirtualProductFileEntryButton: Locator;
 	readonly addVirtualSkuFileEntryButton: Locator;
-	readonly applicationsMenuPage: ApplicationsMenuPage;
+	readonly globalMenuPage: GlobalMenuPage;
 	readonly creationMenuItem: (menuItemName: string) => Locator;
 	readonly creationMenuNewButton: Locator;
+	readonly deleteMenuItem: Locator;
 	readonly managementToolbarItemLink: (productName: string) => Locator;
+	readonly productRowActionsButton: (productName: string) => Locator;
 	readonly managementToolbarSearchInput: Locator;
 	readonly modalAddButton: Locator;
+	readonly modalBody: Locator;
 	readonly modalCancelButton: Locator;
 	readonly page: Page;
 	readonly menuItemProductType: (productType: string) => Locator;
@@ -57,21 +61,31 @@ export class CommerceAdminProductPage extends CommerceDNDTablePage {
 			.frameLocator('iframe')
 			.getByRole('button', {exact: true, name: 'Add File Entry'})
 			.first();
-		this.applicationsMenuPage = new ApplicationsMenuPage(page);
+		this.globalMenuPage = new GlobalMenuPage(page);
 		this.creationMenuItem = (menuItemName: string) =>
 			page.getByRole('menuitem', {
 				exact: true,
 				name: menuItemName,
 			});
-		this.creationMenuNewButton = page.locator(
-			'[data-testid="fdsCreationActionButton"]'
-		);
+		this.creationMenuNewButton = page
+			.getByTestId('managementToolbar')
+			.locator('[data-testid="fdsCreationActionButton"]');
+		this.deleteMenuItem = page.getByRole('menuitem', {
+			exact: true,
+			name: 'Delete',
+		});
 		this.managementToolbarItemLink = (productName: string) =>
 			page.getByRole('link', {exact: true, name: productName});
+		this.productRowActionsButton = (productName: string) =>
+			page
+				.getByRole('row')
+				.filter({hasText: productName})
+				.getByRole('button');
 		this.managementToolbarSearchInput = page
 			.getByTestId('managementToolbar')
 			.getByPlaceholder('Search', {exact: true});
 		this.modalAddButton = page.getByRole('button', {name: 'Add'});
+		this.modalBody = page.locator('.fds-modal-body');
 		this.modalCancelButton = page.getByRole('button', {name: 'Cancel'});
 		this.page = page;
 		this.menuItemProductType = (productType: string) =>
@@ -159,7 +173,7 @@ export class CommerceAdminProductPage extends CommerceDNDTablePage {
 
 		await this.creationMenuNewButton.click();
 		await this.creationMenuItem('Generate All SKU Combinations').click();
-		await this.page.waitForLoadState('load');
+		await waitForAlert(this.page);
 	}
 
 	async addSku(skuName: string, option = {name: '', value: ''}) {
@@ -192,13 +206,13 @@ export class CommerceAdminProductPage extends CommerceDNDTablePage {
 			.click();
 	}
 
-	async goto(checkTabVisibility = true) {
-		await this.applicationsMenuPage.goToProducts(checkTabVisibility);
+	async goto() {
+		await this.globalMenuPage.goToCommerce('Products');
 	}
 
-	async gotoProduct(productName: string, checkTabVisibility = true) {
+	async gotoProduct(productName: string) {
 		await expect(async () => {
-			await this.goto(checkTabVisibility);
+			await this.goto();
 			await this.table.waitFor({state: 'visible'});
 			await this.managementToolbarSearchInput.fill(productName);
 			await this.managementToolbarSearchInput.press('Enter');

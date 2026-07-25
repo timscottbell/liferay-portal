@@ -6,6 +6,11 @@
 package com.liferay.site.cms.site.initializer.internal.service.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.asset.kernel.exception.AssetCategoryException;
+import com.liferay.asset.kernel.model.AssetCategoryConstants;
+import com.liferay.asset.kernel.model.AssetVocabulary;
+import com.liferay.asset.kernel.service.AssetVocabularyLocalService;
+import com.liferay.asset.test.util.AssetTestUtil;
 import com.liferay.depot.constants.DepotConstants;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
@@ -19,12 +24,15 @@ import com.liferay.object.definition.util.ObjectDefinitionUtil;
 import com.liferay.object.field.util.ObjectFieldUtil;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.model.ObjectEntryFolder;
 import com.liferay.object.model.ObjectFolder;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalServiceUtil;
+import com.liferay.object.service.ObjectEntryFolderLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.object.service.ObjectFolderLocalService;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.model.Role;
@@ -34,7 +42,10 @@ import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.RoleLocalService;
+import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserNotificationEventLocalService;
+import com.liferay.portal.kernel.test.AssertUtils;
+import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
@@ -43,6 +54,7 @@ import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.FeatureFlag;
@@ -50,12 +62,15 @@ import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
+import com.liferay.site.cms.site.initializer.internal.service.test.util.CMSObjectEntryTestUtil;
 import com.liferay.site.cms.site.initializer.test.util.CMSTestUtil;
+import com.liferay.trash.service.TrashEntryLocalService;
+
+import java.io.Serializable;
 
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,8 +117,9 @@ public class ObjectEntryLocalServiceTest {
 			_objectDefinitionLocalService.addSystemObjectDefinition(
 				null, TestPropsValues.getUserId(),
 				objectFolder.getObjectFolderId(),
-				ObjectDefinitionUtil.generateRandomClassName(), null, false,
-				true, false, true, false, false, false, false, false, null,
+				ObjectDefinitionUtil.generateRandomClassName(), null, true,
+				false, true, false, true, false, false, false, false, false,
+				null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				true, "Test", null, null, null, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
@@ -132,6 +148,20 @@ public class ObjectEntryLocalServiceTest {
 	}
 
 	@Test
+	public void testAddObjectEntry() throws Exception {
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(_depotEntry.getGroupId());
+
+		AssertUtils.assertFailure(
+			AssetCategoryException.class, null,
+			() -> _testAddObjectTypeEntry(serviceContext));
+
+		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_SAVE_DRAFT);
+
+		_testAddObjectTypeEntry(serviceContext);
+	}
+
+	@Test
 	public void testCheckObjectEntries() throws Exception {
 		ObjectEntry objectEntry =
 			_objectEntryLocalService.addOrUpdateObjectEntry(
@@ -139,7 +169,9 @@ public class ObjectEntryLocalServiceTest {
 				_objectDefinition.getObjectDefinitionId(),
 				ObjectEntryFolderConstants.
 					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
-				Map.of("reviewDate", new Date()),
+				HashMapBuilder.<String, Serializable>put(
+					"reviewDate", new Date()
+				).build(),
 				ServiceContextTestUtil.getServiceContext(
 					_depotEntry.getGroupId()));
 
@@ -158,13 +190,14 @@ public class ObjectEntryLocalServiceTest {
 			ObjectDefinitionLocalServiceUtil.addSystemObjectDefinition(
 				null, TestPropsValues.getUserId(),
 				objectFolder.getObjectFolderId(),
-				ObjectDefinitionUtil.generateRandomClassName(), null, false,
-				true, false, true, false, false, false, false, false, null,
+				ObjectDefinitionUtil.generateRandomClassName(), null, true,
+				false, true, false, true, false, false, false, false, false,
+				null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				true, "Test" + StringUtil.randomString(), null, null, null,
 				null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
-				false, ObjectDefinitionConstants.SCOPE_SITE, null, 1,
+				false, ObjectDefinitionConstants.SCOPE_DEPOT, null, 1,
 				WorkflowConstants.STATUS_DRAFT, Collections.emptyList(),
 				List.of(
 					ObjectFieldUtil.createObjectField(
@@ -183,6 +216,54 @@ public class ObjectEntryLocalServiceTest {
 
 		_objectDefinitionLocalService.deleteObjectDefinition(
 			systemObjectDefinition.getObjectDefinitionId());
+	}
+
+	@Test
+	@TestInfo("LPD-89104")
+	public void testRestoreObjectEntryFromTrash() throws Exception {
+		_testRestoreObjectEntryFromTrashWhenParentFolderExists();
+		_testRestoreObjectEntryFromTrashWhenParentFolderDeleted();
+	}
+
+	private ObjectEntry _addBasicWebContentObjectEntry(
+			ObjectDefinition objectDefinition, ServiceContext serviceContext)
+		throws PortalException {
+
+		ObjectEntryFolder objectEntryFolder =
+			_objectEntryFolderLocalService.
+				getObjectEntryFolderByExternalReferenceCode(
+					"L_CONTENTS", _depotEntry.getGroupId(),
+					_depotEntry.getCompanyId());
+
+		return _objectEntryLocalService.addObjectEntry(
+			_depotEntry.getGroupId(), _depotEntry.getUserId(),
+			objectDefinition.getObjectDefinitionId(),
+			objectEntryFolder.getObjectEntryFolderId(), "en_US",
+			HashMapBuilder.<String, Serializable>put(
+				"content_i18n",
+				HashMapBuilder.put(
+					"en_US", RandomTestUtil.randomString()
+				).build()
+			).put(
+				"title_i18n",
+				HashMapBuilder.put(
+					"en_US", RandomTestUtil.randomString()
+				).build()
+			).build(),
+			serviceContext);
+	}
+
+	private ObjectEntryFolder _addObjectEntryFolder() throws Exception {
+		return _objectEntryFolderLocalService.addObjectEntryFolder(
+			RandomTestUtil.randomString(), _depotEntry.getGroupId(),
+			TestPropsValues.getUserId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			RandomTestUtil.randomString(),
+			HashMapBuilder.put(
+				LocaleUtil.getDefault(), RandomTestUtil.randomString()
+			).build(),
+			RandomTestUtil.randomString(),
+			ServiceContextTestUtil.getServiceContext(_depotEntry.getGroupId()));
 	}
 
 	private void _assertHasResourcePermissionScopeCompany(
@@ -278,6 +359,94 @@ public class ObjectEntryLocalServiceTest {
 		return ObjectFolderConstants.EXTERNAL_REFERENCE_CODE_FILE_TYPES;
 	}
 
+	private void _testAddObjectTypeEntry(ServiceContext serviceContext)
+		throws Exception {
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.
+				getObjectDefinitionByExternalReferenceCode(
+					"L_CMS_BASIC_WEB_CONTENT", TestPropsValues.getCompanyId());
+
+		AssetVocabulary vocabulary = AssetTestUtil.addVocabulary(
+			_group.getGroupId(),
+			_portal.getClassNameId(objectDefinition.getClassName()),
+			AssetCategoryConstants.ALL_CLASS_TYPE_PK, true);
+
+		AssetTestUtil.addCategory(
+			_group.getGroupId(), vocabulary.getVocabularyId());
+
+		try {
+			_addBasicWebContentObjectEntry(objectDefinition, serviceContext);
+		}
+		finally {
+			_assetVocabularyLocalService.deleteVocabulary(vocabulary);
+		}
+	}
+
+	private void _testRestoreObjectEntryFromTrashWhenParentFolderDeleted()
+		throws Exception {
+
+		ObjectEntryFolder objectEntryFolder = _addObjectEntryFolder();
+
+		ObjectEntry objectEntry = CMSObjectEntryTestUtil.addObjectEntry(
+			_depotEntry.getGroupId(), _objectDefinition,
+			objectEntryFolder.getObjectEntryFolderId());
+
+		CMSObjectEntryTestUtil.moveObjectEntryToTrash(
+			_depotEntry.getGroupId(), objectEntry);
+
+		_objectEntryFolderLocalService.deleteObjectEntryFolder(
+			objectEntryFolder.getObjectEntryFolderId());
+
+		ObjectEntry trashedObjectEntry =
+			_objectEntryLocalService.getObjectEntry(
+				objectEntry.getObjectEntryId());
+
+		ObjectEntry restoredObjectEntry =
+			_objectEntryLocalService.restoreObjectEntryFromTrash(
+				TestPropsValues.getUserId(), trashedObjectEntry,
+				ServiceContextTestUtil.getServiceContext(
+					_depotEntry.getGroupId()));
+
+		Assert.assertEquals(
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			restoredObjectEntry.getObjectEntryFolderId());
+	}
+
+	private void _testRestoreObjectEntryFromTrashWhenParentFolderExists()
+		throws Exception {
+
+		ObjectEntryFolder objectEntryFolder = _addObjectEntryFolder();
+
+		ObjectEntry objectEntry = CMSObjectEntryTestUtil.addObjectEntry(
+			_depotEntry.getGroupId(), _objectDefinition,
+			objectEntryFolder.getObjectEntryFolderId());
+
+		CMSObjectEntryTestUtil.moveObjectEntryToTrash(
+			_depotEntry.getGroupId(), objectEntry);
+
+		ObjectEntry trashedObjectEntry =
+			_objectEntryLocalService.getObjectEntry(
+				objectEntry.getObjectEntryId());
+
+		ObjectEntry restoredObjectEntry =
+			_objectEntryLocalService.restoreObjectEntryFromTrash(
+				TestPropsValues.getUserId(), trashedObjectEntry,
+				ServiceContextTestUtil.getServiceContext(
+					_depotEntry.getGroupId()));
+
+		Assert.assertEquals(
+			objectEntryFolder.getObjectEntryFolderId(),
+			restoredObjectEntry.getObjectEntryFolderId());
+		Assert.assertNull(
+			_trashEntryLocalService.fetchEntry(
+				_objectDefinition.getClassName(),
+				restoredObjectEntry.getObjectEntryId()));
+	}
+
+	@Inject
+	private AssetVocabularyLocalService _assetVocabularyLocalService;
+
 	@DeleteAfterTestRun
 	private DepotEntry _depotEntry;
 
@@ -293,16 +462,25 @@ public class ObjectEntryLocalServiceTest {
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;
 
 	@Inject
+	private ObjectEntryFolderLocalService _objectEntryFolderLocalService;
+
+	@Inject
 	private ObjectEntryLocalService _objectEntryLocalService;
 
 	@Inject
 	private ObjectFolderLocalService _objectFolderLocalService;
 
 	@Inject
+	private Portal _portal;
+
+	@Inject
 	private ResourcePermissionLocalService _resourcePermissionLocalService;
 
 	@Inject
 	private RoleLocalService _roleLocalService;
+
+	@Inject
+	private TrashEntryLocalService _trashEntryLocalService;
 
 	@DeleteAfterTestRun
 	private User _user;

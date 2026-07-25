@@ -2,8 +2,8 @@ create unique index IX_17D56F1B on CPDAvailabilityEstimate (CProductId);
 create index IX_E560850D on CPDAvailabilityEstimate (commerceAvailabilityEstimateId);
 create index IX_109320B4 on CPDAvailabilityEstimate (uuid_[$COLUMN_LENGTH:75$]);
 
-create unique index IX_C37B844F on CPDefinitionInventory (ctCollectionId, CPDefinitionId);
-create unique index IX_6C4F2D3A on CPDefinitionInventory (uuid_[$COLUMN_LENGTH:75$], ctCollectionId, groupId);
+create unique index IX_2A31024F on CPDefinitionInventory (CPDefinitionId, ctCollectionId);
+create unique index IX_E7C1FC36 on CPDefinitionInventory (uuid_[$COLUMN_LENGTH:75$], groupId, ctCollectionId);
 
 create unique index IX_4F4C712A on CSOptionAccountEntryRel (accountEntryId, commerceChannelId);
 create index IX_B48AB5E on CSOptionAccountEntryRel (commerceChannelId);
@@ -12,7 +12,7 @@ create index IX_64B9CFFC on CSOptionAccountEntryRel (commerceShippingOptionKey[$
 create unique index IX_9DD3ABD3 on CommerceAddressRestriction (classNameId, classPK, countryId);
 create index IX_AE21488 on CommerceAddressRestriction (countryId);
 
-create index IX_72527224 on CommerceAvailabilityEstimate (companyId);
+create unique index IX_3C615299 on CommerceAvailabilityEstimate (companyId, externalReferenceCode[$COLUMN_LENGTH:75$]);
 create index IX_B83AF5B0 on CommerceAvailabilityEstimate (uuid_[$COLUMN_LENGTH:75$]);
 
 create index IX_12131FC1 on CommerceOrder (billingAddressId);
@@ -26,6 +26,10 @@ create index IX_7759000F on CommerceOrder (orderStatus, userId, createDate);
 create index IX_4B11FAD8 on CommerceOrder (shippingAddressId);
 create index IX_EFAA753 on CommerceOrder (userId);
 create index IX_35A4137B on CommerceOrder (uuid_[$COLUMN_LENGTH:75$]);
+
+create index IX_E43DF711 on CommerceOrderAttachment (commerceOrderId, restricted);
+create unique index IX_819684A7 on CommerceOrderAttachment (externalReferenceCode[$COLUMN_LENGTH:75$], companyId);
+create unique index IX_B5221A52 on CommerceOrderAttachment (uuid_[$COLUMN_LENGTH:75$], groupId);
 
 create index IX_654BB574 on CommerceOrderItem (CIBookedQuantityId);
 create index IX_2E1BB39D on CommerceOrderItem (CPInstanceId);

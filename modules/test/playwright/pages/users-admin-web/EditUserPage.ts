@@ -46,6 +46,7 @@ export class EditUserPage {
 	readonly categoryGridCell: (categoryName: string) => Locator;
 	readonly categoryInput: (vocabularyName: string) => Locator;
 	readonly categoryOption: (categoryName: string) => Locator;
+	readonly passwordConfirmationFrameCancelButton: Locator;
 	readonly changeImageButton: Locator;
 	readonly clearImageButton: Locator;
 	readonly confirmButton: Locator;
@@ -128,11 +129,16 @@ export class EditUserPage {
 	readonly regularRoleCellButton: (name: string) => Locator;
 	readonly regularRolesTable: DataTablePage;
 	readonly removeMenuItem: Locator;
+	readonly requiredPasswordResetCheckbox: Locator;
 	readonly rolesLink: Locator;
 	readonly saveButton: Locator;
 	readonly screenNameError: Locator;
 	readonly screenNameInput: Locator;
 	readonly selectAccountsButton: Locator;
+	readonly selectAssetLibrariesButton: Locator;
+	readonly selectAssetLibrariesFrame: FrameLocator;
+	readonly selectAssetLibrariesFrameEntry: (name: string) => Locator;
+	readonly selectAssetLibrariesSearchBar: Locator;
 	readonly selectOrganizationRolesButton: Locator;
 	readonly selectOrganizationRolesChooseButton: (
 		name: string
@@ -183,6 +189,8 @@ export class EditUserPage {
 	readonly selectSitesTableRowButton: (siteName: string) => Promise<Locator>;
 	readonly selectTagsButton: Locator;
 	readonly selectUserGroupIFrame: FrameLocator;
+	readonly selectUserGroupFrameEntry: (name: string) => Locator;
+	readonly selectUserGroupSearchBar: Locator;
 	readonly selectUserGroupTable: DataTablePage;
 	readonly selectUserGroupsButton: Locator;
 	readonly selectUserLanguage: Locator;
@@ -322,7 +330,7 @@ export class EditUserPage {
 		this.categoryGridCell = (categoryName: string) =>
 			page.getByRole('gridcell', {exact: true, name: categoryName});
 		this.categoryInput = (vocabularyName: string) =>
-			page.getByLabel(vocabularyName, {exact: true});
+			page.getByRole('combobox', {name: vocabularyName});
 		this.categoryOption = (categoryName: string) =>
 			page.getByRole('option', {name: categoryName});
 		this.changeImageButton = page.getByLabel('Change Image');
@@ -336,15 +344,18 @@ export class EditUserPage {
 			name: 'Contact Information',
 		});
 		this.customField = async (fieldName: string) => {
-			await page.getByText('Custom Fields').waitFor({timeout: 15 * 1000});
+			await page
+				.locator(
+					'[id="_com_liferay_users_admin_web_portlet_UsersAdminPortlet_fm"]'
+				)
+				.getByText('Custom Fields', {exact: true})
+				.waitFor({timeout: 15 * 1000});
 
 			const customField = page.getByText(fieldName);
 
-			if (await customField.isVisible()) {
-				return customField;
-			}
+			await expect(customField).toBeVisible();
 
-			throw new Error(`Cannot locate Custom Field ${fieldName}`);
+			return customField;
 		};
 		this.displaySettingsLink = page.getByRole('link', {
 			exact: true,
@@ -552,6 +563,9 @@ export class EditUserPage {
 		this.regularRoleCell = (name) => page.getByRole('cell', {name});
 		this.regularRoleCellButton = (name) =>
 			this.regularRoleCell(name).locator('..').getByRole('button');
+		this.requiredPasswordResetCheckbox = page.locator(
+			'#_com_liferay_users_admin_web_portlet_UsersAdminPortlet_passwordReset'
+		);
 		this.regularRolesTable = new DataTablePage(
 			page,
 			page.locator(
@@ -571,6 +585,16 @@ export class EditUserPage {
 		);
 		this.screenNameInput = page.getByLabel('Screen Name');
 		this.selectAccountsButton = page.getByLabel('Select Accounts');
+		this.selectAssetLibrariesButton = page.locator(
+			'#_com_liferay_users_admin_web_portlet_UsersAdminPortlet_selectDepotGroupLink'
+		);
+		this.selectAssetLibrariesFrame = page.frameLocator(
+			'iframe[title^="Select Asset Librar"]'
+		);
+		this.selectAssetLibrariesFrameEntry = (name) =>
+			this.selectAssetLibrariesFrame.getByText(name, {exact: true});
+		this.selectAssetLibrariesSearchBar =
+			this.selectAssetLibrariesFrame.getByPlaceholder('Search for');
 		this.selectOrganizationRolesButton = page.locator(
 			'#_com_liferay_users_admin_web_portlet_UsersAdminPortlet_selectOrganizationRoleLink'
 		);
@@ -598,7 +622,7 @@ export class EditUserPage {
 			)
 			.or(
 				this.selectOrganizationRolesFrame.locator(
-					'#_com_liferay_roles_admin_web_portlet_RolesAdminPortlet_rolesSearchContainer'
+					'#_com_liferay_roles_admin_web_portlet_RolesAdminPortlet_rolesSearchContainerSearchContainer'
 				)
 			);
 		this.selectOrganizationRolesTableRow = async (
@@ -748,6 +772,10 @@ export class EditUserPage {
 		this.selectUserGroupIFrame = page.frameLocator(
 			'iframe[title="Select User Group"]'
 		);
+		this.selectUserGroupFrameEntry = (name) =>
+			this.selectUserGroupIFrame.getByText(name, {exact: true});
+		this.selectUserGroupSearchBar =
+			this.selectUserGroupIFrame.getByPlaceholder('Search for');
 		this.selectUserGroupTable = new DataTablePage(
 			this.selectUserGroupIFrame,
 			this.selectUserGroupIFrame.locator(
@@ -814,8 +842,31 @@ export class EditUserPage {
 			'button',
 			{name: 'Confirm'}
 		);
+		this.passwordConfirmationFrameCancelButton =
+			this.passwordConfirmationFrame.getByRole('button', {
+				name: 'Cancel',
+			});
 		this.yourPasswordInput =
 			this.passwordConfirmationFrame.getByLabel('Your Password');
+	}
+
+	async linkSiteTemplate(
+		siteTemplateName: string,
+		{propagationEnabled = false}: {propagationEnabled?: boolean} = {}
+	) {
+		await this.profileAndDashboardLink.click();
+
+		await this.page
+			.locator('select[name$="publicLayoutSetPrototypeId"]')
+			.selectOption({label: siteTemplateName});
+
+		await this.page
+			.locator('input[name$="publicLayoutSetPrototypeLinkEnabled"]')
+			.setChecked(propagationEnabled, {force: true});
+
+		await this.saveButton.click();
+
+		await waitForAlert(this.page);
 	}
 
 	async addNewAddress(makePrimary: boolean, streetName: string) {

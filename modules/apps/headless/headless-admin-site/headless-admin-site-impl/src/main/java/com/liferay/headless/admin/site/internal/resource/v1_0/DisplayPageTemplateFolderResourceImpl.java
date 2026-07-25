@@ -5,14 +5,15 @@
 
 package com.liferay.headless.admin.site.internal.resource.v1_0;
 
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.headless.admin.site.dto.v1_0.DisplayPageTemplateFolder;
 import com.liferay.headless.admin.site.internal.odata.entity.v1_0.DisplayPageTemplateFolderEntityModel;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.DisplayPageTemplateFolderUtil;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.GroupUtil;
 import com.liferay.headless.admin.site.internal.util.EnabledUtil;
 import com.liferay.headless.admin.site.resource.v1_0.DisplayPageTemplateFolderResource;
-import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
+import com.liferay.headless.common.spi.util.GroupUtil;
+import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateCollectionTypeConstants;
 import com.liferay.layout.page.template.model.LayoutPageTemplateCollection;
 import com.liferay.layout.page.template.service.LayoutPageTemplateCollectionService;
@@ -27,13 +28,11 @@ import com.liferay.portal.vulcan.pagination.Page;
 import com.liferay.portal.vulcan.pagination.Pagination;
 import com.liferay.portal.vulcan.util.SearchUtil;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.tags.Tags;
-
 import jakarta.ws.rs.core.MultivaluedMap;
 
 import java.util.Collections;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -55,7 +54,6 @@ public class DisplayPageTemplateFolderResourceImpl
 		<DisplayPageTemplateFolder> {
 
 	@Override
-	@Tags({@Tag(description = "[BETA]", name = "DisplayPageTemplateFolder")})
 	public void deleteSiteDisplayPageTemplateFolder(
 			String siteExternalReferenceCode,
 			String displayPageTemplateFolderExternalReferenceCode)
@@ -75,12 +73,24 @@ public class DisplayPageTemplateFolderResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<LayoutPageTemplateCollection>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
+
+			@Override
+			public Function<LayoutPageTemplateCollection, Boolean>
+				getApplicableModelFunction() {
+
+				return layoutPageTemplateCollection ->
+					layoutPageTemplateCollection.getType() ==
+						LayoutPageTemplateCollectionTypeConstants.DISPLAY_PAGE;
+			}
 
 			@Override
 			public String getKey() {
-				return DisplayPageTemplateFolderResourceImpl.class.getName();
+				return LayoutPageTemplateCollection.class.getName() + "-" +
+					LayoutPageTemplateCollectionTypeConstants.DISPLAY_PAGE;
 			}
 
 			@Override
@@ -89,18 +99,23 @@ public class DisplayPageTemplateFolderResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return LayoutPageTemplateCollection.class.getName();
+			public Class<LayoutPageTemplateCollection> getModelClass() {
+				return LayoutPageTemplateCollection.class;
 			}
 
 			@Override
 			public String getPortletId() {
-				return LayoutAdminPortletKeys.GROUP_PAGES;
+				return LayoutPageTemplateAdminPortletKeys.LAYOUT_PAGE_TEMPLATES;
 			}
 
 			@Override
 			public Scope getScope() {
 				return Scope.SITE;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_DESIGN;
 			}
 
 			@Override

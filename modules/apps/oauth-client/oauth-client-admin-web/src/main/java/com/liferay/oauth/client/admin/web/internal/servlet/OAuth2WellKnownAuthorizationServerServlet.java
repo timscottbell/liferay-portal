@@ -15,11 +15,10 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.servlet.ServletResponseUtil;
 import com.liferay.portal.kernel.util.ContentTypes;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.Http;
+import com.liferay.portal.kernel.util.PortalRunMode;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.kernel.util.WebKeys;
 
 import jakarta.servlet.Servlet;
 import jakarta.servlet.http.HttpServlet;
@@ -55,9 +54,9 @@ public class OAuth2WellKnownAuthorizationServerServlet extends HttpServlet {
 			HttpServletResponse httpServletResponse)
 		throws IOException {
 
-		if (!FeatureFlagManagerUtil.isEnabled(
-				CompanyThreadLocal.getCompanyId(), "LPD-63415")) {
+		long companyId = CompanyThreadLocal.getCompanyId();
 
+		if (!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-63415")) {
 			return;
 		}
 
@@ -65,8 +64,6 @@ public class OAuth2WellKnownAuthorizationServerServlet extends HttpServlet {
 		httpServletResponse.setContentType(ContentTypes.APPLICATION_JSON);
 		httpServletResponse.setStatus(HttpServletResponse.SC_NOT_FOUND);
 
-		long companyId = GetterUtil.getLong(
-			httpServletRequest.getAttribute(WebKeys.COMPANY_ID));
 		String issuer = _getIssuer(httpServletRequest);
 
 		if (issuer == null) {
@@ -98,10 +95,15 @@ public class OAuth2WellKnownAuthorizationServerServlet extends HttpServlet {
 				_log.debug("Issuer is not null");
 			}
 
+			String scheme = Http.HTTPS_WITH_SLASH;
+
+			if (PortalRunMode.isTestMode() && !httpServletRequest.isSecure()) {
+				scheme = Http.HTTP_WITH_SLASH;
+			}
+
 			OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
 				_oAuthClientASLocalMetadataLocalService.
-					fetchOAuthClientASLocalMetadata(
-						companyId, Http.HTTPS_WITH_SLASH + issuer);
+					fetchOAuthClientASLocalMetadata(companyId, scheme + issuer);
 
 			if ((oAuthClientASLocalMetadata != null) &&
 				oAuthClientASLocalMetadata.isLocalWellKnownEnabled()) {

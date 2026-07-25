@@ -8,8 +8,6 @@ package com.liferay.jenkins.results.parser.test.clazz.group;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 import com.liferay.jenkins.results.parser.Job;
 import com.liferay.jenkins.results.parser.JobFactory;
-import com.liferay.jenkins.results.parser.PortalAWSJob;
-import com.liferay.jenkins.results.parser.PortalEnvironmentJob;
 import com.liferay.jenkins.results.parser.PortalTestClassJob;
 import com.liferay.jenkins.results.parser.QAWebsitesGitRepositoryJob;
 import com.liferay.jenkins.results.parser.test.batch.JUnitTestBatch;
@@ -152,18 +150,6 @@ public class TestClassGroupFactory {
 		BatchTestClassGroup batchTestClassGroup, JSONObject jsonObject) {
 
 		if (batchTestClassGroup instanceof
-				EnvironmentFunctionalBatchTestClassGroup) {
-
-			if (jsonObject != null) {
-				return new EnvironmentFunctionalSegmentTestClassGroup(
-					batchTestClassGroup, jsonObject);
-			}
-
-			return new EnvironmentFunctionalSegmentTestClassGroup(
-				batchTestClassGroup);
-		}
-
-		if (batchTestClassGroup instanceof
 				QAWebsitesFunctionalBatchTestClassGroup) {
 
 			if (jsonObject != null) {
@@ -176,18 +162,6 @@ public class TestClassGroupFactory {
 		}
 
 		if (batchTestClassGroup instanceof FunctionalBatchTestClassGroup) {
-			Job job = batchTestClassGroup.getJob();
-
-			if (job instanceof PortalAWSJob) {
-				if (jsonObject != null) {
-					return new AWSFunctionalSegmentTestClassGroup(
-						batchTestClassGroup, jsonObject);
-				}
-
-				return new AWSFunctionalSegmentTestClassGroup(
-					batchTestClassGroup);
-			}
-
 			if (jsonObject != null) {
 				return new FunctionalSegmentTestClassGroup(
 					batchTestClassGroup, jsonObject);
@@ -322,21 +296,6 @@ public class TestClassGroupFactory {
 			key);
 
 		if ((batchTestClassGroup == null) &&
-			(job instanceof PortalEnvironmentJob)) {
-
-			if (jsonObject != null) {
-				batchTestClassGroup =
-					new EnvironmentFunctionalBatchTestClassGroup(
-						jsonObject, (PortalEnvironmentJob)job);
-			}
-			else {
-				batchTestClassGroup =
-					new EnvironmentFunctionalBatchTestClassGroup(
-						batchName, (PortalEnvironmentJob)job);
-			}
-		}
-
-		if ((batchTestClassGroup == null) &&
 			(job instanceof PortalTestClassJob)) {
 
 			PortalTestClassJob portalTestClassJob = (PortalTestClassJob)job;
@@ -349,7 +308,7 @@ public class TestClassGroupFactory {
 					batchTestClassGroup = new FunctionalBatchTestClassGroup(
 						jsonObject, portalTestClassJob);
 				}
-				else if (testBatch != null) {
+				else if (testBatch instanceof PoshiTestBatch) {
 					batchTestClassGroup = new FunctionalBatchTestClassGroup(
 						batchName, portalTestClassJob,
 						(PoshiTestBatch)testBatch);
@@ -367,7 +326,7 @@ public class TestClassGroupFactory {
 					batchTestClassGroup = new JUnitBatchTestClassGroup(
 						jsonObject, portalTestClassJob);
 				}
-				else if (testBatch != null) {
+				else if (testBatch instanceof JUnitTestBatch) {
 					batchTestClassGroup = new JUnitBatchTestClassGroup(
 						batchName, portalTestClassJob,
 						(JUnitTestBatch)testBatch);
@@ -437,7 +396,7 @@ public class TestClassGroupFactory {
 					batchTestClassGroup = new ModulesJUnitBatchTestClassGroup(
 						jsonObject, portalTestClassJob);
 				}
-				else if (testBatch != null) {
+				else if (testBatch instanceof JUnitTestBatch) {
 					batchTestClassGroup = new ModulesJUnitBatchTestClassGroup(
 						batchName, portalTestClassJob,
 						(JUnitTestBatch)testBatch);
@@ -474,7 +433,7 @@ public class TestClassGroupFactory {
 					batchTestClassGroup = new PlaywrightBatchTestClassGroup(
 						jsonObject, portalTestClassJob);
 				}
-				else if (testBatch != null) {
+				else if (testBatch instanceof PlaywrightTestBatch) {
 					batchTestClassGroup = new PlaywrightBatchTestClassGroup(
 						batchName, (PlaywrightTestBatch)testBatch,
 						portalTestClassJob);
@@ -540,6 +499,18 @@ public class TestClassGroupFactory {
 					batchTestClassGroup =
 						new QAWebsitesPlaywrightBatchTestClassGroup(
 							batchName, (QAWebsitesGitRepositoryJob)job);
+				}
+			}
+			else if (batchName.startsWith("rest-builder-and-service-builder")) {
+				if (jsonObject != null) {
+					batchTestClassGroup =
+						new RESTBuilderAndServiceBuilderModulesBatchTestClassGroup(
+							jsonObject, portalTestClassJob);
+				}
+				else {
+					batchTestClassGroup =
+						new RESTBuilderAndServiceBuilderModulesBatchTestClassGroup(
+							batchName, portalTestClassJob);
 				}
 			}
 			else if (batchName.startsWith("rest-builder")) {

@@ -124,6 +124,7 @@ import com.liferay.portal.kernel.util.BigDecimalUtil;
 import com.liferay.portal.kernel.util.DateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
@@ -142,7 +143,6 @@ import com.liferay.portal.vulcan.util.SearchUtil;
 import com.liferay.upload.UniqueFileNameProvider;
 
 import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
 
 import java.io.Serializable;
 
@@ -339,32 +339,29 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 	}
 
 	@Override
-	public Response patchProduct(Long id, Product product) throws Exception {
-		CPDefinition cpDefinition =
-			_cpDefinitionService.fetchCPDefinitionByCProductId(id, false);
+	public Product patchProduct(Long id, Product product) throws Exception {
+		CPDefinition cpDefinition = ProductUtil.fetchCPDefinitionByCProductId(
+			id, _cpDefinitionService);
 
 		if (cpDefinition == null) {
 			throw new NoSuchCPDefinitionException(
 				"Unable to find product with ID " + id);
 		}
 
-		_updateProduct(cpDefinition, product);
+		cpDefinition = _updateProduct(cpDefinition, product);
 
-		Response.ResponseBuilder responseBuilder = Response.ok();
-
-		return responseBuilder.build();
+		return _toProduct(cpDefinition.getCPDefinitionId());
 	}
 
 	@Override
-	public Response patchProductByExternalReferenceCode(
+	public Product patchProductByExternalReferenceCode(
 			String externalReferenceCode, Product product)
 		throws Exception {
 
 		CPDefinition cpDefinition =
-			_cpDefinitionService.
-				fetchCPDefinitionByCProductExternalReferenceCode(
-					externalReferenceCode, contextCompany.getCompanyId(),
-					false);
+			ProductUtil.fetchCPDefinitionByCProductExternalReferenceCode(
+				externalReferenceCode, contextCompany.getCompanyId(),
+				_cpDefinitionService);
 
 		if (cpDefinition == null) {
 			throw new NoSuchCPDefinitionException(
@@ -372,21 +369,7 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 					externalReferenceCode);
 		}
 
-		ServiceContext serviceContext = _serviceContextHelper.getServiceContext(
-			cpDefinition.getGroupId());
-
-		int productStatus = GetterUtil.getInteger(product.getProductStatus());
-
-		if (productStatus == WorkflowConstants.STATUS_DRAFT) {
-			serviceContext.setWorkflowAction(
-				WorkflowConstants.ACTION_SAVE_DRAFT);
-		}
-
-		_updateProduct(cpDefinition, product);
-
-		Response.ResponseBuilder responseBuilder = Response.ok();
-
-		return responseBuilder.build();
+		return patchProduct(cpDefinition.getCProductId(), product);
 	}
 
 	@Override
@@ -609,10 +592,9 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 			_getProductTaxConfiguration(product);
 
 		CPDefinition cpDefinition =
-			_cpDefinitionService.
-				fetchCPDefinitionByCProductExternalReferenceCode(
-					externalReferenceCode, contextCompany.getCompanyId(),
-					false);
+			ProductUtil.fetchCPDefinitionByCProductExternalReferenceCode(
+				externalReferenceCode, contextCompany.getCompanyId(),
+				_cpDefinitionService);
 
 		Category[] categories = product.getCategories();
 
@@ -906,6 +888,13 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 	private ProductShippingConfiguration _getProductShippingConfiguration(
 		Product product) {
 
+		ProductConfiguration productConfiguration =
+			product.getProductConfiguration();
+
+		if (productConfiguration != null) {
+			return _getProductShippingConfiguration(productConfiguration);
+		}
+
 		ProductShippingConfiguration productShippingConfiguration =
 			product.getShippingConfiguration();
 
@@ -968,6 +957,13 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 	private ProductTaxConfiguration _getProductTaxConfiguration(
 		Product product) {
 
+		ProductConfiguration productConfiguration =
+			product.getProductConfiguration();
+
+		if (productConfiguration != null) {
+			return _getProductTaxConfiguration(productConfiguration);
+		}
+
 		ProductTaxConfiguration productTaxConfiguration =
 			product.getTaxConfiguration();
 
@@ -989,6 +985,23 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 		}
 
 		return productTaxConfiguration;
+	}
+
+	private boolean _isPublishedCPDefinitionVersionable(
+			CPDefinition cpDefinition)
+		throws Exception {
+
+		CProduct cProduct = cpDefinition.getCProduct();
+
+		CPDefinition publishedCPDefinition =
+			_cpDefinitionService.fetchCPDefinition(
+				cProduct.getPublishedCPDefinitionId());
+
+		if (publishedCPDefinition == null) {
+			return false;
+		}
+
+		return _cpDefinitionService.isVersionable(publishedCPDefinition);
 	}
 
 	private boolean _isTaxable(
@@ -1490,6 +1503,8 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 			CPDefinition cpDefinition, Product product)
 		throws Exception {
 
+		boolean publish = false;
+
 		ServiceContext serviceContext = _serviceContextHelper.getServiceContext(
 			cpDefinition.getGroupId());
 
@@ -1499,8 +1514,12 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 			serviceContext.setWorkflowAction(
 				WorkflowConstants.ACTION_SAVE_DRAFT);
 		}
+		else if (_isPublishedCPDefinitionVersionable(cpDefinition)) {
+			publish = true;
 
-		cpDefinition = _getCPDefinition(cpDefinition, serviceContext);
+			serviceContext.setWorkflowAction(
+				WorkflowConstants.ACTION_SAVE_DRAFT);
+		}
 
 		String[] assetTagNames = product.getTags();
 
@@ -1612,6 +1631,8 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 				cpDefinition.getExpirationDate()),
 			contextUser.getTimeZone());
 
+		cpDefinition = _getCPDefinition(cpDefinition, serviceContext);
+
 		cpDefinition = _cpDefinitionService.updateCPDefinition(
 			cpDefinition.getCPDefinitionId(), cpDefinition.getCPTaxCategoryId(),
 			GetterUtil.getBoolean(
@@ -1649,6 +1670,17 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 				cpDefinition.getCPDefinitionId());
 		}
 
+		Map<String, ?> expando = product.getExpando();
+
+		if (MapUtil.isNotEmpty(expando)) {
+			ExpandoUtil.updateExpando(
+				serviceContext.getCompanyId(), CPDefinition.class,
+				cpDefinition.getPrimaryKey(), expando);
+		}
+
+		cpDefinition = _updateNestedResources(
+			product, cpDefinition, serviceContext);
+
 		if ((product.getActive() != null) && !product.getActive()) {
 			Map<String, Serializable> workflowContext = new HashMap<>();
 
@@ -1657,16 +1689,18 @@ public class ProductResourceImpl extends BaseProductResourceImpl {
 				WorkflowConstants.STATUS_INACTIVE, serviceContext,
 				workflowContext);
 		}
+		else if (publish && (productStatus != WorkflowConstants.STATUS_DRAFT)) {
+			Map<String, Serializable> workflowContext = new HashMap<>();
 
-		Map<String, ?> expando = product.getExpando();
+			serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
 
-		if ((expando != null) && !expando.isEmpty()) {
-			ExpandoUtil.updateExpando(
-				serviceContext.getCompanyId(), CPDefinition.class,
-				cpDefinition.getPrimaryKey(), expando);
+			cpDefinition = _cpDefinitionService.updateStatus(
+				cpDefinition.getCPDefinitionId(),
+				WorkflowConstants.STATUS_APPROVED, serviceContext,
+				workflowContext);
 		}
 
-		return _updateNestedResources(product, cpDefinition, serviceContext);
+		return cpDefinition;
 	}
 
 	@Reference

@@ -6,6 +6,7 @@
 import ClayButton from '@clayui/button';
 import {ClayInput} from '@clayui/form';
 import ClayLink from '@clayui/link';
+import {AIAssistantChat} from '@liferay/ai-hub-cell-js-components-web';
 import {isCtrlOrMeta} from '@liferay/layout-js-components-web';
 import {Toolbar} from '@liferay/site-cms-site-initializer';
 import {sessionStorage, sub} from 'frontend-js-web';
@@ -14,10 +15,16 @@ import React, {useEffect, useId, useState} from 'react';
 export default function EditorToolbar({
 	backURL,
 	formSubmitURL,
+	groupId,
+	hasUpdatePermission,
+	isNew,
 	title,
 }: {
 	backURL: string;
 	formSubmitURL?: string;
+	groupId: number;
+	hasUpdatePermission: boolean;
+	isNew: boolean;
 	title: string;
 }) {
 	const [formId, setFormId] = useState<string | undefined>();
@@ -57,7 +64,7 @@ export default function EditorToolbar({
 					event.preventDefault();
 				}
 
-				if (isShortcut) {
+				if (isShortcut && hasUpdatePermission) {
 					(form as HTMLFormElement).submit();
 				}
 			};
@@ -67,7 +74,7 @@ export default function EditorToolbar({
 			return () =>
 				window.removeEventListener('keydown', handlePublishShortcut);
 		}
-	}, []);
+	}, [hasUpdatePermission]);
 
 	return (
 		<Toolbar
@@ -75,6 +82,21 @@ export default function EditorToolbar({
 			className="content-editor__toolbar position-fixed"
 			title={title}
 		>
+			{Liferay.FeatureFlags['LPD-62272'] && (
+				<>
+					<Toolbar.Item>
+						<AIAssistantChat
+							context={{groupId}}
+							hideTriggerLabel
+							instructionDefinitionScope="cms"
+							triggerRound
+						/>
+					</Toolbar.Item>
+
+					<div className="ai-assistant__separator" />
+				</>
+			)}
+
 			<Toolbar.Item>
 				<ClayLink
 					aria-label={Liferay.Language.get('cancel')}
@@ -93,6 +115,7 @@ export default function EditorToolbar({
 					aria-labelledby={submitLabelId}
 					data-title={submitTitle}
 					data-title-set-as-html
+					disabled={!hasUpdatePermission}
 					form={formId}
 					onClick={() => {
 						const form = getForm();
@@ -105,9 +128,13 @@ export default function EditorToolbar({
 							sessionStorage.setItem(
 								'com.liferay.site.cmp.site.initializer.successMessage',
 								sub(
-									Liferay.Language.get(
-										'x-was-published-successfully'
-									),
+									isNew
+										? Liferay.Language.get(
+												'x-was-created-successfully'
+											)
+										: Liferay.Language.get(
+												'x-was-updated-successfully'
+											),
 									`<strong>${value}</strong>`
 								),
 								sessionStorage.TYPES.NECESSARY

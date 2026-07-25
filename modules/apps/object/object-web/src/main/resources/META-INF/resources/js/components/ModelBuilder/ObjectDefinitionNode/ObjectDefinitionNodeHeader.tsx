@@ -7,6 +7,7 @@ import {ClayButtonWithIcon} from '@clayui/button';
 import {ClayDropDownWithItems} from '@clayui/drop-down';
 import ClayIcon from '@clayui/icon';
 import ClayLabel from '@clayui/label';
+import {ClayTooltipProvider} from '@clayui/tooltip';
 import classNames from 'classnames';
 import React from 'react';
 
@@ -15,6 +16,7 @@ import {DropDownItems} from '../types';
 import './ObjectDefinitionNodeHeader.scss';
 
 interface ObjectDefinitionNodeHeaderProps {
+	allowStandaloneObjectEntry: boolean;
 	dbTableName: string | undefined;
 	dropDownItems: DropDownItems[];
 	handleSelectObjectDefinitionNode: () => void;
@@ -31,6 +33,7 @@ interface ObjectDefinitionNodeHeaderProps {
 }
 
 export default function ObjectDefinitionNodeHeader({
+	allowStandaloneObjectEntry,
 	dbTableName,
 	dropDownItems,
 	handleSelectObjectDefinitionNode,
@@ -92,20 +95,45 @@ export default function ObjectDefinitionNodeHeader({
 				</div>
 
 				<div>
-					{Liferay.FeatureFlags['LPD-34594'] && (
+					<ClayTooltipProvider>
 						<ClayLabel
 							className={classNames('label-inverse-secondary', {
 								'label-inverse-info':
 									isRootDescendantNode || isRootNode,
 							})}
+							title={
+								isRootDescendantNode
+									? allowStandaloneObjectEntry
+										? Liferay.Language.get(
+												'flexible-inheritance-tooltip'
+											)
+										: Liferay.Language.get(
+												'strict-inheritance-tooltip'
+											)
+									: undefined
+							}
 						>
-							{isRootNode
-								? Liferay.Language.get('root-object')
-								: isRootDescendantNode
-									? Liferay.Language.get('inherited')
-									: Liferay.Language.get('standard')}
+							<span className="align-items-center d-inline-flex">
+								{isRootNode
+									? Liferay.Language.get('root-object')
+									: isRootDescendantNode
+										? Liferay.Language.get('inherited')
+										: Liferay.Language.get('standard')}
+
+								{isRootDescendantNode && (
+									<ClayIcon
+										aria-hidden="true"
+										className="c-ml-1"
+										symbol={
+											allowStandaloneObjectEntry
+												? 'unlock'
+												: 'lock'
+										}
+									/>
+								)}
+							</span>
 						</ClayLabel>
-					)}
+					</ClayTooltipProvider>
 
 					<ClayLabel displayType={system ? 'info' : 'warning'}>
 						{system

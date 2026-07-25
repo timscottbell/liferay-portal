@@ -5,6 +5,7 @@
 
 package com.liferay.portal.tools.rest.builder.test.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.petra.function.UnsafeBiConsumer;
 import com.liferay.petra.function.UnsafeConsumer;
 import com.liferay.petra.function.UnsafeFunction;
@@ -77,7 +78,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'GET' 'http://localhost:8080/o/test/v1.0/multipart-test-entities/{multipartTestEntityId}'  -u 'test@liferay.com:test'
+	 * curl -X 'GET' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entities/{multipartTestEntityId}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -111,7 +112,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'GET' 'http://localhost:8080/o/test/v1.0/sites/{siteExternalReferenceCode}/multipart-test-entity'  -u 'test@liferay.com:test'
+	 * curl -X 'GET' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/sites/{siteExternalReferenceCode}/multipart-test-entity'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -149,7 +150,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'PATCH' 'http://localhost:8080/o/test/v1.0/multipart-test-entities/{multipartTestEntityId}' -d $'{"externalReferenceCode": ___, "id": ___, "name": ___, "siteExternalReferenceCode": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
+	 * curl -X 'PATCH' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entities/{multipartTestEntityId}' -d $'{"externalReferenceCode": ___, "id": ___, "name": ___, "siteExternalReferenceCode": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -185,7 +186,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'POST' 'http://localhost:8080/o/test/v1.0/multipart-test-entity' -d $'{"externalReferenceCode": ___, "id": ___, "name": ___, "siteExternalReferenceCode": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
+	 * curl -X 'POST' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entity' -d $'{"externalReferenceCode": ___, "id": ___, "name": ___, "siteExternalReferenceCode": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.tags.Tags(
 		value = {
@@ -209,7 +210,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'POST' 'http://localhost:8080/o/test/v1.0/multipart-test-entity'  -u 'test@liferay.com:test'
+	 * curl -X 'POST' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entity'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.tags.Tags(
 		value = {
@@ -233,7 +234,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'POST' 'http://localhost:8080/o/test/v1.0/multipart-test-entity/batch'  -u 'test@liferay.com:test'
+	 * curl -X 'POST' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entity/batch'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -281,7 +282,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'PUT' 'http://localhost:8080/o/test/v1.0/multipart-test-entities/{multipartTestEntityId}'  -u 'test@liferay.com:test'
+	 * curl -X 'PUT' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entities/{multipartTestEntityId}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -317,7 +318,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'PUT' 'http://localhost:8080/o/test/v1.0/multipart-test-entities/batch'  -u 'test@liferay.com:test'
+	 * curl -X 'PUT' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/multipart-test-entities/batch'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -366,10 +367,10 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'PUT' 'http://localhost:8080/o/test/v1.0/sites/{siteExternalReferenceCode}/multipart-test-entity'  -u 'test@liferay.com:test'
+	 * curl -X 'PUT' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/sites/{siteExternalReferenceCode}/multipart-test-entity'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @io.swagger.v3.oas.annotations.media.Content(mediaType = "multipart/form-data", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PutSiteMultipartTestEntityRequestBody.class)))
+		requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @io.swagger.v3.oas.annotations.media.Content(mediaType = "multipart/form-data", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PutSiteMultipartTestEntityRequestBody.class)), description = "The multipart Test Entity to update. This exercises a multipart request body that also declares a description.")
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -510,6 +511,15 @@ public abstract class BaseMultipartTestEntityResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -665,7 +675,7 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	}
 
 	protected String getApplicationPath() {
-		return "test";
+		return "portal-tools-rest-builder-test";
 	}
 
 	public void setVulcanBatchEngineExportTaskResource(
@@ -1141,3 +1151,4 @@ public abstract class BaseMultipartTestEntityResourceImpl
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:2010847609

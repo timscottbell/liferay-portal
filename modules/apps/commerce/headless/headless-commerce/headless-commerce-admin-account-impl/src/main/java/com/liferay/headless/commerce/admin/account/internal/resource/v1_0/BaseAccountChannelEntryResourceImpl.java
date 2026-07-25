@@ -5,6 +5,7 @@
 
 package com.liferay.headless.commerce.admin.account.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.commerce.admin.account.dto.v1_0.AccountChannelEntry;
 import com.liferay.headless.commerce.admin.account.dto.v1_0.User;
 import com.liferay.headless.commerce.admin.account.resource.v1_0.AccountChannelEntryResource;
@@ -72,10 +73,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-billing-addresses/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account billing address channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -106,10 +111,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-currencies/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account currency channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -140,10 +149,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-delivery-terms/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account delivery term channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -174,10 +187,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-discounts/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account discount channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -208,10 +225,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-methods/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account payment method channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -242,10 +263,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-terms/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account payment term channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -276,10 +301,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-price-list/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account price list channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -310,10 +339,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-shipping-addresses/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account shipping address channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -344,10 +377,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-users/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Deletes the per-account user channel override identified by its internal ID. Returns 204 on success."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -378,18 +415,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-billing-addresses'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account billing address channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -426,18 +469,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-currencies'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account currency channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -474,18 +523,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-delivery-terms'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account delivery term channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -522,18 +577,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-discounts'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account discount channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -570,18 +631,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-payment-methods'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account payment method channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -618,18 +685,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-payment-terms'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account payment term channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -666,18 +739,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-price-lists'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account price list channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -714,18 +793,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-shipping-addresses'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account shipping address channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -762,18 +847,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-users'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account user channel overrides for the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -810,10 +901,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-billing-addresses/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account billing address channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -846,10 +941,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-currencies/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account currency channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -882,10 +981,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-delivery-terms/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account delivery term channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -918,10 +1021,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-discounts/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account discount channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -954,10 +1061,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-methods/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account payment method channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -990,10 +1101,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-terms/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account payment term channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1026,10 +1141,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-price-list/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account price list channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1062,10 +1181,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-shipping-addresses/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account shipping address channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1098,10 +1221,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-users/{id}'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Reads the per-account user channel override identified by its internal ID. Returns 404 when no entry exists."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1134,18 +1261,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-billing-addresses'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account billing address channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1180,18 +1313,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-currencies'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account currency channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1225,18 +1364,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-delivery-terms'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account delivery term channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1271,18 +1416,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-discounts'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account discount channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1316,18 +1467,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-payment-methods'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account payment method channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1362,18 +1519,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-payment-terms'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account payment term channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1407,18 +1570,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-price-lists'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account price list channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1452,18 +1621,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-shipping-addresses'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account shipping address channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1498,18 +1673,24 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-users'  -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Lists the per-account user channel overrides for the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "One-based page index used together with pageSize to slice the result set. The first page is 1.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "page"
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Maximum number of entries returned per page. The default value is 20 when the parameter is omitted.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
 				name = "pageSize"
 			)
@@ -1543,10 +1724,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-billing-addresses/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account billing address channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1581,10 +1766,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-currencies/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account currency channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1619,10 +1808,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-delivery-terms/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account delivery term channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1657,10 +1850,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-discounts/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account discount channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1695,10 +1892,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-methods/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account payment method channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1733,10 +1934,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-payment-terms/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account payment term channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1771,10 +1976,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-price-list/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account price list channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1809,10 +2018,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-shipping-addresses/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account shipping address channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1847,10 +2060,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/account-channel-users/{id}' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Partially updates the per-account user channel override identified by its internal ID. JSON Merge Patch semantics; only the supplied fields (channel binding, priority, overrideEligibility) are modified."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -1885,10 +2102,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-billing-addresses' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account billing address channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -1926,10 +2147,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-currencies' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account currency channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -1967,10 +2192,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-delivery-terms' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account delivery term channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2008,10 +2237,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-discounts' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account discount channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2049,10 +2282,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-payment-methods' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account payment method channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2090,10 +2327,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-payment-terms' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account payment term channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2131,10 +2372,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-price-lists' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account price list channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2172,10 +2417,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-shipping-addresses' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account shipping address channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2213,10 +2462,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/by-externalReferenceCode/{externalReferenceCode}/account-channel-users' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account user channel override under the Account identified by external reference code."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "External reference code that identifies the resource. Idempotency key for create and update; must be unique per entity within the company.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "externalReferenceCode"
 			)
@@ -2254,10 +2507,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-billing-addresses' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account billing address channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2292,10 +2549,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-currencies' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account currency channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2330,10 +2591,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-delivery-terms' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account delivery term channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2368,10 +2633,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-discounts' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account discount channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2406,10 +2675,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-payment-methods' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account payment method channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2444,10 +2717,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-payment-terms' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account payment term channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2482,10 +2759,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-price-lists' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account price list channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2520,10 +2801,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-shipping-addresses' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account shipping address channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2558,10 +2843,14 @@ public abstract class BaseAccountChannelEntryResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-account/v1.0/accounts/{id}/account-channel-users' -d $'{"channelExternalReferenceCode": ___, "channelId": ___, "classExternalReferenceCode": ___, "classPK": ___, "overrideEligibility": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@Deprecated
-	@io.swagger.v3.oas.annotations.Operation(deprecated = true)
+	@io.swagger.v3.oas.annotations.Operation(
+		deprecated = true,
+		description = "Creates a per-account user channel override under the Account identified by internal ID."
+	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
+				description = "Internal primary key that identifies the resource.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "id"
 			)
@@ -2664,6 +2953,15 @@ public abstract class BaseAccountChannelEntryResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -3243,3 +3541,4 @@ public abstract class BaseAccountChannelEntryResourceImpl
 		LogFactoryUtil.getLog(BaseAccountChannelEntryResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:-974087258

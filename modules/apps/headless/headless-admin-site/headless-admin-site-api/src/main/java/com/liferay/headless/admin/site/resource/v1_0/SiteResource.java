@@ -63,7 +63,8 @@ public interface SiteResource {
 		throws Exception;
 
 	public Page<Site> getSitesPage(
-			Boolean active, String search, Pagination pagination)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, Pagination pagination)
 		throws Exception;
 
 	public Site postSite(Site site) throws Exception;
@@ -75,14 +76,21 @@ public interface SiteResource {
 		throws Exception;
 
 	public Response postSitesPageExportBatch(
-			Boolean active, String search, String callbackURL,
-			String contentType, String fieldNames)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, String callbackURL, String contentType,
+			String fieldNames)
 		throws Exception;
 
 	public Site putSite(String siteExternalReferenceCode, Site site)
 		throws Exception;
 
+	public void putSiteActivate(String siteExternalReferenceCode)
+		throws Exception;
+
 	public Response putSiteBatch(String callbackURL, Object object)
+		throws Exception;
+
+	public void putSiteDeactivate(String siteExternalReferenceCode)
 		throws Exception;
 
 	public Page<com.liferay.portal.vulcan.permission.Permission>
@@ -191,3 +199,4 @@ public interface SiteResource {
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:-521558797

@@ -8,7 +8,6 @@ import {expect, mergeTests} from '@playwright/test';
 import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../fixtures/loginTest';
-import {HomePage} from '../../../pages/portal-web/HomePage';
 import getRandomString from '../../../utils/getRandomString';
 import performLogin, {
 	performLogout,
@@ -26,41 +25,55 @@ const test = mergeTests(
 );
 
 test(
-	'Can access to Spaces from the Applications Menu',
-	{tag: '@LPD-59033'},
-	async ({apiHelpers, page}) => {
+	'Admin section is not visible for non-admin space members',
+	{tag: '@LPD-83160'},
+	async ({apiHelpers, page, spaceSummaryPage}) => {
 		const spaceName = `Space ${getRandomString()}`;
+		let space = null;
+		let user = null;
 
-		await apiHelpers.headlessAssetLibrary.createAssetLibrary({
+		space = await apiHelpers.headlessAssetLibrary.createAssetLibrary({
 			name: spaceName,
-			settings: {
-				logoColor: 'outline-3',
-				sharingEnabled: true,
-			},
+			settings: {},
 			type: 'Space',
 		});
 
-		const homePage = new HomePage(page);
+		user = await apiHelpers.headlessAdminUser.postUserAccount();
 
-		await homePage.openApplicationMenu();
+		userData[user.alternateName] = {
+			name: user.givenName,
+			password: 'test',
+			surname: user.familyName,
+		};
 
-		await page.getByLabel('Applications Menu').waitFor({state: 'visible'});
+		await apiHelpers.jsonWebServicesUser.addGroupUsers(space.siteId, [
+			user.id,
+		]);
+
+		await performLogout(page);
+
+		await performLogin(page, user.alternateName, 'test');
+
+		await spaceSummaryPage.goto(spaceName);
 
 		await expect(
-			page.locator('a span.text-truncate', {
-				hasText: 'Default',
-			})
-		).toBeVisible();
-
-		const spaceLink = page.locator('a span.text-truncate', {
-			hasText: spaceName,
-		});
-
-		await spaceLink.click();
+			page
+				.locator('.vertical-navigation-fragment')
+				.getByRole('menuitem', {
+					name: 'Admin',
+				})
+		).not.toBeVisible();
 
 		await expect(
-			page.getByRole('heading', {name: spaceName})
+			page
+				.locator('.vertical-navigation-fragment')
+				.getByRole('menuitem', {
+					name: 'Contents',
+				})
 		).toBeVisible();
+
+		await apiHelpers.headlessAdminUser.deleteUserAccount(user.id);
+		await apiHelpers.headlessAssetLibrary.deleteAssetLibrary(space.id);
 	}
 );
 

@@ -36,10 +36,16 @@ function main() {
 					!hasError &&
 					inputElement.value.length > input.attributes.maxLength
 				) {
+					const lengthFeedback = errorMessage.getAttribute(
+						'data-length-feedback'
+					);
+
 					showInputError({
-						errorType: 'length',
+						errorContainer: error,
+						errorMessageContainer: errorMessage,
 						formGroup,
 						lengthInfoContainer: lengthInfo,
+						message: `${lengthFeedback}: ${inputElement.value.length} / ${input.attributes.maxLength}`,
 					});
 				}
 
@@ -56,10 +62,12 @@ function main() {
 
 				inputElement.addEventListener('keyup', onKeyup);
 
-				const defaultLanguageId = themeDisplay.getDefaultLanguageId();
+				const defaultLanguageId = input.attributes.defaultLanguageId;
 
 				if (input.localizable) {
 					const {onChange} = registerLocalizedInput({
+						availableLanguageIds:
+							input.attributes.availableLanguageIds,
 						defaultLanguageId,
 						initialValues: input.valueI18n,
 						inputElement,

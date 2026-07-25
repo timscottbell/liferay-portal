@@ -11,7 +11,9 @@ import com.liferay.oauth.client.persistence.service.base.OAuthClientASLocalMetad
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermissionUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
@@ -50,12 +52,13 @@ public class OAuthClientASLocalMetadataServiceImpl
 				getUserId(), metadataJSON, wellKnownURISuffix);
 	}
 
+	@Override
 	public OAuthClientASLocalMetadata addOAuthClientASLocalMetadata(
-			String authorizationEndpoint, String issuer, String jwksURI,
-			boolean localWellKnownEnabled, String registrationEndpoint,
-			String[] supportedGrantTypes, String[] supportedScopes,
-			String[] supportedSubjectTypes, String tokenEndpoint,
-			String userInfoEndpoint)
+			String externalReferenceCode, String authorizationEndpoint,
+			String issuer, String jwksURI, boolean localWellKnownEnabled,
+			String registrationEndpoint, String[] supportedGrantTypes,
+			String[] supportedScopes, String[] supportedSubjectTypes,
+			String tokenEndpoint, String userInfoEndpoint)
 		throws PortalException {
 
 		ModelResourcePermissionUtil.check(
@@ -66,8 +69,8 @@ public class OAuthClientASLocalMetadataServiceImpl
 
 		return oAuthClientASLocalMetadataLocalService.
 			addOAuthClientASLocalMetadata(
-				getUserId(), authorizationEndpoint, issuer, jwksURI,
-				localWellKnownEnabled, registrationEndpoint,
+				externalReferenceCode, getUserId(), authorizationEndpoint,
+				issuer, jwksURI, localWellKnownEnabled, registrationEndpoint,
 				supportedGrantTypes, supportedScopes, supportedSubjectTypes,
 				tokenEndpoint, userInfoEndpoint);
 	}
@@ -91,16 +94,21 @@ public class OAuthClientASLocalMetadataServiceImpl
 
 	@Override
 	public OAuthClientASLocalMetadata deleteOAuthClientASLocalMetadata(
-			String localWellKnownURI)
+			long companyId, String localWellKnownURI)
 		throws PortalException {
+
+		PermissionChecker permissionChecker = getPermissionChecker();
+
+		if (companyId != permissionChecker.getCompanyId()) {
+			throw new PrincipalException();
+		}
 
 		OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
 			oAuthClientASLocalMetadataLocalService.
-				getOAuthClientASLocalMetadata(localWellKnownURI);
+				getOAuthClientASLocalMetadata(companyId, localWellKnownURI);
 
 		_oAuthClientASLocalMetadataModelResourcePermission.check(
-			getPermissionChecker(), oAuthClientASLocalMetadata,
-			ActionKeys.DELETE);
+			permissionChecker, oAuthClientASLocalMetadata, ActionKeys.DELETE);
 
 		return oAuthClientASLocalMetadataLocalService.
 			deleteOAuthClientASLocalMetadata(oAuthClientASLocalMetadata);
@@ -131,6 +139,26 @@ public class OAuthClientASLocalMetadataServiceImpl
 
 		OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
 			oAuthClientASLocalMetadataPersistence.fetchByC_I(companyId, issuer);
+
+		if (oAuthClientASLocalMetadata != null) {
+			_oAuthClientASLocalMetadataModelResourcePermission.check(
+				getPermissionChecker(), oAuthClientASLocalMetadata,
+				ActionKeys.VIEW);
+		}
+
+		return oAuthClientASLocalMetadata;
+	}
+
+	@Override
+	public OAuthClientASLocalMetadata
+			fetchOAuthClientASLocalMetadataByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
+			oAuthClientASLocalMetadataLocalService.
+				fetchOAuthClientASLocalMetadataByExternalReferenceCode(
+					externalReferenceCode, companyId);
 
 		if (oAuthClientASLocalMetadata != null) {
 			_oAuthClientASLocalMetadataModelResourcePermission.check(
@@ -191,13 +219,32 @@ public class OAuthClientASLocalMetadataServiceImpl
 	}
 
 	@Override
-	public OAuthClientASLocalMetadata getOAuthClientASLocalMetadata(
-			String localWellKnownURI)
+	public OAuthClientASLocalMetadata
+			getOAuthClientASLocalMetadataByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
 		throws PortalException {
 
 		OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
-			oAuthClientASLocalMetadataPersistence.findByLocalWellKnownURI(
-				localWellKnownURI);
+			oAuthClientASLocalMetadataLocalService.
+				getOAuthClientASLocalMetadataByExternalReferenceCode(
+					externalReferenceCode, companyId);
+
+		_oAuthClientASLocalMetadataModelResourcePermission.check(
+			getPermissionChecker(), oAuthClientASLocalMetadata,
+			ActionKeys.VIEW);
+
+		return oAuthClientASLocalMetadata;
+	}
+
+	@Override
+	public OAuthClientASLocalMetadata
+			getOAuthClientASLocalMetadataByLocalWellKnownURI(
+				long companyId, String localWellKnownURI)
+		throws PortalException {
+
+		OAuthClientASLocalMetadata oAuthClientASLocalMetadata =
+			oAuthClientASLocalMetadataPersistence.findByC_LWKURI(
+				companyId, localWellKnownURI);
 
 		_oAuthClientASLocalMetadataModelResourcePermission.check(
 			getPermissionChecker(), oAuthClientASLocalMetadata,
@@ -238,6 +285,7 @@ public class OAuthClientASLocalMetadataServiceImpl
 				oAuthClientASLocalMetadataId, metadataJSON, wellKnownURISuffix);
 	}
 
+	@Override
 	public OAuthClientASLocalMetadata updateOAuthClientASLocalMetadata(
 			long oAuthClientASLocalMetadataId, String authorizationEndpoint,
 			String issuer, String jwksURI, boolean localWellKnownEnabled,

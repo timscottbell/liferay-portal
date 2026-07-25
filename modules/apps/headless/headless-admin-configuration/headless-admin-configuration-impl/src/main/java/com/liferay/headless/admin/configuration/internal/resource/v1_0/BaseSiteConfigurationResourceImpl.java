@@ -5,6 +5,7 @@
 
 package com.liferay.headless.admin.configuration.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.admin.configuration.dto.v1_0.SiteConfiguration;
 import com.liferay.headless.admin.configuration.resource.v1_0.SiteConfigurationResource;
 import com.liferay.petra.function.UnsafeBiConsumer;
@@ -120,6 +121,14 @@ public abstract class BaseSiteConfigurationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
 				name = "siteExternalReferenceCode"
+			),
+			@io.swagger.v3.oas.annotations.Parameter(
+				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
+				name = "page"
+			),
+			@io.swagger.v3.oas.annotations.Parameter(
+				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
+				name = "pageSize"
 			)
 		}
 	)
@@ -138,7 +147,8 @@ public abstract class BaseSiteConfigurationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(hidden = true)
 			@jakarta.validation.constraints.NotNull
 			@jakarta.ws.rs.PathParam("siteExternalReferenceCode")
-			String siteExternalReferenceCode)
+			String siteExternalReferenceCode,
+			@jakarta.ws.rs.core.Context Pagination pagination)
 		throws Exception {
 
 		return Page.of(Collections.emptyList());
@@ -468,7 +478,8 @@ public abstract class BaseSiteConfigurationResourceImpl
 
 		if (parameters.containsKey("siteExternalReferenceCode")) {
 			return getSiteSiteConfigurationsPage(
-				(String)parameters.get("siteExternalReferenceCode"));
+				(String)parameters.get("siteExternalReferenceCode"),
+				pagination);
 		}
 		else {
 			throw new NotSupportedException(
@@ -493,6 +504,15 @@ public abstract class BaseSiteConfigurationResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -1071,3 +1091,4 @@ public abstract class BaseSiteConfigurationResourceImpl
 		LogFactoryUtil.getLog(BaseSiteConfigurationResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:1621532209

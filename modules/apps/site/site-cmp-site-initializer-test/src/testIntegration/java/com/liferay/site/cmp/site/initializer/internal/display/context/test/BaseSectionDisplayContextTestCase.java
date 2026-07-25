@@ -12,13 +12,14 @@ import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.DropdownItem;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.service.ObjectDefinitionLocalService;
+import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.service.CompanyLocalService;
-import com.liferay.portal.kernel.test.AssertUtils;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.site.cmp.site.initializer.test.util.CMPTestUtil;
@@ -41,7 +42,8 @@ public abstract class BaseSectionDisplayContextTestCase {
 
 	@Before
 	public void setUp() throws Exception {
-		CMPTestUtil.getOrAddGroup(BaseSectionDisplayContextTestCase.class);
+		Group group = CMPTestUtil.getOrAddGroup(
+			BaseSectionDisplayContextTestCase.class);
 
 		objectDefinition =
 			objectDefinitionLocalService.
@@ -54,41 +56,13 @@ public abstract class BaseSectionDisplayContextTestCase {
 					_companyLocalService.getCompany(
 						TestPropsValues.getCompanyId()));
 				setLocale(LocaleUtil.getDefault());
-				setURLCurrent("http://localhost:8080/currentURL");
+				setScopeGroupId(group.getGroupId());
+				setURLCurrent(
+					"http://localhost:" +
+						PortalUtil.getPortalServerPort(false) + "/currentURL");
 				setUser(TestPropsValues.getUser());
 			}
 		};
-	}
-
-	protected void assertFDSActionDropdownItem(
-		String expectedIcon, String expectedId, String expectedLabel,
-		String expectedMethod, FDSActionDropdownItem fdsActionDropdownItem) {
-
-		Map<String, String> data =
-			(Map<String, String>)fdsActionDropdownItem.get("data");
-
-		Assert.assertEquals(expectedId, data.get("id"));
-		Assert.assertEquals(expectedMethod, data.get("method"));
-
-		Assert.assertEquals(expectedIcon, fdsActionDropdownItem.get("icon"));
-		Assert.assertEquals(expectedLabel, fdsActionDropdownItem.get("label"));
-	}
-
-	protected void assertFDSActionDropdownItem(
-		String expectedIcon, String expectedId, String expectedLabel,
-		String expectedMethod, Map<String, Object> expectedVisibilityFilters,
-		FDSActionDropdownItem fdsActionDropdownItem) {
-
-		assertFDSActionDropdownItem(
-			expectedIcon, expectedId, expectedLabel, expectedMethod,
-			fdsActionDropdownItem);
-
-		Map<String, Object> data =
-			(Map<String, Object>)fdsActionDropdownItem.get("data");
-
-		AssertUtils.assertEquals(
-			expectedVisibilityFilters,
-			(Map<String, Object>)data.get("visibilityFilters"));
 	}
 
 	protected void assertFDSFilter(
@@ -101,10 +75,27 @@ public abstract class BaseSectionDisplayContextTestCase {
 		Assert.assertEquals(expectedLabel, fdsFilter.getLabel());
 	}
 
+	protected Map<String, Object> getAdditionalProps(AssetEntry assetEntry)
+		throws Exception {
+
+		return ReflectionTestUtil.invoke(
+			getSectionDisplayContext(_getHttpServletRequest(assetEntry)),
+			"getAdditionalProps", new Class<?>[0]);
+	}
+
 	protected String getAPIURL(AssetEntry assetEntry) throws Exception {
 		return ReflectionTestUtil.invoke(
 			getSectionDisplayContext(_getHttpServletRequest(assetEntry)),
 			"getAPIURL", new Class<?>[0]);
+	}
+
+	protected List<DropdownItem> getBulkActionDropdownItems(
+			AssetEntry assetEntry)
+		throws Exception {
+
+		return ReflectionTestUtil.invoke(
+			getSectionDisplayContext(_getHttpServletRequest(assetEntry)),
+			"getBulkActionDropdownItems", new Class<?>[0]);
 	}
 
 	protected CreationMenu getCreationMenu(AssetEntry assetEntry)
@@ -113,6 +104,14 @@ public abstract class BaseSectionDisplayContextTestCase {
 		return ReflectionTestUtil.invoke(
 			getSectionDisplayContext(_getHttpServletRequest(assetEntry)),
 			"getCreationMenu", new Class<?>[0]);
+	}
+
+	protected Map<String, Object> getEmptyState(AssetEntry assetEntry)
+		throws Exception {
+
+		return ReflectionTestUtil.invoke(
+			getSectionDisplayContext(_getHttpServletRequest(assetEntry)),
+			"getEmptyState", new Class<?>[0]);
 	}
 
 	protected List<FDSActionDropdownItem> getFDSActionDropdownItems(

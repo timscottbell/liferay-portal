@@ -100,7 +100,7 @@ if ((cpDefinition != null) && (cpDefinition.getExpirationDate() != null)) {
 
 					<div class="entry-content form-group">
 						<c:choose>
-							<c:when test='<%= !FeatureFlagManagerUtil.isEnabled("LPD-11235") %>'>
+							<c:when test='<%= FeatureFlagManagerUtil.isEnabled("LPD-11235") %>'>
 								<liferay-ui:input-localized
 									defaultLanguageId="<%= defaultLanguageId %>"
 									name="descriptionMapAsXML"
@@ -169,7 +169,7 @@ if ((cpDefinition != null) && (cpDefinition.getExpirationDate() != null)) {
 			</commerce-ui:panel>
 
 			<commerce-ui:panel
-				title='<%= LanguageUtil.get(request, "schedule") %>'
+				title='<%= LanguageUtil.get(request, "schedule[noun]") %>'
 			>
 				<liferay-ui:error exception="<%= CPDefinitionExpirationDateException.class %>" message="please-select-a-valid-expiration-date" />
 

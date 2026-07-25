@@ -5,10 +5,10 @@
 
 import {expect, mergeTests} from '@playwright/test';
 
-import {applicationsMenuPageTest} from '../../../../fixtures/applicationsMenuPageTest';
 import {commercePagesTest} from '../../../../fixtures/commercePagesTest';
 import {customFieldsPagesTest} from '../../../../fixtures/customFieldsPagesTest';
 import {dataApiHelpersTest} from '../../../../fixtures/dataApiHelpersTest';
+import {globalMenuPagesTest} from '../../../../fixtures/globalMenuPagesTest';
 import {loginTest} from '../../../../fixtures/loginTest';
 import {createCategories} from '../../../../helpers/CreateCategories';
 import {TCustomField} from '../../../../helpers/CustomFieldTypesHelper';
@@ -17,19 +17,19 @@ import getRandomString from '../../../../utils/getRandomString';
 import {waitForAlert} from '../../../../utils/waitForAlert';
 
 export const test = mergeTests(
-	applicationsMenuPageTest,
 	dataApiHelpersTest,
 	commercePagesTest,
 	customFieldsPagesTest,
 	dataApiHelpersTest,
+	globalMenuPagesTest,
 	loginTest()
 );
 
 test('LPD-41420 Verify configuration list eligibility management is available', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
 
@@ -51,11 +51,9 @@ test('LPD-41420 Verify configuration list eligibility management is available', 
 		productConfigurationList.id
 	);
 
-	const site = await apiHelpers.headlessSite.createSite({
+	const site = await apiHelpers.headlessAdminSite.postSite({
 		name: getRandomString(),
 	});
-
-	apiHelpers.data.push({id: site.id, type: 'site'});
 
 	const channel = await apiHelpers.headlessCommerceAdminChannel.postChannel({
 		siteGroupId: site.id,
@@ -77,7 +75,7 @@ test('LPD-41420 Verify configuration list eligibility management is available', 
 		productConfigurationList.id
 	);
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await expect(
 		commerceAdminProductConfigurationListsPage.table
@@ -130,9 +128,9 @@ test('LPD-41420 Verify configuration list eligibility management is available', 
 
 test('LPD-41420 Verify configuration list eligibility management save button clears out fields when All option is selected', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
 
@@ -154,11 +152,9 @@ test('LPD-41420 Verify configuration list eligibility management save button cle
 		productConfigurationList.id
 	);
 
-	const site = await apiHelpers.headlessSite.createSite({
+	const site = await apiHelpers.headlessAdminSite.postSite({
 		name: getRandomString(),
 	});
-
-	apiHelpers.data.push({id: site.id, type: 'site'});
 
 	const channel = await apiHelpers.headlessCommerceAdminChannel.postChannel({
 		siteGroupId: site.id,
@@ -180,7 +176,7 @@ test('LPD-41420 Verify configuration list eligibility management save button cle
 		productConfigurationList.id
 	);
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await expect(
 		commerceAdminProductConfigurationListsPage.table
@@ -276,10 +272,10 @@ test('LPD-41420 Verify configuration list eligibility management save button cle
 });
 
 test('LPD-42555 Verify configuration list table appears', async ({
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 }) => {
-	await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await expect(
 		commerceAdminProductConfigurationListsPage.table
@@ -287,10 +283,10 @@ test('LPD-42555 Verify configuration list table appears', async ({
 });
 
 test('LPD-43390 Create child configuration list', async ({
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 }) => {
-	await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await expect(
 		commerceAdminProductConfigurationListsPage.table
@@ -324,11 +320,11 @@ test('LPD-43390 Create child configuration list', async ({
 
 test('LPD-43013 Configuration Entry form in side panel', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationEntriesPage,
 	commerceAdminProductConfigurationEntryPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 	page,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
@@ -348,7 +344,7 @@ test('LPD-43013 Configuration Entry form in side panel', async ({
 
 	expect(configurationList).not.toBeNull();
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists();
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await (
 		await commerceAdminProductConfigurationListsPage.tableRowLink({
@@ -368,7 +364,7 @@ test('LPD-43013 Configuration Entry form in side panel', async ({
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -439,7 +435,7 @@ test('LPD-43013 Configuration Entry form in side panel', async ({
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -508,11 +504,11 @@ test('LPD-43013 Configuration Entry form in side panel', async ({
 
 test('LPD-43013 Configuration Entry form in side panel for virtual products', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationEntriesPage,
 	commerceAdminProductConfigurationEntryPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 	page,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
@@ -533,7 +529,7 @@ test('LPD-43013 Configuration Entry form in side panel for virtual products', as
 
 	expect(configurationList).not.toBeNull();
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists();
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await (
 		await commerceAdminProductConfigurationListsPage.tableRowLink({
@@ -553,7 +549,7 @@ test('LPD-43013 Configuration Entry form in side panel for virtual products', as
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -578,9 +574,9 @@ test('LPD-43013 Configuration Entry form in side panel for virtual products', as
 
 test('LPD-43013 Edit configuration template', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 	page,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
@@ -596,7 +592,7 @@ test('LPD-43013 Edit configuration template', async ({
 
 	expect(configurationList).not.toBeNull();
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists();
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await (
 		await commerceAdminProductConfigurationListsPage.tableRowLink({
@@ -774,7 +770,7 @@ test('LPD-37882 Show purchasable field', async ({
 
 	expect(product.skus[0].purchasable).toBeTruthy();
 
-	await commerceAdminProductPage.gotoProduct(product.name['en_US'], false);
+	await commerceAdminProductPage.gotoProduct(product.name['en_US']);
 
 	await expect(
 		await commerceAdminProductDetailsPage.productSkusLink
@@ -812,9 +808,9 @@ test(
 	{tag: '@LPD-37886'},
 	async ({
 		apiHelpers,
-		applicationsMenuPage,
 		commerceAdminProductConfigurationEntriesPage,
 		commerceAdminProductConfigurationListsPage,
+		globalMenuPage,
 	}) => {
 		const catalog =
 			await apiHelpers.headlessCommerceAdminCatalog.postCatalog({
@@ -885,7 +881,7 @@ test(
 				}
 			);
 
-		await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+		await globalMenuPage.goToCommerce('Product Configurations');
 
 		await (
 			await commerceAdminProductConfigurationListsPage.tableRowLink({
@@ -898,7 +894,7 @@ test(
 		await expect(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product1.name['en_US'],
 					true
 				)
@@ -907,7 +903,7 @@ test(
 		await expect(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product2.name['en_US'],
 					true
 				)
@@ -922,7 +918,7 @@ test(
 		await expect(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product1.name['en_US'],
 					true
 				)
@@ -933,7 +929,7 @@ test(
 			await expect(
 				(
 					await commerceAdminProductConfigurationEntriesPage.tableRow(
-						1,
+						0,
 						product2.name['en_US'],
 						true
 					)
@@ -967,7 +963,7 @@ test(
 		await expect(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product1.name['en_US'],
 					true
 				)
@@ -978,7 +974,7 @@ test(
 			await expect(
 				(
 					await commerceAdminProductConfigurationEntriesPage.tableRow(
-						1,
+						0,
 						product2.name['en_US'],
 						true
 					)
@@ -1000,7 +996,7 @@ test(
 		await expect(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product1.name['en_US'],
 					true
 				)
@@ -1011,7 +1007,7 @@ test(
 			await expect(
 				(
 					await commerceAdminProductConfigurationEntriesPage.tableRow(
-						1,
+						0,
 						product2.name['en_US'],
 						true
 					)
@@ -1026,9 +1022,9 @@ test(
 
 test('LPD-43013 Edit child configuration list', async ({
 	addCustomFieldPage,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 	page,
 }) => {
 	const customField: TCustomField = {
@@ -1039,7 +1035,7 @@ test('LPD-43013 Edit child configuration list', async ({
 
 	await addCustomFieldPage.addCustomField(customField);
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists(false);
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await expect(
 		commerceAdminProductConfigurationListsPage.table
@@ -1140,11 +1136,11 @@ test('LPD-43013 Edit child configuration list', async ({
 
 test('LPD-44818 Show difference icons', async ({
 	apiHelpers,
-	applicationsMenuPage,
 	commerceAdminProductConfigurationEntriesPage,
 	commerceAdminProductConfigurationEntryPage,
 	commerceAdminProductConfigurationListPage,
 	commerceAdminProductConfigurationListsPage,
+	globalMenuPage,
 	page,
 }) => {
 	const catalog = await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
@@ -1164,7 +1160,7 @@ test('LPD-44818 Show difference icons', async ({
 
 	expect(configurationList).not.toBeNull();
 
-	await applicationsMenuPage.goToCommerceProductConfigurationLists();
+	await globalMenuPage.goToCommerce('Product Configurations');
 
 	await commerceAdminProductConfigurationListsPage.addConfigurationList.click();
 
@@ -1211,7 +1207,7 @@ test('LPD-44818 Show difference icons', async ({
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -1236,7 +1232,7 @@ test('LPD-44818 Show difference icons', async ({
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -1260,7 +1256,7 @@ test('LPD-44818 Show difference icons', async ({
 		commerceAdminProductConfigurationEntriesPage.differenceIcon(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					1,
+					0,
 					product.name['en_US']
 				)
 			).column
@@ -1270,7 +1266,7 @@ test('LPD-44818 Show difference icons', async ({
 		commerceAdminProductConfigurationEntriesPage.differenceIcon(
 			(
 				await commerceAdminProductConfigurationEntriesPage.tableRow(
-					3,
+					2,
 					'yes'
 				)
 			).column
@@ -1279,7 +1275,7 @@ test('LPD-44818 Show difference icons', async ({
 
 	await (
 		await commerceAdminProductConfigurationEntriesPage.tableRowLink({
-			colIndex: 1,
+			colIndex: 0,
 			rowValue: product.name['en_US'],
 		})
 	).click();
@@ -1318,10 +1314,7 @@ test(
 				productStatus: 2,
 			});
 
-		await commerceAdminProductPage.gotoProduct(
-			product.name['en_US'],
-			false
-		);
+		await commerceAdminProductPage.gotoProduct(product.name['en_US']);
 
 		await expect(
 			commerceAdminProductDetailsPage.productConfigurationLink
@@ -1340,5 +1333,66 @@ test(
 		await waitForAlert(page);
 
 		await expect(page.locator('.workflow-status-approved')).toBeVisible();
+	}
+);
+
+test(
+	'Configuration entries have no visibility bulk actions or row selection',
+	{tag: '@LPD-95737'},
+	async ({
+		apiHelpers,
+		commerceAdminProductConfigurationEntriesPage,
+		commerceAdminProductConfigurationListsPage,
+		globalMenuPage,
+		page,
+	}) => {
+		const catalog =
+			await apiHelpers.headlessCommerceAdminCatalog.postCatalog();
+
+		const product =
+			await apiHelpers.headlessCommerceAdminCatalog.postProduct({
+				catalogId: catalog.id,
+			});
+
+		const productConfigurationList =
+			await apiHelpers.headlessCommerceAdminCatalog.postProductConfigurationList(
+				{
+					catalogId: catalog.id,
+					name: getRandomString(),
+					productConfigurations: [{entityId: product.id}],
+				}
+			);
+
+		await globalMenuPage.goToCommerce('Product Configurations');
+
+		await (
+			await commerceAdminProductConfigurationListsPage.tableRowLink({
+				colIndex: 1,
+				rowValue: productConfigurationList.name,
+			})
+		).click();
+
+		await commerceAdminProductConfigurationListsPage.entriesLink.click();
+
+		await expect(
+			(
+				await commerceAdminProductConfigurationEntriesPage.tableRow(
+					0,
+					product.name['en_US'],
+					true
+				)
+			).row
+		).toBeVisible();
+
+		await expect(
+			commerceAdminProductConfigurationEntriesPage.tableHeadSelector
+		).toHaveCount(0);
+
+		await expect(
+			page.getByRole('button', {exact: true, name: 'Set as Visible'})
+		).toHaveCount(0);
+		await expect(
+			page.getByRole('button', {exact: true, name: 'Set as Not Visible'})
+		).toHaveCount(0);
 	}
 );

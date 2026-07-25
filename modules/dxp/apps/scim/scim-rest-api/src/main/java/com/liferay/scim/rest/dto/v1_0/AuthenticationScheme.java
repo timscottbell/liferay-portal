@@ -37,6 +37,9 @@ import java.util.function.Supplier;
 	description = "The authentication schemes supported by the service provider.",
 	value = "AuthenticationScheme"
 )
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "The authentication schemes supported by the service provider."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "AuthenticationScheme")
 public class AuthenticationScheme implements Serializable {
@@ -513,3 +516,4 @@ public class AuthenticationScheme implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:2146332474

@@ -60,6 +60,7 @@ import com.liferay.expando.kernel.service.ExpandoRowLocalService;
 import com.liferay.expando.kernel.service.ExpandoTableLocalService;
 import com.liferay.expando.kernel.util.ExpandoBridgeUtil;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
+import com.liferay.petra.io.ByteArrayFileInputStream;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.sql.dsl.DSLQueryFactoryUtil;
 import com.liferay.petra.string.StringBundler;
@@ -68,7 +69,6 @@ import com.liferay.portal.kernel.bean.BeanReference;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.comment.CommentManagerUtil;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
-import com.liferay.portal.kernel.dao.orm.DefaultActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.IndexableActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
@@ -80,7 +80,6 @@ import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.interval.IntervalActionProcessor;
-import com.liferay.portal.kernel.io.ByteArrayFileInputStream;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.lock.InvalidLockException;
 import com.liferay.portal.kernel.lock.Lock;
@@ -118,18 +117,18 @@ import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.OrganizationLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
-import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserGroupLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.service.WebDAVPropsLocalService;
 import com.liferay.portal.kernel.service.WorkflowInstanceLinkLocalService;
 import com.liferay.portal.kernel.service.persistence.RepositoryPersistence;
+import com.liferay.portal.kernel.service.persistence.RolePersistence;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
 import com.liferay.portal.kernel.service.persistence.WebDAVPropsPersistence;
 import com.liferay.portal.kernel.settings.LocalizedValuesMap;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
+import com.liferay.portal.kernel.transaction.TransactionCallbackUtil;
 import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.kernel.trash.helper.TrashHelper;
 import com.liferay.portal.kernel.util.ArrayUtil;
@@ -159,6 +158,7 @@ import com.liferay.portlet.documentlibrary.DLGroupServiceSettings;
 import com.liferay.portlet.documentlibrary.constants.DLConstants;
 import com.liferay.portlet.documentlibrary.model.impl.DLFileEntryImpl;
 import com.liferay.portlet.documentlibrary.service.base.DLFileEntryLocalServiceBaseImpl;
+import com.liferay.portlet.documentlibrary.util.comparator.DLFileEntryMetadataIdComparator;
 import com.liferay.ratings.kernel.service.RatingsStatsLocalService;
 
 import java.io.File;
@@ -1198,6 +1198,7 @@ public class DLFileEntryLocalServiceImpl
 	}
 
 	@Override
+	@Transactional(enabled = false)
 	public void forEachFileEntry(
 			long companyId, Consumer<DLFileEntry> consumer, long maximumSize,
 			String[] mimeTypes)
@@ -1256,6 +1257,7 @@ public class DLFileEntryLocalServiceImpl
 	}
 
 	@Override
+	@Transactional(enabled = false)
 	public void forEachFileEntry(
 			long companyId, long classNameId, Consumer<DLFileEntry> consumer,
 			long maximumSize, String[] mimeTypes)
@@ -2049,8 +2051,9 @@ public class DLFileEntryLocalServiceImpl
 				DLFileEntryTypeConstants.FILE_ENTRY_TYPE_ID_BASIC_DOCUMENT)) {
 
 			DLFileEntryMetadata dlFileEntryMetadata =
-				_dlFileEntryMetadataPersistence.fetchByFileEntryId_Last(
-					fileEntryId, null);
+				_dlFileEntryMetadataPersistence.fetchByFileEntryId_First(
+					fileEntryId,
+					DLFileEntryMetadataIdComparator.getInstance(false));
 
 			DDMStructure ddmStructure = DDMStructureManagerUtil.fetchStructure(
 				dlFileEntryMetadata.getDDMStructureId());
@@ -2912,7 +2915,7 @@ public class DLFileEntryLocalServiceImpl
 	private long _getActiveCompanyAdminUserId(long companyId)
 		throws PortalException {
 
-		Role role = _roleLocalService.getRole(
+		Role role = _rolePersistence.findByC_N(
 			companyId, RoleConstants.ADMINISTRATOR);
 
 		Long userId = _getActiveUser(
@@ -2960,7 +2963,7 @@ public class DLFileEntryLocalServiceImpl
 	private Long _getActiveUser(long[] userIds) {
 		if (ArrayUtil.isNotEmpty(userIds)) {
 			for (long userId : userIds) {
-				User user = _userLocalService.fetchUser(userId);
+				User user = _userPersistence.fetchByPrimaryKey(userId);
 
 				if ((user != null) && user.isActive()) {
 					return userId;
@@ -3241,10 +3244,10 @@ public class DLFileEntryLocalServiceImpl
 			return;
 		}
 
-		User user = _userLocalService.fetchUser(fileVersion.getUserId());
+		User user = _userPersistence.fetchByPrimaryKey(fileVersion.getUserId());
 
 		if ((user == null) || !user.isActive()) {
-			user = _userLocalService.fetchUser(userId);
+			user = _userPersistence.fetchByPrimaryKey(userId);
 		}
 
 		DLGroupServiceSettings dlGroupServiceSettings =
@@ -3387,7 +3390,7 @@ public class DLFileEntryLocalServiceImpl
 			return;
 		}
 
-		User user = _userLocalService.fetchUser(fileVersion.getUserId());
+		User user = _userPersistence.fetchByPrimaryKey(fileVersion.getUserId());
 
 		if (user == null) {
 			return;
@@ -3682,8 +3685,6 @@ public class DLFileEntryLocalServiceImpl
 		actionableDynamicQuery.setPerformActionMethod(
 			(DLFileEntry dlFileEntry) -> performActionMethodConsumer.accept(
 				dlFileEntry));
-		actionableDynamicQuery.setTransactionConfig(
-			DefaultActionableDynamicQuery.REQUIRES_NEW_TRANSACTION_CONFIG);
 
 		actionableDynamicQuery.performActions();
 	}
@@ -3735,7 +3736,7 @@ public class DLFileEntryLocalServiceImpl
 	private void _registerPWCDeletionCallback(
 		DLFileEntry dlFileEntry, String storeFileName) {
 
-		TransactionCommitCallbackUtil.registerCallback(
+		TransactionCallbackUtil.registerCommitCallback(
 			() -> {
 				_deleteFile(
 					dlFileEntry.getCompanyId(),
@@ -4267,8 +4268,8 @@ public class DLFileEntryLocalServiceImpl
 	@BeanReference(type = ResourceLocalService.class)
 	private ResourceLocalService _resourceLocalService;
 
-	@BeanReference(type = RoleLocalService.class)
-	private RoleLocalService _roleLocalService;
+	@BeanReference(type = RolePersistence.class)
+	private RolePersistence _rolePersistence;
 
 	@BeanReference(type = UserGroupLocalService.class)
 	private UserGroupLocalService _userGroupLocalService;

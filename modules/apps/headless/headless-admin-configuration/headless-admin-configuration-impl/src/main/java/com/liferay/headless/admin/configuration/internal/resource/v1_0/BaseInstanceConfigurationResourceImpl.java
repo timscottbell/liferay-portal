@@ -5,6 +5,7 @@
 
 package com.liferay.headless.admin.configuration.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.headless.admin.configuration.dto.v1_0.InstanceConfiguration;
 import com.liferay.headless.admin.configuration.resource.v1_0.InstanceConfigurationResource;
 import com.liferay.petra.function.UnsafeBiConsumer;
@@ -111,6 +112,18 @@ public abstract class BaseInstanceConfigurationResourceImpl
 	 *
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-admin-configuration/v1.0/instance-configurations'  -u 'test@liferay.com:test'
 	 */
+	@io.swagger.v3.oas.annotations.Parameters(
+		value = {
+			@io.swagger.v3.oas.annotations.Parameter(
+				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
+				name = "page"
+			),
+			@io.swagger.v3.oas.annotations.Parameter(
+				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
+				name = "pageSize"
+			)
+		}
+	)
 	@io.swagger.v3.oas.annotations.tags.Tags(
 		value = {
 			@io.swagger.v3.oas.annotations.tags.Tag(
@@ -122,7 +135,8 @@ public abstract class BaseInstanceConfigurationResourceImpl
 	@jakarta.ws.rs.Path("/instance-configurations")
 	@jakarta.ws.rs.Produces({"application/json", "application/xml"})
 	@Override
-	public Page<InstanceConfiguration> getInstanceConfigurationsPage()
+	public Page<InstanceConfiguration> getInstanceConfigurationsPage(
+			@jakarta.ws.rs.core.Context Pagination pagination)
 		throws Exception {
 
 		return Page.of(Collections.emptyList());
@@ -457,7 +471,7 @@ public abstract class BaseInstanceConfigurationResourceImpl
 			Map<String, Serializable> parameters, String search)
 		throws Exception {
 
-		return getInstanceConfigurationsPage();
+		return getInstanceConfigurationsPage(pagination);
 	}
 
 	@Override
@@ -477,6 +491,15 @@ public abstract class BaseInstanceConfigurationResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -1057,3 +1080,4 @@ public abstract class BaseInstanceConfigurationResourceImpl
 		LogFactoryUtil.getLog(BaseInstanceConfigurationResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:-420267825

@@ -11,9 +11,11 @@ import com.liferay.portal.kernel.dao.db.DBInspector;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.ResourceAction;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.permission.ResourceActionsUtil;
 import com.liferay.portal.kernel.service.ResourceActionLocalService;
 import com.liferay.portal.kernel.upgrade.data.cleanup.util.DataCleanupLoggingUtil;
+import com.liferay.portal.kernel.util.Validator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -42,7 +44,7 @@ public class ResourceActionPostUpgradeDataCleanupProcess
 	@Override
 	public void cleanUp() throws Exception {
 		if (!PostUpgradeDataCleanupProcessUtil.isEveryLiferayBundleResolved()) {
-			if (_log.isWarnEnabled()) {
+			if (_log.isWarnEnabled() && CompanyThreadLocal.isDefaultCompany()) {
 				_log.warn(
 					StringBundler.concat(
 						ResourceActionPostUpgradeDataCleanupProcess.class.
@@ -69,8 +71,9 @@ public class ResourceActionPostUpgradeDataCleanupProcess
 			while (resultSet1.next()) {
 				String name = resultSet1.getString("name");
 
-				if (!name.startsWith("com.liferay.") &&
-					!name.startsWith("com_liferay_")) {
+				if (Validator.isNull(name) ||
+					(!name.startsWith("com.liferay.") &&
+					 !name.startsWith("com_liferay_"))) {
 
 					continue;
 				}

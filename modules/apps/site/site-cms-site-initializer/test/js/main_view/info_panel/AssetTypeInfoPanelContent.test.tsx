@@ -37,7 +37,22 @@ const testSpace = {
 } as Space;
 
 const testAdditionalProps = {
-	assetLibraries: [testSpace.id],
+	breadcrumbProps: {
+		breadcrumbItems: [
+			{
+				label: testSpace.name,
+			},
+			{
+				label: 'content',
+			},
+			{
+				label: 'content-folder',
+			},
+		],
+		displayType: 'outline-0',
+		size: 'sm',
+	},
+	candidateAssetLibraries: [testSpace.id],
 	fileMimeTypeIcons: {
 		default: 'document-default',
 		image: 'document-image',
@@ -106,6 +121,20 @@ describe('CMS Asset Type Info Panel', () => {
 
 		expect(screen.getByText('location')).toBeInTheDocument();
 
+		expect(screen.getByText('author')).toBeInTheDocument();
+
+		expect(
+			screen.getByText(CONTENT_OBJECT_ENTRY.embedded.creator.name)
+		).toBeInTheDocument();
+
+		expect(screen.getByText('created')).toBeInTheDocument();
+
+		expect(screen.getByText('modified')).toBeInTheDocument();
+
+		expect(screen.getByText('never-expire')).toBeInTheDocument();
+
+		expect(screen.getByText('never-review')).toBeInTheDocument();
+
 		const breadcrumb = screen.getByLabelText('Breadcrumb');
 
 		expect(
@@ -120,10 +149,25 @@ describe('CMS Asset Type Info Panel', () => {
 	});
 
 	it('renders the component for an Image asset type', async () => {
+		const testFileAdditionalProps = {
+			...testAdditionalProps,
+			breadcrumbProps: {
+				...testAdditionalProps.breadcrumbProps,
+				breadcrumbItems: [
+					{
+						label: testSpace.name,
+					},
+					{
+						label: 'files',
+					},
+				],
+			},
+		};
+
 		const {container} = render(
 			<SidePanel containerRef={{current: null}}>
 				<AssetTypeInfoPanelContent
-					additionalProps={testAdditionalProps}
+					additionalProps={testFileAdditionalProps}
 					items={[DOCUMENT_OBJECT_ENTRY] as any}
 				/>
 			</SidePanel>
@@ -164,6 +208,14 @@ describe('CMS Asset Type Info Panel', () => {
 
 		expect(screen.queryByText('url')).toBeInTheDocument();
 
+		expect(screen.getByText('jpeg')).toBeInTheDocument();
+
+		expect(screen.getByText('1.2 MB')).toBeInTheDocument();
+
+		expect(screen.getByText('1920x1080')).toBeInTheDocument();
+
+		expect(screen.getByText('tall')).toBeInTheDocument();
+
 		expect(
 			screen.getByPlaceholderText(
 				DOCUMENT_OBJECT_ENTRY.embedded.file.link.href
@@ -171,6 +223,20 @@ describe('CMS Asset Type Info Panel', () => {
 		).toBeInTheDocument();
 
 		expect(screen.getByText('location')).toBeInTheDocument();
+
+		expect(screen.getByText('author')).toBeInTheDocument();
+
+		expect(
+			screen.getByText(DOCUMENT_OBJECT_ENTRY.embedded.creator.name)
+		).toBeInTheDocument();
+
+		expect(screen.getByText('created')).toBeInTheDocument();
+
+		expect(screen.getByText('modified')).toBeInTheDocument();
+
+		expect(screen.getByText('never-expire')).toBeInTheDocument();
+
+		expect(screen.getByText('never-review')).toBeInTheDocument();
 
 		const breadcrumb = screen.getByLabelText('Breadcrumb');
 
@@ -229,6 +295,16 @@ describe('CMS Asset Type Info Panel', () => {
 
 		expect(screen.getByText('location')).toBeInTheDocument();
 
+		expect(screen.getByText('author')).toBeInTheDocument();
+
+		expect(
+			screen.getByText(FOLDER_OBJECT_ENTRY.embedded.creator.name)
+		).toBeInTheDocument();
+
+		expect(screen.getByText('created')).toBeInTheDocument();
+
+		expect(screen.getByText('modified')).toBeInTheDocument();
+
 		const breadcrumb = screen.getByLabelText('Breadcrumb');
 
 		expect(
@@ -239,6 +315,10 @@ describe('CMS Asset Type Info Panel', () => {
 
 		expect(
 			within(breadcrumb).getByRole('button', {name: 'content'})
+		).toBeInTheDocument();
+
+		expect(
+			within(breadcrumb).getByRole('button', {name: 'content-folder'})
 		).toBeInTheDocument();
 	});
 });

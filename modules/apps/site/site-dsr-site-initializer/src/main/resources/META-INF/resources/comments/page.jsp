@@ -12,7 +12,17 @@
 		module="{RoomComments} from site-dsr-site-initializer"
 		props='<%=
 			HashMapBuilder.<String, Object>put(
-				"roomId", roomId
+				"addCommentURL", addCommentURL
+			).put(
+				"deleteCommentURL", deleteCommentURL
+			).put(
+				"editCommentURL", editCommentURL
+			).put(
+				"editorConfig", editorConfig
+			).put(
+				"getCommentsURL", getCommentsURL
+			).put(
+				"readOnly", readOnly
 			).build()
 		%>'
 	/>

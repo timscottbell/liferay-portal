@@ -18,7 +18,7 @@ import getRandomString from '../../../utils/getRandomString';
 import {nextPage, setItemsPerPage} from '../../../utils/pagination';
 import {
 	performLoginViaApi,
-	performLogout,
+	performUserSwitch,
 	userData,
 } from '../../../utils/performLogin';
 import {waitForAlert} from '../../../utils/waitForAlert';
@@ -28,6 +28,7 @@ export const test = mergeTests(
 	dataApiHelpersTest,
 	featureFlagsTest({
 		'LPD-35443': {enabled: true},
+		'LPD-78863': {enabled: true, system: true},
 		'LPS-178052': {enabled: true},
 	}),
 	isolatedSiteTest,
@@ -38,9 +39,12 @@ export const test = mergeTests(
 
 test.beforeAll(async ({browser}) => {
 	const page = await browser.newPage();
-	const rolesPage = new RolesPage(page);
+
+	await page.goto('/');
 
 	await performLoginViaApi({page, screenName: 'test'});
+
+	const rolesPage = new RolesPage(page);
 
 	await rolesPage.goto();
 
@@ -560,13 +564,11 @@ test(
 			roleAssigneesPage.assigneesTable.cell(user.name)
 		).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toBeVisible();
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await rolesPage.goto();
 
@@ -589,10 +591,9 @@ test(
 			roleAssigneesPage.assigneesTable.cell(user.name)
 		).toHaveCount(0);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toHaveCount(0);
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toHaveCount(0);
 	}
 );
 
@@ -679,13 +680,11 @@ test(
 			roleAssigneesPage.assigneesTable.cell(userGroup.name)
 		).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toBeVisible();
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await rolesPage.goto();
 
@@ -712,10 +711,9 @@ test(
 			roleAssigneesPage.assigneesTable.cell(userGroup.name)
 		).toHaveCount(0);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toHaveCount(0);
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toHaveCount(0);
 	}
 );
 
@@ -807,13 +805,11 @@ test(
 			roleAssigneesPage.assigneesTable.cell(organization.name)
 		).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toBeVisible();
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await rolesPage.goto();
 
@@ -842,10 +838,9 @@ test(
 			roleAssigneesPage.assigneesTable.cell(organization.name)
 		).toHaveCount(0);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toHaveCount(0);
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toHaveCount(0);
 	}
 );
 
@@ -1046,13 +1041,11 @@ test(
 			roleAssigneesPage.assigneesTable.cell(site.name)
 		).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toBeVisible();
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await rolesPage.goto();
 
@@ -1077,10 +1070,9 @@ test(
 			roleAssigneesPage.assigneesTable.cell(site.name)
 		).toHaveCount(0);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await expect(rolesPage.applicationsMenuButton).toHaveCount(0);
+		await expect(rolesPage.globalMenuPage.globalMenuButton).toHaveCount(0);
 	}
 );
 
@@ -1133,7 +1125,7 @@ test(
 		const menuItemName = 'Documents and Media';
 		const permissionName =
 			'Access in Site and Asset Library Administration';
-		const siteName = 'Liferay DXP';
+		const siteName = 'Liferay DXP Site';
 
 		await roleDefinePermissionsPage.searchInput.click();
 		await roleDefinePermissionsPage.searchInput.fill(menuItemName);
@@ -1680,11 +1672,9 @@ test(
 			site1
 		);
 
-		const site2 = await apiHelpers.headlessSite.createSite({
+		const site2 = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site2.id, type: 'site'});
 
 		const bookmarkName2 = getRandomString();
 
@@ -1713,8 +1703,7 @@ test(
 			user.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await page.goto(`/web/${site1.name}/${layout1.friendlyUrlPath}`);
 
@@ -1724,16 +1713,14 @@ test(
 
 		await expect(bookmarksPage.bookmarkItem(bookmarkName2)).toHaveCount(0);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await apiHelpers.headlessAdminUser.assignUserToRole(
 			role.externalReferenceCode,
 			user.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
 		await page.goto(`/web/${site1.name}/${layout1.friendlyUrlPath}`);
 
@@ -2016,10 +2003,9 @@ test(
 			user.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await rolesPage.goto(false);
+		await rolesPage.goto();
 
 		await rolesPage.rolesTable.changeView('Table');
 
@@ -2033,8 +2019,7 @@ test(
 
 		await expect(rolesPage.duplicateMenuItem).not.toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		const role2 = await apiHelpers.headlessAdminUser.postRole({
 			name: getRandomString(),
@@ -2054,10 +2039,9 @@ test(
 			user.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: user.alternateName});
+		await performUserSwitch(page, user.alternateName);
 
-		await rolesPage.goto(false);
+		await rolesPage.goto();
 
 		await rolesPage.rolesTable.search(guestRoleName);
 
@@ -2100,8 +2084,7 @@ test(
 			).not.toBeVisible();
 		}
 		finally {
-			await performLogout(page);
-			await performLoginViaApi({page, screenName: 'test'});
+			await performUserSwitch(page, 'test');
 
 			await rolesPage.goto();
 
@@ -2185,7 +2168,7 @@ test(
 	'Cannot duplicate a role with fixed permissions',
 	{tag: ['@LPD-69394']},
 	async ({rolesPage}) => {
-		await rolesPage.goto(false);
+		await rolesPage.goto();
 
 		const rolesWithFixedPermissions = ['Administrator', 'Owner'];
 
@@ -2305,5 +2288,34 @@ test(
 				timeout: 100,
 			});
 		}).toPass();
+	}
+);
+
+test(
+	'Cannot edit the key of the CMS Administrator role',
+	{tag: ['@LPD-83058']},
+	async ({apiHelpers, rolePage, rolesPage}) => {
+		const roleName = 'CMS Administrator';
+
+		const existingRole =
+			await apiHelpers.headlessAdminUser.getRoleByName(roleName);
+
+		if (!existingRole) {
+			await apiHelpers.headlessAdminUser.postRole({
+				name: roleName,
+				roleType: 'regular',
+			});
+		}
+
+		await rolesPage.goto();
+
+		await rolesPage.rolesTable.search(roleName);
+		await (await rolesPage.rolesTable.cellLink(roleName)).click();
+
+		await expect(rolePage.disabledKeyInput).toBeVisible();
+		await expect(rolePage.disabledKeyInput).toBeDisabled();
+		await expect(rolePage.disabledKeyInput).toHaveValue(roleName);
+		await expect(rolePage.keyInput).toBeHidden();
+		await expect(rolePage.keyInput).toHaveValue(roleName);
 	}
 );

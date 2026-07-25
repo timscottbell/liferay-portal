@@ -80,6 +80,27 @@
 	},
 	{
 		"classNames": [
+			"BaseModelListener"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-7865",
+		"methodsToFormat": [
+			{
+				"from": "regex:\\((?<paramType>[\\S]*?)\\s*(?<paramName>[\\S]*?)\\)(?<methodContent>\\s*\\{[\\s\\S]*?)(?<methodCall>super.onAfterUpdate|onBeforeUpdate)\\([\\S]*?\\);",
+				"to": "(${paramType} ${paramName})${methodContent}${methodCall}((${paramType})${paramName}.clone(), ${paramName});"
+			},
+			{
+				"from": "regex:(?<methodDeclaration>public\\s*void\\s*(onAfterUpdate|onBeforeUpdate))\\((?<paramType>[\\S]*)\\s*(?<paramName>[\\S]*)\\)",
+				"to": "${methodDeclaration}(${paramType} original${paramName}, ${paramType} ${paramName})"
+			},
+			{
+				"from": "regex:(?<methodDeclaration>public\\s*void\\s*(onAfterUpdate|onBeforeUpdate)\\(\\w\\s*(?<paramOriginalModel>\\S*),\\s*\\w\\s*(?<paramModel>\\S*)\\)\\s*)(?<methodContent>\\{(?:(?!public|private|protected|@|\\}\\s*$)[\\s\\S])*?)(?<methodCall>super.onAfterUpdate|onBeforeUpdate)\\(\\(\\w\\)[\\s\\S]*?\\);",
+				"to": "${methodDeclaration}${methodContent}${methodCall}(${paramOriginalModel}, ${paramModel});"
+			}
+		]
+	},
+	{
+		"classNames": [
 			"BasePanelApp"
 		],
 		"classStructurePattern": true,
@@ -195,6 +216,17 @@
 	},
 	{
 		"classNames": [
+			"InfoItemReference"
+		],
+		"from": "regex:(?<infoItemReference>\\w+)\\.getClassPK\\(\\)",
+		"issueKey": "LPD-8019",
+		"newImports": [
+			"com.liferay.info.item.ClassPKInfoItemIdentifier"
+		],
+		"to": "((ClassPKInfoItemIdentifier)${infoItemReference}.getInfoItemIdentifier()).getClassPK()"
+	},
+	{
+		"classNames": [
 			"HttpServletRequest"
 		],
 		"from": "regex:\t*(?s)\\b\\w+\\s*\\.setAttribute\\s*\\(\\s*InfoDisplayWebKeys\\s*\\.INFO_ITEM_FIELD_VALUES_PROVIDER\\s*,.*?\\);\n",
@@ -220,6 +252,15 @@
 		"from": "destroy(ClassLoader paramName)",
 		"issueKey": "LPD-8036",
 		"to": ""
+	},
+	{
+		"from": "ContentUtil.get(ClassLoader paramName, String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-8037",
+		"validExtensions": [
+			"java",
+			"jsp"
+		]
 	},
 	{
 		"classNames": [
@@ -252,6 +293,15 @@
 				"from": "regex:@Override\\s*@Reference\\s*\\(\\s*target\\s*=\\s*\"(?<target>[^\"]*)\",[\\s\\S]*?\\)\\s*public\\s+void\\s+setServletContext\\(ServletContext\\s+servletContext\\)\\s*\\{[\\s\\S]*?\\}",
 				"to": "@Reference(\n\t\ttarget = \"${target}\"\n\t)\n\tprivate ServletContext _servletContext;\n\n\t@Override\n\tpublic ServletContext getServletContext() {\n\t\treturn _servletContext;\n\t}"
 			}
+		]
+	},
+	{
+		"classNames": [
+			"SchedulerEntry"
+		],
+		"issueKey": "LPD-8091",
+		"removeImplements": [
+			"StorageTypeAware"
 		]
 	},
 	{
@@ -2458,12 +2508,54 @@
 		"to": "_trashHelper.${prefixMethodName}(${variableName})"
 	},
 	{
+		"from": "regex:liferay-ui:membership-policy-error",
+		"issueKey": "LPD-27743",
+		"to": "liferay-site:membership-policy-error",
+		"validExtensions": [
+			"jsp",
+			"jspf"
+		]
+	},
+	{
 		"from": "XMLUtil.formatXML(String param)",
 		"issueKey": "LPD-27744",
 		"newImports": [
 			"com.liferay.portal.kernel.xml.SAXReaderUtil"
 		],
 		"to": "SAXReaderUtil.read(param#0#).formattedString()"
+	},
+	{
+		"classNames": [
+			"GroupURLProvider"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-27748",
+		"methodsToFormat": [
+			{
+				"from": "regex:\\s*?@Override\\s*?public\\s*?String\\s*?getDisplayURL\\([\\s\\S]*?\\)\\s*\\{[\\s\\S]*?\\}",
+				"to": ""
+			},
+			{
+				"from": "regex:@Override\\s*?(?<methodDeclaration>public String getGroupAdministrationURL)",
+				"to": "${methodDeclaration}"
+			},
+			{
+				"from": "regex:@Override\\s*?(?<methodDeclaration>public String getGroupLayoutsURL)",
+				"to": "${methodDeclaration}"
+			},
+			{
+				"from": "regex:@Override\\s*?(?<methodDeclaration>public String getGroupURL)",
+				"to": "${methodDeclaration}"
+			},
+			{
+				"from": "regex:\\s*?@Override\\s*?public\\s*?int\\s*getLayoutsCount\\([\\s\\S]*?\\)\\s*\\{[\\s\\S]*?\\}",
+				"to": ""
+			},
+			{
+				"from": "regex:@Override\\n\\t(?<methodDeclaration>public String getLiveGroupURL)",
+				"to": "${methodDeclaration}"
+			}
+		]
 	},
 	{
 		"classNames": [
@@ -3013,6 +3105,16 @@
 		]
 	},
 	{
+		"from": "regex:!company\\.isSendPassword\\(\\) && (?<condition>!company\\.isSendPasswordResetLink\\(\\))",
+		"issueKey": "LPD-28363",
+		"to": "${condition}"
+	},
+	{
+		"from": "regex:PropsKeys\\.COMPANY_SECURITY_SEND_PASSWORD,\\s+(?<suffix>PropsKeys\\.COMPANY_SECURITY_SEND_PASSWORD_RESET_LINK)",
+		"issueKey": "LPD-28363",
+		"to": "${suffix}"
+	},
+	{
 		"classNames": [
 			"StrutsAction"
 		],
@@ -3439,6 +3541,14 @@
 	},
 	{
 		"classNames": [
+			"RecurrenceSerializer"
+		],
+		"from": "toCronText(Recurrence paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-31312"
+	},
+	{
+		"classNames": [
 			"CustomFacetPortletPreferences"
 		],
 		"from": "getFederatedSearchKeyOptional",
@@ -3449,6 +3559,14 @@
 		"from": "regex:((Optional<(?<type>String|PortletPreferences))>(?<space>\\s+)(?<declaredVariableName>\\w+)(?<equalSign>\\s*=\\s*))?(?<variableName>\\w+)\\.(?<methodName>getParameter|getPortletPreferences)(Optional|71)",
 		"issueKey": "LPD-31994",
 		"to": "${type}${space}${declaredVariableName}${equalSign}${variableName}.${methodName}"
+	},
+	{
+		"classNames": [
+			"JournalArticle"
+		],
+		"from": "setContent(String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-31997"
 	},
 	{
 		"classNames": [
@@ -3467,6 +3585,22 @@
 			"com.liferay.mail.kernel.service.MailServiceUtil"
 		],
 		"to": "MailServiceUtil.sendEmail(new MailMessage(param#0#, param#1#, param#2#, param#3#, param#4#))"
+	},
+	{
+		"classNames": [
+			"MessageBus"
+		],
+		"from": "registerMessageListener(String paramName, MessageListener paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-34692"
+	},
+	{
+		"classNames": [
+			"MessageBus"
+		],
+		"from": "unregisterMessageListener(String paramName, MessageListener paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-34692"
 	},
 	{
 		"classNames": [
@@ -3585,6 +3719,20 @@
 	},
 	{
 		"classNames": [
+			"BaseJSPDynamicInclude"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-35156",
+		"newImports": [
+			"jakarta.servlet.ServletContext"
+		],
+		"newMethods": [
+			"@Override\n\tprotected ServletContext getServletContext() {\n\t\treturn _servletContext;\n\t}"
+		],
+		"newReference": "ServletContext _servletContext"
+	},
+	{
+		"classNames": [
 			"ListTypeLocalService"
 		],
 		"from": "addListType(String paramName, String paramName)",
@@ -3593,6 +3741,35 @@
 			"com.liferay.portal.kernel.security.auth.CompanyThreadLocal"
 		],
 		"to": "addListType(CompanyThreadLocal.getCompanyId(), param#0#, param#1#)"
+	},
+	{
+		"classNames": [
+			"SoyDataFactory"
+		],
+		"from": "createSoyHTMLData(String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-35240"
+	},
+	{
+		"classNames": [
+			"SoyDataFactory"
+		],
+		"from": "createSoyRawData(String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-35240"
+	},
+	{
+		"classNames": [
+			"UpgradeProcess"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-35262",
+		"methodsToFormat": [
+			{
+				"from": "regex:alter\\(\\s*?(?<tableClass>\\w*),\\s*?new\\s*?AlterTableAddColumn\\(\\s*?(?<columnName>\\w*?)\\s*?\\+[^+]*?\\+\\s*?(?<columnType>\\w*)\\)\\);",
+				"to": "alterTableAddColumn((String)${tableClass}.getField(\"TABLE_NAME\").get(null), ${columnName}, ${columnType});"
+			}
+		]
 	},
 	{
 		"classNames": [
@@ -4387,6 +4564,22 @@
 	},
 	{
 		"classNames": [
+			"PortletSharedSearchResponse"
+		],
+		"from": "getKeywordsOptional",
+		"issueKey": "LPD-47005",
+		"to": "getKeywords"
+	},
+	{
+		"classNames": [
+			"PortletSharedSearchResponse"
+		],
+		"from": "getSpellCheckSuggestionOptional",
+		"issueKey": "LPD-47005",
+		"to": "getSpellCheckSuggestion"
+	},
+	{
+		"classNames": [
 			"SiteNavigationMenuLocalService",
 			"SiteNavigationMenuLocalServiceUtil"
 		],
@@ -4963,6 +5156,23 @@
 	},
 	{
 		"classNames": [
+			"CommerceOrderItemWrapper"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-54263",
+		"methodsToFormat": [
+			{
+				"from": "@Override\n\tpublic long getBookedQuantityId",
+				"to": "@Override\n\tpublic long getCommerceInventoryBookedQuantityId"
+			},
+			{
+				"from": "@Override\n\tpublic void setBookedQuantityId",
+				"to": "@Override\n\tpublic void setCommerceInventoryBookedQuantityId"
+			}
+		]
+	},
+	{
+		"classNames": [
 			"TemplateContextHelper"
 		],
 		"from": "getHelperUtilities(ClassLoader paramName, boolean paramName)",
@@ -4976,6 +5186,16 @@
 		"validExtensions": [
 			"jsp"
 		]
+	},
+	{
+		"from": "JournalServiceConfigurationKeys",
+		"hasMessage": true,
+		"issueKey": "LPD-58184"
+	},
+	{
+		"from": "JournalServiceConfigurationValues",
+		"hasMessage": true,
+		"issueKey": "LPD-58184"
 	},
 	{
 		"classNames": [
@@ -5220,6 +5440,14 @@
 		"to": "updateFileEntryAndCheckIn(param#0#, param#1#, param#2#, param#3#, null, param#4#, param#5#, param#6#, param#7#, param#8#, null, null, null, param#9#)"
 	},
 	{
+		"classNames": [
+			"PropsKeys"
+		],
+		"from": "COMPANY_SECURITY_AUTH_REQUIRES_HTTPS",
+		"hasMessage": true,
+		"issueKey": "LPD-58508"
+	},
+	{
 		"ClassNames": [
 			"UserLocalService",
 			"UserLocalServiceUtil"
@@ -5288,6 +5516,14 @@
 		"to": "getSitemap(param#0#, param#1#, param#2#)"
 	},
 	{
+		"from": "regex:(?<variableName>\\w+)\\.getParameter\\((?<nameAttribute>\\w*)\\)",
+		"issueKey": "LPD-59929",
+		"newImports": [
+			"com.liferay.portal.kernel.util.HttpComponentsUtil"
+		],
+		"to": "HttpComponentsUtil.getParameter(HttpComponentsUtil.getRequestURL(${variableName}), ${nameAttribute})"
+	},
+	{
 		"classNames": [
 			"CPMedia"
 		],
@@ -5327,6 +5563,7 @@
 	},
 	{
 		"classNames": [
+			"CPCompareHelper",
 			"CPCompareHelperUtil"
 		],
 		"from": "getCPDefinitionIds(long paramName, long paramName, HttpSession paramName)",
@@ -5343,6 +5580,17 @@
 	},
 	{
 		"classNames": [
+			"CPDefinitionLocalService",
+			"CPDefinitionLocalServiceUtil",
+			"CPDefinitionService",
+			"CPDefinitionServiceUtil"
+		],
+		"from": "getLayoutUuid(long paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-61140"
+	},
+	{
+		"classNames": [
 			"UserLocalService",
 			"UserLocalServiceUtil"
 		],
@@ -5352,6 +5600,11 @@
 			"com.liferay.portal.kernel.model.UserConstants"
 		],
 		"to": "addUserWithWorkflow(param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#, param#10#, param#11#, param#12#, param#13#, param#14#, param#15#, param#16#, param#17#, param#18#, UserConstants.TYPE_REGULAR, param#19#, param#20#, param#21#, param#22#, param#23#, param#24#)"
+	},
+	{
+		"from": "new FileAttachment(File paramName, String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-61487"
 	},
 	{
 		"classNames": [
@@ -5368,6 +5621,35 @@
 		"from": "PluginPackage.REPOSITORY_XML_FILENAME_EXTENSION",
 		"issueKey": "LPD-61573",
 		"to": "\"xml\""
+	},
+	{
+		"classNames": [
+			"MailMessage"
+		],
+		"from": "addFileAttachment(File paramName, String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-61575"
+	},
+	{
+		"classNames": [
+			"ParamAndPropertyAncestorTagImpl"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-61579",
+		"methodsToFormat": [
+			{
+				"from": "regex:FileAvailabilityUtil\\.isAvailable\\(servletContext, (?<page>[^)]+)\\)",
+				"to": "FileAvailabilityUtil.isAvailable(getServletContext(), ${page})"
+			},
+			{
+				"from": "servletContext = ServletContextUtil.getServletContext()",
+				"to": "setServletContext(ServletContextUtil.getServletContext())"
+			},
+			{
+				"from": "setAttributes(request)",
+				"to": "setAttributes(getRequest())"
+			}
+		]
 	},
 	{
 		"classNames": [
@@ -5554,6 +5836,63 @@
 	},
 	{
 		"classNames": [
+			"DDMStructureLocalService",
+			"DDMStructureLocalServiceUtil"
+		],
+		"from": "addStructure(long paramName, long paramName, long paramName, long paramName, String paramName, Map<Locale, String> paramName, Map<Locale, String> paramName, DDMForm paramName, DDMFormLayout paramName, String paramName, int paramName, ServiceContext paramName)",
+		"issueKey": "LPD-69589",
+		"newImports": [
+			"com.liferay.petra.string.StringPool"
+		],
+		"to": "addStructure(StringPool.BLANK, param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#, param#10#, param#11#)"
+	},
+	{
+		"classNames": [
+			"DDMStructureLocalService",
+			"DDMStructureLocalServiceUtil"
+		],
+		"from": "addStructure(long paramName, long paramName, long paramName, long paramName, String paramName, Map<Locale, String> paramName, Map<Locale, String> paramName, String paramName, String paramName, ServiceContext paramName)",
+		"issueKey": "LPD-69589",
+		"newImports": [
+			"com.liferay.petra.string.StringPool"
+		],
+		"to": "addStructure(StringPool.BLANK, param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#)"
+	},
+	{
+		"classNames": [
+			"DDMStructureLocalService",
+			"DDMStructureLocalServiceUtil"
+		],
+		"from": "updateStructure(long paramName, long paramName, long paramName, Map<Locale, String> paramName, Map<Locale, String> paramName, String paramName, ServiceContext paramName)",
+		"issueKey": "LPD-69589",
+		"newImports": [
+			"com.liferay.petra.string.StringPool"
+		],
+		"to": "updateStructure(StringPool.BLANK, param#0#, param#1#, param#6#.getScopeGroupId(), param#2#, DDMStructureLocalServiceUtil.getStructure(param#1#).getClassNameId(), DDMStructureLocalServiceUtil.getStructure(param#1#).getStructureKey(), param#3#, param#4#, param#5#, param#6#)"
+	},
+	{
+		"classNames": [
+			"Language",
+			"LanguageUtil"
+		],
+		"from": "get(PageContext paramName, String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-70233",
+		"validExtensions": [
+			"java"
+		]
+	},
+	{
+		"from": "regex:(?<class>Language(?:Util)?)\\.(?<method>format|get)\\(pageContext,",
+		"issueKey": "LPD-70233",
+		"to": "${class}.${method}(request,",
+		"validExtensions": [
+			"jsp",
+			"jspf"
+		]
+	},
+	{
+		"classNames": [
 			"FFDocumentLibraryDDMEditorConfigurationUtil"
 		],
 		"from": "useDataEngineEditor()",
@@ -5590,12 +5929,100 @@
 	},
 	{
 		"classNames": [
+			"DDMStructureLocalService",
+			"DDMStructureLocalServiceUtil"
+		],
+		"from": "addStructure(long paramName, long paramName, long paramName, long paramName, String paramName,  Map<Locale, String> paramName, Map<Locale, String> paramName, DDMForm paramName, DDMFormLayout paramName, String paramName, int paramName, ServiceContext paramName)",
+		"issueKey": "LPD-80777",
+		"newImports": [
+			"com.liferay.petra.string.StringPool"
+		],
+		"to": "addStructure(StringPool.BLANK, param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#, param#10#, param#11#)"
+	},
+	{
+		"classNames": [
+			"DDMStructureLocalService",
+			"DDMStructureLocalServiceUtil"
+		],
+		"from": "addStructure(long paramName, long paramName, long paramName, long paramName, String paramName,  Map<Locale, String> paramName, Map<Locale, String> paramName, String paramName, String paramName, ServiceContext paramName)",
+		"issueKey": "LPD-80777",
+		"newImports": [
+			"com.liferay.petra.string.StringPool"
+		],
+		"to": "addStructure(StringPool.BLANK, param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#)"
+	},
+	{
+		"classNames": [
+			"BasePortletProvider"
+		],
+		"classStructurePattern": true,
+		"issueKey": "LPD-81227",
+		"newImports": [
+			"com.liferay.portal.kernel.portlet.PortletProvider"
+		],
+		"newMethods": [
+			"@Override\n\tpublic Action[] getSupportedActions() {\n\t\treturn PortletProvider.Action.values();\n\t}"
+		]
+	},
+	{
+		"classNames": [
 			"AssetEntryLocalService",
 			"AssetEntryLocalServiceUtil"
 		],
 		"from": "updateEntry(long paramName, long paramName, Date paramName, Date paramName, String paramName, long paramName, String paramName, long paramName, long[] paramName, String[] paramName, boolean paramName, Date paramName, Date paramName, Date paramName, String paramName, String paramName, String paramName, String paramName, String paramName, String paramName, int paramName, int paramName, Double paramName, boolean paramName)",
 		"issueKey": "LPD-81811",
 		"to": "updateEntry(param#0#, param#1#, param#2#, param#3#, param#4#, param#5#, param#6#, param#7#, param#8#, param#9#, false, param#10#, param#11#, param#12#, null, param#13#, param#14#, param#15#, param#16#, param#17#, param#18#, param#19#, param#20#, param#21#, param#22#)"
+	},
+	{
+		"classNames": [
+			"CompanyLocalService",
+			"CompanyLocalServiceUtil",
+			"CompanyService",
+			"CompanyServiceUtil"
+		],
+		"from": "getCompanyByMx(String paramName)",
+		"hasMessage": true,
+		"issueKey": "LPD-82354"
+	},
+	{
+		"from": "regex:(?<varName>\\w*?FileEntryType)\\.getDDMStructures\\(\\)",
+		"issueKey": "LPD-84010",
+		"newImports": [
+			"com.liferay.document.library.util.DLFileEntryTypeUtil"
+		],
+		"to": "DLFileEntryTypeUtil.getDDMStructures(${varName})"
+	},
+	{
+		"classNames": [
+			"PhoneLocalService",
+			"PhoneLocalServiceUtil",
+			"PhoneService",
+			"PhoneServiceUtil"
+		],
+		"from": "updatePhone(long paramName, String paramName, String paramName, long paramName, boolean paramName)",
+		"issueKey": "LPD-85864",
+		"to": "updatePhone(null, param#0#, param#1#, param#2#, param#3#, param#4#)"
+	},
+	{
+		"from": "CustomFieldsUtil.hasVisibleCustomFields",
+		"issueKey": "LPD-85980",
+		"newImports": [
+			"com.liferay.expando.util.ExpandoAttributesUtil"
+		],
+		"to": "ExpandoAttributesUtil.hasVisibleAttributes",
+		"validExtensions": [
+			"java",
+			"jsp"
+		]
+	},
+	{
+		"from": "SitesUtil.updateLayoutSetPrototypesLinks",
+		"issueKey": "LPD-85995",
+		"newImports": [
+			"com.liferay.sites.kernel.util.Sites"
+		],
+		"newReference": "Sites _sites",
+		"to": "_sites.updateLayoutSetPrototypesLinks"
 	},
 	{
 		"from": "regex:MultiVMPoolUtil\\s*.\\s*getPortalCache\\(\\s*(?<prefixMethodName>[\\s\\S]*?)\\)",
@@ -5605,14 +6032,6 @@
 			"com.liferay.portal.kernel.cache.PortalCacheManagerNames"
 		],
 		"to": "PortalCacheHelperUtil.getPortalCache(PortalCacheManagerNames.MULTI_VM, ${prefixMethodName})"
-	},
-	{
-		"from": "CookieKeys.COMMERCE_CONTINUE_AS_GUEST",
-		"issueKey": "LPS-159679",
-		"newImports": [
-			"com.liferay.portal.kernel.cookies.constants.CookiesConstants"
-		],
-		"to": "CookiesConstants.NAME_COMMERCE_CONTINUE_AS_GUEST"
 	},
 	{
 		"from": "CookieKeys.getCookie(HttpServletRequest paramName, String paramName)",

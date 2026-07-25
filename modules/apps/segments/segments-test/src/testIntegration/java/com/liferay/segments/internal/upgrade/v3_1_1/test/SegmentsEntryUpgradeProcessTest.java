@@ -126,7 +126,7 @@ public class SegmentsEntryUpgradeProcessTest {
 		throws Exception {
 
 		_segmentsEntryLocalService.addSegmentsEntry(
-			RandomTestUtil.randomString(),
+			null, RandomTestUtil.randomString(),
 			Collections.singletonMap(locale, RandomTestUtil.randomString()),
 			Collections.singletonMap(locale, RandomTestUtil.randomString()),
 			true, criteria, SegmentsEntryConstants.SOURCE_DEFAULT,
@@ -164,15 +164,15 @@ public class SegmentsEntryUpgradeProcessTest {
 		"com.liferay.segments.internal.upgrade.v3_1_1." +
 			"SegmentsEntryUpgradeProcess";
 
-	@Inject(
-		filter = "(&(component.name=com.liferay.segments.internal.upgrade.registry.SegmentsServiceUpgradeStepRegistrator))"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	@DeleteAfterTestRun
 	private Group _group;
 
 	@Inject
 	private SegmentsEntryLocalService _segmentsEntryLocalService;
+
+	@Inject(
+		filter = "(&(component.name=com.liferay.segments.internal.upgrade.registry.SegmentsServiceUpgradeStepRegistrator))"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

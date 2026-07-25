@@ -125,8 +125,10 @@ public class BNDSourceUtil {
 	public static Map<String, String> getDefinitionKeysMap() {
 		return _populateDefinitionKeysMap(
 			ArrayUtil.append(
-				Constants.BUNDLE_SPECIFIC_HEADERS, Constants.headers,
-				Constants.options));
+				ArrayUtil.toStringArray(Constants.BUNDLE_SPECIFIC_HEADERS),
+				ArrayUtil.toStringArray(Constants.headers),
+				ArrayUtil.toStringArray(Constants.options),
+				new String[] {"-bundleannotations"}));
 	}
 
 	public static String getDefinitionValue(String content, String key) {
@@ -272,7 +274,7 @@ public class BNDSourceUtil {
 		"Liferay-Site-Initializer-Feature-Flag",
 		"Liferay-Site-Initializer-Name", "Liferay-Theme-Contributor-Type",
 		"Liferay-Theme-Contributor-Weight", "Liferay-Versions", "Main-Class",
-		"Premain-Class", "Web-ContextPath"
+		"Premain-Class", "Web-ContextPath", "Web-ServiceTracking"
 	};
 
 	private static final String[] _COMMON_BND_DEFINITION_KEYS = {

@@ -6,16 +6,26 @@
 package com.liferay.site.internal.configuration.manager;
 
 import com.liferay.petra.function.transform.TransformUtil;
+import com.liferay.petra.string.CharPool;
 import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.module.configuration.ConfigurationException;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.CalendarFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
+import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Time;
+import com.liferay.portal.kernel.util.TimeZoneUtil;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.site.configuration.manager.SitemapConfigurationManager;
+import com.liferay.site.constants.SitemapConstants;
 import com.liferay.site.internal.configuration.SitemapCompanyConfiguration;
 import com.liferay.site.internal.configuration.SitemapGroupConfiguration;
+
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -26,6 +36,17 @@ import org.osgi.service.component.annotations.Reference;
 @Component(service = SitemapConfigurationManager.class)
 public class SitemapConfigurationManagerImpl
 	implements SitemapConfigurationManager {
+
+	@Override
+	public boolean cachedGenerationCompanyEnabled(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.cachedGenerationEnabled();
+	}
 
 	@Override
 	public Long[] getCompanySitemapGroupIds(long companyId) throws Exception {
@@ -49,6 +70,76 @@ public class SitemapConfigurationManagerImpl
 		return TransformUtil.transform(
 			sitemapCompanyConfiguration.companySitemapObjectDefinitionIds(),
 			GetterUtil::getLong, Long.class);
+	}
+
+	@Override
+	public long getXMLSitemapRegenerationDelay(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		TimeZone timeZone = TimeZoneUtil.getDefault();
+
+		String xmlSitemapRegenerationTimeZoneId =
+			sitemapCompanyConfiguration.xmlSitemapRegenerationTimeZoneId();
+
+		if (Validator.isNotNull(xmlSitemapRegenerationTimeZoneId)) {
+			timeZone = TimeZoneUtil.getTimeZone(
+				xmlSitemapRegenerationTimeZoneId);
+		}
+
+		Calendar calendar = CalendarFactoryUtil.getCalendar(timeZone);
+
+		Calendar nextCalendar = (Calendar)calendar.clone();
+
+		nextCalendar.set(Calendar.MILLISECOND, 0);
+		nextCalendar.set(Calendar.SECOND, 0);
+
+		String xmlSitemapRegenerationFrequency =
+			sitemapCompanyConfiguration.xmlSitemapRegenerationFrequency();
+
+		if (StringUtil.equals(
+				xmlSitemapRegenerationFrequency,
+				SitemapConstants.REGENERATION_FREQUENCY_HOURLY)) {
+
+			nextCalendar.add(Calendar.HOUR_OF_DAY, 1);
+			nextCalendar.set(Calendar.MINUTE, 0);
+		}
+		else {
+			int[] hourAndMinuteParts = _parseHourAndMinuteParts(
+				sitemapCompanyConfiguration.xmlSitemapRegenerationTime());
+
+			nextCalendar.set(Calendar.HOUR_OF_DAY, hourAndMinuteParts[0]);
+			nextCalendar.set(Calendar.MINUTE, hourAndMinuteParts[1]);
+
+			if (StringUtil.equals(
+					xmlSitemapRegenerationFrequency,
+					SitemapConstants.REGENERATION_FREQUENCY_WEEKLY)) {
+
+				nextCalendar.set(
+					Calendar.DAY_OF_WEEK,
+					GetterUtil.getInteger(
+						sitemapCompanyConfiguration.
+							xmlSitemapRegenerationDayOfWeek(),
+						calendar.get(Calendar.DAY_OF_WEEK)));
+
+				if (nextCalendar.getTimeInMillis() <=
+						calendar.getTimeInMillis()) {
+
+					nextCalendar.add(Calendar.WEEK_OF_YEAR, 1);
+				}
+			}
+			else if (nextCalendar.getTimeInMillis() <=
+						calendar.getTimeInMillis()) {
+
+				nextCalendar.add(Calendar.DAY_OF_MONTH, 1);
+			}
+		}
+
+		return (nextCalendar.getTimeInMillis() - calendar.getTimeInMillis()) /
+			Time.SECOND;
 	}
 
 	@Override
@@ -130,6 +221,25 @@ public class SitemapConfigurationManagerImpl
 	}
 
 	@Override
+	public boolean indexModeAssetTypeCompanyEnabled(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		if (sitemapCompanyConfiguration.xmlSitemapIndexEnabled() &&
+			StringUtil.equals(
+				sitemapCompanyConfiguration.xmlSitemapIndexMode(),
+				SitemapConstants.INDEX_MODE_ASSET_TYPE)) {
+
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
 	public boolean isObjectDefinitionCompanyIncluded(
 			long companyId, String objectDefinitionId)
 		throws ConfigurationException {
@@ -145,15 +255,22 @@ public class SitemapConfigurationManagerImpl
 
 	@Override
 	public void saveSitemapCompanyConfiguration(
-			long companyId, long[] companySitemapGroupIds,
+			boolean cachedGenerationEnabled, long companyId,
+			long[] companySitemapGroupIds,
 			long[] companySitemapObjectDefinitionIds, boolean includeCategories,
 			boolean includePages, boolean includeWebContent,
-			boolean xmlSitemapIndexEnabled)
+			boolean xmlSitemapIndexEnabled, String xmlSitemapIndexMode,
+			String xmlSitemapRegenerationDayOfWeek,
+			String xmlSitemapRegenerationFrequency,
+			String xmlSitemapRegenerationTime,
+			String xmlSitemapRegenerationTimeZoneId)
 		throws ConfigurationException {
 
 		_configurationProvider.saveCompanyConfiguration(
 			SitemapCompanyConfiguration.class, companyId,
 			HashMapDictionaryBuilder.<String, Object>put(
+				"cachedGenerationEnabled", cachedGenerationEnabled
+			).put(
 				"companySitemapGroupIds", companySitemapGroupIds
 			).put(
 				"companySitemapObjectDefinitionIds",
@@ -166,6 +283,19 @@ public class SitemapConfigurationManagerImpl
 				"includeWebContent", includeWebContent
 			).put(
 				"xmlSitemapIndexEnabled", xmlSitemapIndexEnabled
+			).put(
+				"xmlSitemapIndexMode", xmlSitemapIndexMode
+			).put(
+				"xmlSitemapRegenerationDayOfWeek",
+				xmlSitemapRegenerationDayOfWeek
+			).put(
+				"xmlSitemapRegenerationFrequency",
+				xmlSitemapRegenerationFrequency
+			).put(
+				"xmlSitemapRegenerationTime", xmlSitemapRegenerationTime
+			).put(
+				"xmlSitemapRegenerationTimeZoneId",
+				xmlSitemapRegenerationTimeZoneId
 			).build());
 	}
 
@@ -197,6 +327,75 @@ public class SitemapConfigurationManagerImpl
 				SitemapCompanyConfiguration.class, companyId);
 
 		return sitemapCompanyConfiguration.xmlSitemapIndexEnabled();
+	}
+
+	@Override
+	public String xmlSitemapIndexMode(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.xmlSitemapIndexMode();
+	}
+
+	@Override
+	public String xmlSitemapRegenerationDayOfWeek(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.xmlSitemapRegenerationDayOfWeek();
+	}
+
+	@Override
+	public String xmlSitemapRegenerationFrequency(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.xmlSitemapRegenerationFrequency();
+	}
+
+	@Override
+	public String xmlSitemapRegenerationTime(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.xmlSitemapRegenerationTime();
+	}
+
+	@Override
+	public String xmlSitemapRegenerationTimeZoneId(long companyId)
+		throws ConfigurationException {
+
+		SitemapCompanyConfiguration sitemapCompanyConfiguration =
+			_configurationProvider.getCompanyConfiguration(
+				SitemapCompanyConfiguration.class, companyId);
+
+		return sitemapCompanyConfiguration.xmlSitemapRegenerationTimeZoneId();
+	}
+
+	private int[] _parseHourAndMinuteParts(String xmlSitemapRegenerationTime) {
+		String[] hourAndMinuteParts = StringUtil.split(
+			xmlSitemapRegenerationTime, CharPool.COLON);
+
+		if (hourAndMinuteParts.length < 2) {
+			return new int[] {0, 0};
+		}
+
+		return new int[] {
+			GetterUtil.getInteger(hourAndMinuteParts[0]),
+			GetterUtil.getInteger(hourAndMinuteParts[1])
+		};
 	}
 
 	@Reference

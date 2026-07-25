@@ -55,7 +55,7 @@ import org.osgi.service.component.annotations.ReferenceScope;
  * @generated
  */
 @Component(
-	property = "resource.locator.key=/test/v1.0/BatchTestEntity",
+	property = "resource.locator.key=/portal-tools-rest-builder-test/v1.0/BatchTestEntity",
 	service = BatchTestEntityResource.Factory.class
 )
 @Generated("")
@@ -332,3 +332,4 @@ public class BatchTestEntityResourceFactoryImpl
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1233518911

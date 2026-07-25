@@ -29,6 +29,16 @@ export class ObjectEntryApiHelper {
 		);
 	}
 
+	async expireObjectEntryByExternalReferenceCode(
+		applicationName: string,
+		scopeKey: string,
+		externalReferenceCode: string
+	) {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${applicationName}/scopes/${scopeKey}/by-external-reference-code/${externalReferenceCode}/expire`
+		);
+	}
+
 	async getObjectDefinitionObjectEntries(
 		applicationName: string,
 		searchParams?: URLSearchParams
@@ -46,11 +56,16 @@ export class ObjectEntryApiHelper {
 
 	async getObjectDefinitionObjectEntriesByScope(
 		applicationName: string,
-		scopeKey: string
+		scopeKey: string,
+		searchParams?: URLSearchParams
 	) {
-		return this.apiHelpers.get(
-			`${this.apiHelpers.baseUrl}/${applicationName}/scopes/${scopeKey}`
-		);
+		const url = `${this.apiHelpers.baseUrl}${applicationName}/scopes/${scopeKey}`;
+
+		if (searchParams) {
+			return this.apiHelpers.get(`${url}?${searchParams.toString()}`);
+		}
+
+		return this.apiHelpers.get(url);
 	}
 
 	async getObjectEntryByExternalReferenceCode({
@@ -149,6 +164,28 @@ export class ObjectEntryApiHelper {
 		);
 	}
 
+	async getObjectEntryCollaboratorsPage(
+		applicationName: string,
+		objectEntryId: number
+	) {
+		const response = await this.apiHelpers.get(
+			`${this.apiHelpers.baseUrl}${applicationName}/${objectEntryId}/collaborators`
+		);
+
+		return response?.items;
+	}
+
+	async postObjectEntryCollaborators(
+		data: DataObject[],
+		applicationName: string,
+		objectEntryId: number
+	) {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${applicationName}/${objectEntryId}/collaborators`,
+			{data}
+		);
+	}
+
 	async putByExternalReferenceCodeCurrentExternalReferenceCodeObjectRelationshipNameRelatedExternalReferenceCode({
 		applicationName,
 		currentExternalReferenceCode,
@@ -173,6 +210,17 @@ export class ObjectEntryApiHelper {
 		return this.apiHelpers.put(
 			`${this.apiHelpers.baseUrl}${applicationName}/${objectEntryId}`,
 			{data}
+		);
+	}
+
+	async putObjectEntryPermissions(
+		applicationName: string,
+		objectEntryId: number,
+		permissions: Array<{actionIds: string[]; roleName: string}>
+	) {
+		return this.apiHelpers.put(
+			`${this.apiHelpers.baseUrl}${applicationName}/${objectEntryId}/permissions`,
+			{data: permissions}
 		);
 	}
 }

@@ -201,7 +201,7 @@ public class SegmentsExperienceServiceImpl
 		throws PortalException {
 
 		SegmentsExperience segmentsExperience =
-			segmentsExperienceLocalService.getSegmentsExperience(
+			segmentsExperiencePersistence.findByG_SEK_P(
 				groupId, segmentsExperienceKey, plid);
 
 		_segmentsExperienceResourcePermission.check(
@@ -299,8 +299,9 @@ public class SegmentsExperienceServiceImpl
 			ActionKeys.UPDATE);
 
 		return segmentsExperienceLocalService.updateSegmentsExperience(
-			segmentsExperienceId, segmentsEntryERC, segmentsEntryScopeERC,
-			nameMap, active, typeSettingsUnicodeProperties);
+			getUserId(), segmentsExperienceId, segmentsEntryERC,
+			segmentsEntryScopeERC, nameMap, active,
+			typeSettingsUnicodeProperties);
 	}
 
 	@Override
@@ -327,7 +328,7 @@ public class SegmentsExperienceServiceImpl
 		}
 
 		return segmentsExperienceLocalService.updateSegmentsExperiencePriority(
-			segmentsExperienceId, newPriority);
+			getUserId(), segmentsExperienceId, newPriority);
 	}
 
 	private boolean _hasUpdateLayoutPermission(long plid)

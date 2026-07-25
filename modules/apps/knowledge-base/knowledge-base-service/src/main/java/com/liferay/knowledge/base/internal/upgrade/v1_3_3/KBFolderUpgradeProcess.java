@@ -50,7 +50,7 @@ public class KBFolderUpgradeProcess extends UpgradeProcess {
 			preparedStatement.setString(1, urlTitle + "%");
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
-				if (!resultSet.next() || (resultSet.getInt("count") == 0)) {
+				if (!resultSet.next() || (resultSet.getLong("count") == 0)) {
 					return urlTitle;
 				}
 
@@ -65,6 +65,7 @@ public class KBFolderUpgradeProcess extends UpgradeProcess {
 		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select kbFolderId, name from KBFolder where (KBFolder." +
 					"urlTitle is null) or (KBFolder.urlTitle = '')");
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			Map<Long, String> urlTitles = new HashMap<>();

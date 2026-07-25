@@ -376,6 +376,7 @@
 		<exception>DuplicateFragmentEntryKey</exception>
 		<exception>FragmentCollectionName</exception>
 		<exception>FragmentCompositionDescription</exception>
+		<exception>FragmentCompositionGroupId</exception>
 		<exception>FragmentCompositionName</exception>
 		<exception>FragmentEntryConfiguration</exception>
 		<exception>FragmentEntryContent</exception>
@@ -385,5 +386,7 @@
 		<exception>InvalidFile</exception>
 		<exception>InvalidFragmentCompositionKey</exception>
 		<exception>RequiredFragmentEntry</exception>
+		<exception>RequiredFragmentEntryVersion</exception>
+		<exception>UnsupportedUnpublishFragmentEntryOperation</exception>
 	</exceptions>
 </service-builder>

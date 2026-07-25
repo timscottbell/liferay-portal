@@ -48,12 +48,14 @@ public class OpenIdConnectProviderConfigurationUpgradeProcess
 		}
 
 		try (Statement statement = connection.createStatement();
+
 			ResultSet resultSet = statement.executeQuery(
 				StringBundler.concat(
 					"select * from Configuration_ where configurationId LIKE ",
 					"'%com.liferay.portal.security.sso.openid.connect.",
 					"internal.configuration.",
 					"OpenIdConnectProviderConfiguration%'"));
+
 			PreparedStatement preparedStatement =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,

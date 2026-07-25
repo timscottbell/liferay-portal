@@ -79,6 +79,8 @@ export interface IBulkActionTaskStarterDTO<T extends keyof IBulkActionType> {
 	apiURL?: string;
 	dataSetId?: string;
 	entryClassName?: string;
+	folderId?: string;
+	groupIds?: string;
 	keyValues?: IBulkActionType[T];
 	onCreateError?:
 		| ((response: RequestResult<IBulkActionTaskPage>) => void)
@@ -88,11 +90,15 @@ export interface IBulkActionTaskStarterDTO<T extends keyof IBulkActionType> {
 		| null;
 	overrideDefaultErrorToast?: boolean;
 	overrideDefaultSuccessToast?: boolean;
+	resetSearch?: boolean;
 	selectedData: IBulkActionFDSData;
 	type: keyof IBulkActionType;
 }
 
 export interface IBulkActionType {
+	AddObjectToProjectBulkSelectionAction: {
+		projectScopeKeys?: string[];
+	};
 	AssignStructureDefaultWorkflowBulkSelectionAction: {
 		workflow?: string;
 	};
@@ -120,6 +126,7 @@ export interface IBulkActionType {
 	DueDateObjectBulkSelectionAction: {
 		dueDate?: string;
 	};
+	DuplicateObjectBulkSelectionAction: {};
 	EditObjectCategoriesBulkSelectionAction: {
 		append?: boolean;
 		taxonomyCategoryIdsToAdd?: number[];
@@ -131,6 +138,11 @@ export interface IBulkActionType {
 		keywordsToRemove?: string[];
 	};
 	ExpireObjectBulkSelectionAction: {};
+	ExportTranslationBulkAction: {
+		sourceLanguageId: string;
+		targetLanguageIds: string[];
+		xliffMimeType: string;
+	};
 	MoveObjectBulkSelectionAction: {
 		objectEntryFolderId: number;
 	};
@@ -139,12 +151,17 @@ export interface IBulkActionType {
 		roleKey?: string;
 	};
 	ResetPermissionObjectBulkSelectionAction: {};
+	RestoreObjectBulkSelectionAction: {};
 	StatusObjectBulkSelectionAction: {
 		status?: string;
+	};
+	UpdateObjectValuesBulkSelectionAction: {
+		values?: Record<string, unknown>;
 	};
 }
 
 export interface IBulkActionTaskType {
+	AddObjectToProjectBulkSelectionAction: string;
 	AssignStructureDefaultWorkflowBulkSelectionAction: string;
 	AssignToObjectBulkSelectionAction: string;
 	CopyObjectBulkSelectionAction: string;
@@ -154,13 +171,17 @@ export interface IBulkActionTaskType {
 	DeleteTaskBulkAction: string;
 	DownloadBulkAction: string;
 	DueDateObjectBulkSelectionAction: string;
+	DuplicateObjectBulkSelectionAction: string;
 	EditObjectCategoriesBulkSelectionAction: string;
 	EditObjectTagsBulkSelectionAction: string;
 	ExpireObjectBulkSelectionAction: string;
+	ExportTranslationBulkAction: string;
 	MoveObjectBulkSelectionAction: string;
 	PermissionObjectBulkSelectionAction: string;
 	ResetPermissionObjectBulkSelectionAction: string;
+	RestoreObjectBulkSelectionAction: string;
 	StatusObjectBulkSelectionAction: string;
+	UpdateObjectValuesBulkSelectionAction: string;
 }
 
 export type TBulkActionTaskDTO = {

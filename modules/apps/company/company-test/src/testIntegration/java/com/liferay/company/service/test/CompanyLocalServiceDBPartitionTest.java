@@ -31,6 +31,7 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.instance.PortalInstancePool;
 import com.liferay.portal.kernel.model.ClassName;
 import com.liferay.portal.kernel.model.Company;
+import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Repository;
 import com.liferay.portal.kernel.model.ResourceAction;
 import com.liferay.portal.kernel.model.User;
@@ -88,6 +89,7 @@ import java.sql.Types;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -161,7 +163,7 @@ public class CompanyLocalServiceDBPartitionTest
 	@Test
 	public void testAddCompany() throws Exception {
 		int dbPartitionsCount = _getDBPartitionsCount();
-		int rulesCount = _getRulesCount(defaultPartitionName);
+		long rulesCount = _getRulesCount(defaultPartitionName);
 
 		_company1 = CompanyTestUtil.addCompany();
 
@@ -489,7 +491,7 @@ public class CompanyLocalServiceDBPartitionTest
 	@FeatureFlag("LPD-11342")
 	@Test
 	public void testCopyDBPartitionCompany() throws Exception {
-		int rulesCount = _getRulesCount(defaultPartitionName);
+		long rulesCount = _getRulesCount(defaultPartitionName);
 
 		Configuration configuration =
 			CompanyLocalServiceTestUtil.createFactoryConfiguration(
@@ -751,6 +753,10 @@ public class CompanyLocalServiceDBPartitionTest
 		companyLocalService.deleteCompany(_company1);
 
 		Assert.assertFalse(
+			PortalInstances.isCompanyInDeletionProcess(
+				_company1.getCompanyId()));
+
+		Assert.assertFalse(
 			ArrayUtil.contains(
 				CompanyLocalServiceTestUtil.getCompanyIdsBySQL(),
 				_company1.getCompanyId()));
@@ -807,6 +813,53 @@ public class CompanyLocalServiceDBPartitionTest
 					CompanyLocalServiceTestUtil.getCompanyIdsBySQL(),
 					_company1.getCompanyId()));
 		}
+	}
+
+	@Test
+	public void testForEachCompanyIdSkipsGoneOrInDeletionCompanies()
+		throws Exception {
+
+		// A company in the deletion process is skipped
+
+		_company1 = CompanyTestUtil.addCompany();
+
+		long companyId = _company1.getCompanyId();
+
+		List<Long> companyIds = new ArrayList<>();
+
+		try (SafeCloseable safeCloseable =
+				PortalInstances.setCompanyInDeletionProcessWithSafeCloseable(
+					companyId)) {
+
+			companyLocalService.forEachCompanyId(
+				companyIds::add, new long[] {companyId});
+		}
+
+		Assert.assertEquals(companyIds.toString(), 0, companyIds.size());
+
+		// A company that no longer exists is skipped
+
+		companyLocalService.forEachCompanyId(
+			companyIds::add, new long[] {RandomTestUtil.nextLong()});
+
+		Assert.assertEquals(companyIds.toString(), 0, companyIds.size());
+
+		// The system scope is passed through
+
+		companyLocalService.forEachCompanyId(
+			companyIds::add, new long[] {CompanyConstants.SYSTEM});
+
+		Assert.assertEquals(
+			Collections.singletonList(CompanyConstants.SYSTEM), companyIds);
+
+		companyIds.clear();
+
+		// A live company is iterated
+
+		companyLocalService.forEachCompanyId(
+			companyIds::add, new long[] {companyId});
+
+		Assert.assertEquals(Collections.singletonList(companyId), companyIds);
 	}
 
 	private void _addCopyDBPartitionCompanyCache(long companyId) {
@@ -888,6 +941,7 @@ public class CompanyLocalServiceDBPartitionTest
 					CompanyLocalServiceTestUtil.getPartitionName(companyId),
 					".Configuration_ where configurationId like '",
 					configuration.getFactoryPid(), "%'"));
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			Assert.assertTrue(resultSet.next());
@@ -1132,7 +1186,7 @@ public class CompanyLocalServiceDBPartitionTest
 		throw new SQLException("At least one database partition is required");
 	}
 
-	private int _getRulesCount(String partitionName) throws Exception {
+	private long _getRulesCount(String partitionName) throws Exception {
 		if (db.getDBType() != DBType.POSTGRESQL) {
 			return 0;
 		}
@@ -1152,7 +1206,7 @@ public class CompanyLocalServiceDBPartitionTest
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				resultSet.next();
 
-				return resultSet.getInt("count");
+				return resultSet.getLong("count");
 			}
 		}
 	}
@@ -1184,22 +1238,14 @@ public class CompanyLocalServiceDBPartitionTest
 		CompanyLocalServiceDBPartitionTest.class.getName() + 2;
 
 	private static BundleContext _bundleContext;
-	private static ClassName _className1;
-	private static ClassName _className2;
-
-	@Inject
-	private static ClassNameLocalService _classNameLocalService;
-
-	private static long _counter;
-
-	@Inject
-	private static CounterLocalService _counterLocalService;
-
 	private static long _defaultCompanyId;
 	private static SafeCloseable _safeCloseable;
 
+	private ClassName _className1;
+	private ClassName _className2;
+
 	@Inject
-	private static VirtualHostLocalService _virtualHostLocalService;
+	private ClassNameLocalService _classNameLocalService;
 
 	@DeleteAfterTestRun
 	private Company _company1;
@@ -1213,8 +1259,13 @@ public class CompanyLocalServiceDBPartitionTest
 	@Inject
 	private ConfigurationAdmin _configurationAdmin;
 
+	private long _counter;
+
 	@Inject
 	private CounterFinder _counterFinder;
+
+	@Inject
+	private CounterLocalService _counterLocalService;
 
 	@Inject
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;
@@ -1246,5 +1297,8 @@ public class CompanyLocalServiceDBPartitionTest
 		filter = "(&(objectClass=com.liferay.document.library.kernel.store.Store)(default=true))"
 	)
 	private Store _store;
+
+	@Inject
+	private VirtualHostLocalService _virtualHostLocalService;
 
 }

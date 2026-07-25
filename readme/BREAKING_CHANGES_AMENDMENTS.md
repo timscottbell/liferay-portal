@@ -1,6 +1,6 @@
 # cb2501a618b8b2cfc7e045cc610f8bc872231fb0
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPD-16086: Prevent to compute values for item selector and URL fields. This commit resolves a bug where pages containing item selector or URL fields could not be imported after being exported. Previously, the full value of these fields was computed and stored, leading to data inconsistencies during import/export. For a complete and correct response format, this change should be considered in conjunction with regressions LPD-33951 and LPD-57833.
@@ -188,7 +188,7 @@ ThreadLocalDistributor has no current usage.
 
 # 0bfc1206ac4a93ec401be491f9553ac94ecea0ed
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-200453 Make PortletToolbar not a spring bean and provide the instance through filed INSTANCE.
@@ -212,7 +212,7 @@ Directly use PortletToolbar.INSTANCE to get the instance of PortletToolbar.
 
 # f971716348b82b1ea6747ae3c011b40616bb5884
 
-The commit message is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-198809 Remove ModelSearchRegistrarHelper, not used anymore
@@ -340,7 +340,7 @@ The new configuration to avoid caching documents is now the default configuratio
 
 # a35946f28515783df6d3de0a45ff8c9631dc416a
 
-The commit message is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-188270 Add new method getPortletInstanceConfiguration in class ConfigurationProviderImpl to replace method getPortletInstanceConfiguration in class PortletDisplay
@@ -562,7 +562,7 @@ If the total time spent searching is still a concern, regulate it with the new P
 
 # 6de9f9ce7bd603ca6b0dbb5035c359c2c9c2ed4f
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-196539 SF rename variable name
@@ -586,7 +586,7 @@ Use getPortletPreferences() and setPortletPreferences() instead.
 
 # 3abd46aedba5663099d5c66abd057d1f0392582f
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-197267 Move PermissionConverter to portal-security-permission-api and Remove Util
@@ -610,7 +610,7 @@ Use an OSGi service to reference PermissionConverter.
 
 # 91ba4f2de757ad28f4129563b8a0059dad4d58ad
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPS-197267 Remove unused PermissionConverter overloaded methods
@@ -630,7 +630,7 @@ These methods are no longer used after refactoring the PermissionConverter APIs.
 
 # 50b57897005e337516b53e1e592b1eeee70e2950
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPD-47825 portal-search-web: skip deprecation for internal interface
@@ -654,7 +654,7 @@ Vocabulary IDs for all vocabularies related to the returned categories are avail
 
 # 971a14cc0a58eb64a36fc88863a50141b0f09022
 
-This commit is missing a breaking change message. The correct message is:
+The commit message is missing a breaking change. The correct message is:
 
 ```
 LPD-77861 Semantic versioning (gw baseline)
@@ -672,4 +672,128 @@ These attributes were added for more flexibility when using Clay components, ena
 ## Alternatives
 
 The displayType attribute always works, since it defaults to "transparent". The size attribute is used as a replacement for the deprecated large flag. If the size attribute isn't provided, the large flag still works as a fallback. The collapse attribute is a new control and it's disabled by default. Provide collapse with true if the previous behavior is missing.
+```
+
+----
+
+# 37cfb5472d42205e47807e06ff6a20fe096609bf
+
+The commit message is missing the required breaking change format. The correct message is:
+
+```
+LPD-59218 Semantic versioning
+
+# breaking
+
+## What portal-kernel/src/com/liferay/portal/kernel/util/Props.java
+
+The interface com.liferay.portal.kernel.util.Props has been removed. Its methods (contains, get, getArray, getProperties) are now directly available as static methods on com.liferay.portal.kernel.util.PropsUtil.
+
+## Why
+
+Props was a redundant indirection layer. PropsUtil already provided the same static API, and PropsImpl simply delegated back to PropsUtil. Removing Props eliminates the unnecessary interface and simplifies the properties access pattern.
+
+----
+
+# breaking
+
+## What portal-impl/src/com/liferay/portal/util/PropsImpl.java
+
+The class com.liferay.portal.util.PropsImpl has been removed. It was the sole implementation of com.liferay.portal.kernel.util.Props, which has also been removed.
+
+## Why
+
+PropsImpl was a pass-through that delegated every call to com.liferay.portal.util.PropsUtil. With Props and PropsUtil merged into com.liferay.portal.kernel.util.PropsUtil, this class is no longer needed.
+
+----
+
+# breaking
+
+## What portal-impl/src/com/liferay/portal/util/PropsUtil.java
+
+The class com.liferay.portal.util.PropsUtil has been removed. All of its functionality has been merged into com.liferay.portal.kernel.util.PropsUtil. Additionally, PropsUtil.getProps() and PropsUtil.setProps(Props) have been removed from the kernel PropsUtil. The properties are now initialized directly and cannot be swapped at runtime.
+
+## Why
+
+Having two PropsUtil classes (portal-impl and portal-kernel) with an intermediate Props interface created unnecessary complexity. The portal-kernel PropsUtil now loads properties directly via ConfigurationFactoryImpl, removing the need for runtime Props injection via setProps().
+
+## Alternatives
+
+Update imports from com.liferay.portal.util.PropsUtil to com.liferay.portal.kernel.util.PropsUtil. Replace PropsUtil.getProps() calls with direct PropsUtil static method calls. Remove PropsUtil.setProps() calls as they are no longer needed.
+
+----
+
+# breaking
+
+## What portal-impl/src/com/liferay/portal/util/PropsFiles.java
+
+The class com.liferay.portal.util.PropsFiles has been removed. Its constants (CAPTCHA, CONTENT_TYPES, PORTAL) have been inlined into ConfigurationFactoryImpl.
+
+## Why
+
+PropsFiles only held three string constants and was referenced in a single place. Inlining them eliminates a trivial class.
+
+----
+
+# breaking
+
+## What portal-test/src/com/liferay/portal/test/rule/InitializeKernelUtilTestRule.java
+
+InitializeKernelUtilTestRule now extends AbstractTestRule<Map<String, String>, Map<String, String>> instead of AbstractTestRule<Void, Properties>. The beforeClass method now returns Map<String, String> instead of Void, and afterClass/afterMethod accept Map<String, String> instead of Void/Properties. The rule no longer calls PropsUtil.setProps() or uses reflection to call addProperties/removeProperties.
+
+## Why
+
+With the removal of the Props interface and PropsUtil.setProps(), the test rule can no longer swap in a new PropsImpl. Instead it saves and restores individual property values via PropsUtil.set(String, String) and PropsUtil.get(String).
+
+## Alternatives
+
+Use PropsUtil.set(String, String) to set individual properties and PropsUtil.get(String) to read them back, instead of the former Props-based swapping pattern.
+```
+
+----
+
+# 780cf785b969d493e8bc80ab19d9855abce13f52
+
+The commit message is missing a breaking change. The correct message is:
+
+```
+LPD-71875 Stop returning fieldReference from name field for ContentStructureField
+
+# breaking
+
+## What modules/apps/headless/headless-delivery/headless-delivery-api/src/main/java/com/liferay/headless/delivery/dto/v1_0/util/ContentStructureUtil.java
+
+The name field of the ContentStructureField returned by the headless-delivery REST API now contains the field's actual name instead of its fieldReference.
+
+## Why
+
+The name field was populated with the fieldReference rather than the field's name. It now returns the actual name, while the fieldReference remains available through the dedicated fieldReference field.
+
+## Alternatives
+
+Consumers that relied on the name field to obtain the fieldReference should read the fieldReference field of ContentStructureField instead.
+```
+
+----
+
+# 1efb89cecc2466d44328f11977ed5730753b26cc
+
+The commit message is missing a breaking change. The correct message is:
+
+```
+LPD-71875 Stop returning fieldReference from name field for ContentField
+
+# breaking
+
+## What modules/apps/headless/headless-delivery/headless-delivery-api/src/main/java/com/liferay/headless/delivery/dto/v1_0/util/ContentFieldUtil.java
+
+The name field of the ContentField returned by the headless-delivery REST API now contains the field's actual name instead of its fieldReference.
+
+## Why
+
+The name field was populated with the fieldReference rather than the field's name. It now returns the actual name, while the fieldReference remains available through the dedicated fieldReference field.
+
+## Alternatives
+
+Consumers that relied on the name field to obtain the fieldReference should read the fieldReference field of ContentField instead.
 ```

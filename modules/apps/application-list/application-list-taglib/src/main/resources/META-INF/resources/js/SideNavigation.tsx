@@ -12,6 +12,7 @@ import {SearchResultsMessage} from '@liferay/layout-js-components-web';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {sub} from '../../../../../../../../frontend-js/frontend-js-web/src/main/resources/META-INF/resources/main';
+import SideNavigationColorSchemeButton from './SideNavigationColorSchemeButton';
 import SideNavigationSearchInput from './SideNavigationSearchInput';
 import SideNavigationSiteSelector from './SideNavigationSiteSelector';
 import {SideNavigationItem} from './types/SideNavigation';
@@ -20,11 +21,13 @@ import {useSideNavigationFilter} from './useSideNavigationFilter';
 interface Props {
 	canonicalName: string;
 	categoryImageUrl: string;
+	colorScheme: 'dark' | 'light';
+	colorSchemeSessionKey: string;
 	expandedKeys: Array<React.Key>;
 	expandedKeysSessionKey: string;
 	items: Array<SideNavigationItem>;
 	label: string;
-	portletId: string;
+	selectedPortletId: string;
 	siteAdministrationItemSelectedEventName: string;
 	siteAdministrationItemSelectorUrl: string;
 	visible: boolean;
@@ -34,11 +37,13 @@ interface Props {
 function SideNavigation({
 	canonicalName,
 	categoryImageUrl,
+	colorScheme,
+	colorSchemeSessionKey,
 	expandedKeys: externalExpandedKeys,
 	expandedKeysSessionKey,
 	items: externalItems,
 	label,
-	portletId,
+	selectedPortletId,
 	siteAdministrationItemSelectedEventName,
 	siteAdministrationItemSelectorUrl,
 	visible: initialVisible,
@@ -121,6 +126,7 @@ function SideNavigation({
 			containerRef={containerRef}
 			data-canonical-name={canonicalName}
 			data-qa-id="sideNavigation"
+			data-testid="sideNavigation"
 			defaultOpen={initialVisible}
 			direction="left"
 			id="com_liferay_application_list_taglib_side_navigation"
@@ -131,6 +137,11 @@ function SideNavigation({
 		>
 			<SidePanel.Header
 				className="c-mt-2 c-mx-1 c-px-2"
+				closeButtonProps={
+					Liferay.FeatureFlags['LPD-57922']
+						? {className: 'sr-only sr-only-focusable'}
+						: undefined
+				}
 				data-qa-id="sideNavigationHeader"
 				messages={{
 					backAriaLabel: Liferay.Language.get('go-back'),
@@ -162,6 +173,13 @@ function SideNavigation({
 						eventName={siteAdministrationItemSelectedEventName}
 						url={siteAdministrationItemSelectorUrl}
 					/>
+
+					{Liferay.FeatureFlags['LPD-57922'] && (
+						<SideNavigationColorSchemeButton
+							colorScheme={colorScheme}
+							colorSchemeSessionKey={colorSchemeSessionKey}
+						/>
+					)}
 				</SidePanel.Title>
 			</SidePanel.Header>
 
@@ -175,7 +193,7 @@ function SideNavigation({
 
 				{numberOfResults ? (
 					<ClayVerticalNav
-						active={portletId}
+						active={selectedPortletId}
 						defaultExpandedKeys={initialExpandedKeys}
 						displayType="primary"
 						expandedKeys={expandedKeys ?? userExpandedKeys}

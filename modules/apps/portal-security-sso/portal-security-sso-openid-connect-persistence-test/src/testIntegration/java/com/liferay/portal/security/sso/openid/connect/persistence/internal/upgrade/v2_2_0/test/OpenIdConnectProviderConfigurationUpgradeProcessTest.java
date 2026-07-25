@@ -9,6 +9,7 @@ import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.oauth.client.persistence.constants.OAuthClientEntryConstants;
 import com.liferay.oauth.client.persistence.model.OAuthClientEntry;
 import com.liferay.oauth.client.persistence.service.OAuthClientEntryLocalService;
+import com.liferay.oauth.client.test.util.OpenIdConnectProviderHttpServer;
 import com.liferay.petra.io.unsync.UnsyncByteArrayInputStream;
 import com.liferay.petra.io.unsync.UnsyncByteArrayOutputStream;
 import com.liferay.petra.string.StringBundler;
@@ -81,6 +82,7 @@ public class OpenIdConnectProviderConfigurationUpgradeProcessTest {
 		ConfigurationHandler.write(unsyncByteArrayOutputStream, _properties);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				"insert into Configuration_ (configurationId, dictionary) " +
 					"values(?, ?)")) {
@@ -92,45 +94,53 @@ public class OpenIdConnectProviderConfigurationUpgradeProcessTest {
 			preparedStatement.execute();
 		}
 
-		_oAuthClientEntry1 = _oAuthClientEntryLocalService.addOAuthClientEntry(
-			TestPropsValues.getUserId(), StringPool.BLANK,
-			"https://accounts.google.com/.well-known/openid-configuration",
-			null,
-			JSONUtil.put(
-				"client_id", _properties.get("openIdConnectClientId")
-			).put(
-				"client_name", RandomTestUtil.randomString()
-			).put(
-				"client_secret", RandomTestUtil.randomString()
-			).put(
-				"redirect_uris", JSONUtil.put("")
-			).put(
-				"scope", "openid email profile"
-			).put(
-				"subject_type", "public"
-			).toString(),
-			"email", 0, OAuthClientEntryConstants.OIDC_USER_INFO_MAPPER_JSON,
-			StringPool.BLANK);
-		_oAuthClientEntry2 = _oAuthClientEntryLocalService.addOAuthClientEntry(
-			TestPropsValues.getUserId(), StringPool.BLANK,
-			"https://accounts.google.com/.well-known/openid-configuration",
-			null,
-			JSONUtil.put(
-				"client_id", RandomTestUtil.randomString()
-			).put(
-				"client_name", RandomTestUtil.randomString()
-			).put(
-				"client_secret", RandomTestUtil.randomString()
-			).put(
-				"redirect_uris", JSONUtil.put("")
-			).put(
-				"scope", "openid email profile"
-			).put(
-				"subject_type", "public"
-			).toString(),
-			"email", OAuthClientEntryConstants.METADATA_CACHE_TIME_DEFAULT,
-			OAuthClientEntryConstants.OIDC_USER_INFO_MAPPER_JSON,
-			StringPool.BLANK);
+		try (OpenIdConnectProviderHttpServer openIdConnectProviderHttpServer =
+				new OpenIdConnectProviderHttpServer()) {
+
+			_oAuthClientEntry1 =
+				_oAuthClientEntryLocalService.addOAuthClientEntry(
+					null, TestPropsValues.getUserId(), StringPool.BLANK,
+					openIdConnectProviderHttpServer.getURL(), null,
+					JSONUtil.put(
+						"client_id", _properties.get("openIdConnectClientId")
+					).put(
+						"client_name", RandomTestUtil.randomString()
+					).put(
+						"client_secret", RandomTestUtil.randomString()
+					).put(
+						"redirect_uris", JSONUtil.put("")
+					).put(
+						"scope", "openid email profile"
+					).put(
+						"subject_type", "public"
+					).toString(),
+					"email", 0,
+					OAuthClientEntryConstants.OIDC_USER_INFO_MAPPER_JSON,
+					OAuthClientEntryConstants.TOKEN_CONNECTION_TIMEOUT_DEFAULT,
+					StringPool.BLANK);
+			_oAuthClientEntry2 =
+				_oAuthClientEntryLocalService.addOAuthClientEntry(
+					null, TestPropsValues.getUserId(), StringPool.BLANK,
+					openIdConnectProviderHttpServer.getURL(), null,
+					JSONUtil.put(
+						"client_id", RandomTestUtil.randomString()
+					).put(
+						"client_name", RandomTestUtil.randomString()
+					).put(
+						"client_secret", RandomTestUtil.randomString()
+					).put(
+						"redirect_uris", JSONUtil.put("")
+					).put(
+						"scope", "openid email profile"
+					).put(
+						"subject_type", "public"
+					).toString(),
+					"email",
+					OAuthClientEntryConstants.METADATA_CACHE_TIME_DEFAULT,
+					OAuthClientEntryConstants.OIDC_USER_INFO_MAPPER_JSON,
+					OAuthClientEntryConstants.TOKEN_CONNECTION_TIMEOUT_DEFAULT,
+					StringPool.BLANK);
+		}
 	}
 
 	@After
@@ -154,7 +164,9 @@ public class OpenIdConnectProviderConfigurationUpgradeProcessTest {
 		upgradeProcess.upgrade();
 
 		try (Connection connection = DataAccess.getConnection();
+
 			Statement statement = connection.createStatement();
+
 			ResultSet resultSet = statement.executeQuery(
 				StringBundler.concat(
 					"select dictionary from Configuration_ where ",

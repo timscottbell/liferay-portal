@@ -112,12 +112,8 @@ public class PortalPreferenceValuePersistenceTest {
 
 	@Test
 	public void testUpdateExisting() throws Exception {
-		long pk = RandomTestUtil.nextLong();
-
-		PortalPreferenceValue newPortalPreferenceValue = _persistence.create(
-			pk);
-
-		newPortalPreferenceValue.setMvccVersion(RandomTestUtil.nextLong());
+		PortalPreferenceValue newPortalPreferenceValue =
+			addPortalPreferenceValue();
 
 		newPortalPreferenceValue.setCompanyId(RandomTestUtil.nextLong());
 
@@ -134,8 +130,10 @@ public class PortalPreferenceValuePersistenceTest {
 
 		newPortalPreferenceValue.setSmallValue(RandomTestUtil.randomString());
 
-		_portalPreferenceValues.add(
-			_persistence.update(newPortalPreferenceValue));
+		newPortalPreferenceValue = _persistence.update(
+			newPortalPreferenceValue);
+
+		_portalPreferenceValues.add(newPortalPreferenceValue);
 
 		PortalPreferenceValue existingPortalPreferenceValue =
 			_persistence.findByPrimaryKey(
@@ -175,6 +173,12 @@ public class PortalPreferenceValuePersistenceTest {
 		_persistence.countByPortalPreferencesId(RandomTestUtil.nextLong());
 
 		_persistence.countByPortalPreferencesId(0L);
+	}
+
+	@Test
+	public void testCountByPortalPreferencesIdArrayable() throws Exception {
+		_persistence.countByPortalPreferencesId(
+			new long[] {RandomTestUtil.nextLong(), 0L});
 	}
 
 	@Test
@@ -571,8 +575,6 @@ public class PortalPreferenceValuePersistenceTest {
 
 		PortalPreferenceValue portalPreferenceValue = _persistence.create(pk);
 
-		portalPreferenceValue.setMvccVersion(RandomTestUtil.nextLong());
-
 		portalPreferenceValue.setCompanyId(RandomTestUtil.nextLong());
 
 		portalPreferenceValue.setPortalPreferencesId(RandomTestUtil.nextLong());
@@ -598,3 +600,4 @@ public class PortalPreferenceValuePersistenceTest {
 	private ClassLoader _dynamicQueryClassLoader;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:433008743

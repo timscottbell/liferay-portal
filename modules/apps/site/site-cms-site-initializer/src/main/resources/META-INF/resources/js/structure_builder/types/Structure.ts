@@ -12,6 +12,10 @@ type Status = 'new' | 'draft' | 'published' | 'publishing' | 'saving';
 
 type Spaces = 'all' | string[];
 
+export type StructureSettings = {
+	allowStandaloneObjectEntry?: string;
+};
+
 type Workflows = Record<'' | Space['externalReferenceCode'], Workflow['name']>;
 
 export type ReferencedStructure = {
@@ -64,12 +68,16 @@ export type Structure = {
 	id?: number;
 	label: Liferay.Language.LocalizedValue<string>;
 	name: string;
+	path: string;
+	settings?: StructureSettings;
 	spaces: Spaces;
 	status: Status;
 	system: boolean;
-	type?: 'L_CMS_CONTENT_STRUCTURES' | 'L_CMS_FILE_TYPES';
+	type: StructureType;
 	uuid: Uuid;
 	workflows: Workflows;
 };
+
+export type StructureType = 'L_CMS_CONTENT_STRUCTURES' | 'L_CMS_FILE_TYPES';
 
 export type Structures = Map<Structure['erc'], Structure>;

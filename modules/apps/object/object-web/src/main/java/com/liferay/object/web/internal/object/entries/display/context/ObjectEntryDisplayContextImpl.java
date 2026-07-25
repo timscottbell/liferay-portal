@@ -5,6 +5,7 @@
 
 package com.liferay.object.web.internal.object.entries.display.context;
 
+import com.liferay.depot.util.SiteConnectedGroupGroupProviderUtil;
 import com.liferay.dynamic.data.mapping.expression.DDMExpressionFactory;
 import com.liferay.dynamic.data.mapping.form.field.type.constants.DDMFormFieldTypeConstants;
 import com.liferay.dynamic.data.mapping.form.renderer.DDMFormRenderer;
@@ -241,6 +242,17 @@ public class ObjectEntryDisplayContextImpl
 			backURL = String.valueOf(liferayPortletResponse.createRenderURL());
 		}
 
+		ObjectDefinition objectDefinition = getObjectDefinition1();
+
+		if (!objectDefinition.isDefaultStorageType() ||
+			!StringUtil.equals(
+				String.valueOf(
+					httpServletRequest.getAttribute(WebKeys.PORTLET_ID)),
+				objectDefinition.getPortletId())) {
+
+			return backURL;
+		}
+
 		ObjectEntry objectEntry = _getObjectEntry();
 
 		if (objectEntry == null) {
@@ -248,16 +260,11 @@ public class ObjectEntryDisplayContextImpl
 		}
 
 		com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry =
-			_objectEntryLocalService.getObjectEntry(objectEntry.getId());
+			_objectEntryLocalService.fetchObjectEntry(
+				GetterUtil.getLong(objectEntry.getId()));
 
-		ObjectDefinition objectDefinition = getObjectDefinition1();
-
-		if (!objectDefinition.isDefaultStorageType() ||
-			!serviceBuilderObjectEntry.isRootDescendantNode() ||
-			!StringUtil.equals(
-				String.valueOf(
-					httpServletRequest.getAttribute(WebKeys.PORTLET_ID)),
-				objectDefinition.getPortletId())) {
+		if ((serviceBuilderObjectEntry == null) ||
+			!serviceBuilderObjectEntry.isRootDescendantNode()) {
 
 			return backURL;
 		}
@@ -348,15 +355,39 @@ public class ObjectEntryDisplayContextImpl
 	}
 
 	@Override
+	public long[] getGroupIds() throws PortalException {
+		if (_groupIds != null) {
+			return _groupIds;
+		}
+
+		long groupId = _getGroupId();
+
+		if (groupId <= 0) {
+			groupId = _themeDisplay.getCompanyGroupId();
+		}
+
+		_groupIds =
+			SiteConnectedGroupGroupProviderUtil.
+				getCurrentAndAncestorSiteAndDepotGroupIds(groupId);
+
+		return _groupIds;
+	}
+
+	@Override
 	public String getMethod() throws PortalException {
 		if (_objectEntry == null) {
 			return "POST";
 		}
 
-		com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry =
-			_objectEntryLocalService.getObjectEntry(_objectEntry.getId());
+		if (getObjectLayoutTab() != null) {
+			return "PATCH";
+		}
 
-		if ((getObjectLayoutTab() != null) ||
+		com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry =
+			_objectEntryLocalService.fetchObjectEntry(
+				GetterUtil.getLong(_objectEntry.getId()));
+
+		if ((serviceBuilderObjectEntry != null) &&
 			(serviceBuilderObjectEntry.getRootObjectEntryId() != 0)) {
 
 			return "PATCH";
@@ -1338,9 +1369,7 @@ public class ObjectEntryDisplayContextImpl
 				"objectDefinitionExternalReferenceCode",
 				objectDefinition.getExternalReferenceCode());
 
-			ddmFormField.setProperty(
-				"objectEntryExternalReferenceCode",
-				objectEntry.getExternalReferenceCode());
+			ddmFormField.setProperty("objectEntryId", objectEntry.getId());
 		}
 
 		ddmFormField.setReadOnly(readOnly);
@@ -1613,6 +1642,19 @@ public class ObjectEntryDisplayContextImpl
 			values.put("creator", creator.getName());
 		}
 
+		Date displayDate = objectEntry.getDisplayDate();
+
+		if (displayDate != null) {
+			values.put("displayDate", new Timestamp(displayDate.getTime()));
+		}
+
+		Date expirationDate = objectEntry.getExpirationDate();
+
+		if (expirationDate != null) {
+			values.put(
+				"expirationDate", new Timestamp(expirationDate.getTime()));
+		}
+
 		values.put(
 			"externalReferenceCode", objectEntry.getExternalReferenceCode());
 		values.put("id", objectEntry.getId());
@@ -1621,6 +1663,12 @@ public class ObjectEntryDisplayContextImpl
 
 		if (dateModified != null) {
 			values.put("modifiedDate", new Timestamp(dateModified.getTime()));
+		}
+
+		Date reviewDate = objectEntry.getReviewDate();
+
+		if (reviewDate != null) {
+			values.put("reviewDate", new Timestamp(reviewDate.getTime()));
 		}
 
 		Status status = objectEntry.getStatus();
@@ -1740,6 +1788,7 @@ public class ObjectEntryDisplayContextImpl
 
 	private final DDMExpressionFactory _ddmExpressionFactory;
 	private final DDMFormRenderer _ddmFormRenderer;
+	private long[] _groupIds;
 	private final ItemSelector _itemSelector;
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService;
 	private ObjectEntry _objectEntry;

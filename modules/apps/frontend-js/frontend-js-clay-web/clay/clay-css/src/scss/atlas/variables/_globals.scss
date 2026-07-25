@@ -347,16 +347,16 @@ $spacers: () !default;
 $spacers: map-deep-merge(
 	(
 		0: 0,
-		1: $spacer * 0.25,
-		2: $spacer * 0.5,
-		3: $spacer * 1,
-		4: $spacer * 1.5,
-		5: $spacer * 3,
-		6: $spacer * 4.5,
-		7: $spacer * 6,
-		8: $spacer * 7.5,
-		9: $spacer * 9,
-		10: $spacer * 10,
+		1: calc(#{$spacer} * 0.25),
+		2: calc(#{$spacer} * 0.5),
+		3: calc(#{$spacer} * 1),
+		4: calc(#{$spacer} * 1.5),
+		5: calc(#{$spacer} * 3),
+		6: calc(#{$spacer} * 4.5),
+		7: calc(#{$spacer} * 6),
+		8: calc(#{$spacer} * 7.5),
+		9: calc(#{$spacer} * 9),
+		10: calc(#{$spacer} * 10),
 	),
 	$spacers
 );
@@ -386,6 +386,7 @@ $border-width: 0.0625rem !default;
 $border-radius: 0.25rem !default; // 4px
 $border-radius-lg: 0.375rem !default; // 6px
 $border-radius-sm: 0.1875rem !default; // 3px
+$border-radius-xl: 1rem !default; // 16px
 
 $rounded-0-border-radius: 0px !default;
 $rounded-border-radius: $border-radius !default;
@@ -475,8 +476,10 @@ $container-form-lg: () !default;
 $container-form-lg: map-deep-merge(
 	(
 		breakpoint-up: lg,
+
 		padding-bottom: 3rem,
 		padding-top: 3rem,
+
 		padding-bottom-mobile: 1rem,
 		padding-top-mobile: 1rem,
 	),
@@ -499,6 +502,8 @@ $webkit-font-smoothing: antialiased !default;
 
 $font-import-url: null !default;
 
+$font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas,
+	'Liberation Mono', 'Courier New', monospace !default;
 $font-family-sans-serif:
 	system-ui,
 	-apple-system,
@@ -515,8 +520,6 @@ $font-family-sans-serif:
 	'Segoe UI Emoji',
 	'Segoe UI Symbol' !default;
 $font-family-serif: Georgia, 'Times New Roman', Times, serif !default;
-$font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas,
-	'Liberation Mono', 'Courier New', monospace !default;
 
 $font-family-base: $font-family-sans-serif !default;
 
@@ -698,15 +701,15 @@ $small-font-size: 80% !default;
 
 $text-muted: $gray-500 !default;
 
+$blockquote-font-size: calc(#{$font-size-base} * 1.25) !default;
 $blockquote-small-color: $gray-600 !default;
 $blockquote-small-font-size: $small-font-size !default;
-$blockquote-font-size: calc(#{$font-size-base} * 1.25) !default;
 
 $hr-border-color: rgba($black, 0.1) !default;
 $hr-border-width: $border-width !default;
 $hr-margin-y: $spacer !default;
 
-$mark-bg: #ffe399 !default;
+$mark-bg: $yellow-l3 !default;
 
 $dt-font-weight: $font-weight-bold !default;
 

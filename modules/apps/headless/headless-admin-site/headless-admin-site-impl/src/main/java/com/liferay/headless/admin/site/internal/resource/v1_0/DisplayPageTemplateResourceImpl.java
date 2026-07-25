@@ -6,6 +6,7 @@
 package com.liferay.headless.admin.site.internal.resource.v1_0;
 
 import com.liferay.client.extension.type.manager.CETManager;
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.fragment.processor.FragmentEntryProcessorRegistry;
 import com.liferay.headless.admin.site.dto.v1_0.ClassSubtypeReference;
@@ -17,12 +18,11 @@ import com.liferay.headless.admin.site.dto.v1_0.DisplayPageTemplateSEOSettings;
 import com.liferay.headless.admin.site.dto.v1_0.DisplayPageTemplateSettings;
 import com.liferay.headless.admin.site.dto.v1_0.PageSpecification;
 import com.liferay.headless.admin.site.dto.v1_0.SitemapSettings;
+import com.liferay.headless.admin.site.dto.v1_0.util.FileEntryUtil;
 import com.liferay.headless.admin.site.internal.dto.v1_0.util.DTOConverterContextUtil;
 import com.liferay.headless.admin.site.internal.dto.v1_0.util.SubtypeUtil;
 import com.liferay.headless.admin.site.internal.odata.entity.v1_0.DisplayPageTemplateEntityModel;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.DisplayPageTemplateFolderUtil;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.FileEntryUtil;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.GroupUtil;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.LayoutUtil;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.PageSpecificationUtil;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.ServiceContextUtil;
@@ -30,9 +30,11 @@ import com.liferay.headless.admin.site.internal.util.EnabledUtil;
 import com.liferay.headless.admin.site.internal.util.LogUtil;
 import com.liferay.headless.admin.site.resource.v1_0.DisplayPageTemplateResource;
 import com.liferay.headless.common.spi.service.context.ServiceContextBuilder;
+import com.liferay.headless.common.spi.util.GroupUtil;
 import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.admin.kernel.model.LayoutTypePortletConstants;
+import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateCollectionTypeConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateEntryTypeConstants;
@@ -66,9 +68,6 @@ import com.liferay.portal.vulcan.pagination.Pagination;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 import com.liferay.portal.vulcan.util.SearchUtil;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.tags.Tags;
-
 import jakarta.ws.rs.core.MultivaluedMap;
 
 import java.util.Collections;
@@ -77,6 +76,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -97,7 +97,6 @@ public class DisplayPageTemplateResourceImpl
 		<DisplayPageTemplate> {
 
 	@Override
-	@Tags({@Tag(description = "[BETA]", name = "DisplayPageTemplate")})
 	public void deleteSiteDisplayPageTemplate(
 			String siteExternalReferenceCode,
 			String displayPageTemplateExternalReferenceCode)
@@ -117,12 +116,24 @@ public class DisplayPageTemplateResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<LayoutPageTemplateEntry>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
+
+			@Override
+			public Function<LayoutPageTemplateEntry, Boolean>
+				getApplicableModelFunction() {
+
+				return layoutPageTemplateEntry ->
+					layoutPageTemplateEntry.getType() ==
+						LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE;
+			}
 
 			@Override
 			public String getKey() {
-				return DisplayPageTemplateResourceImpl.class.getName();
+				return LayoutPageTemplateEntry.class.getName() + "-" +
+					LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE;
 			}
 
 			@Override
@@ -131,23 +142,28 @@ public class DisplayPageTemplateResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return LayoutPageTemplateEntry.class.getName();
+			public Class<LayoutPageTemplateEntry> getModelClass() {
+				return LayoutPageTemplateEntry.class;
 			}
 
 			@Override
 			public List<String> getNestedFields() {
-				return List.of("pageSpecifications", "thumbnail");
+				return List.of("pageSpecifications", "thumbnailURLReference");
 			}
 
 			@Override
 			public String getPortletId() {
-				return LayoutAdminPortletKeys.GROUP_PAGES;
+				return LayoutPageTemplateAdminPortletKeys.LAYOUT_PAGE_TEMPLATES;
 			}
 
 			@Override
 			public Scope getScope() {
 				return Scope.SITE;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_DESIGN;
 			}
 
 			@Override
@@ -180,7 +196,9 @@ public class DisplayPageTemplateResourceImpl
 				LayoutPageTemplateCollectionTypeConstants.DISPLAY_PAGE,
 				layoutPageTemplateCollection.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template folder type does not match the " +
+					"display page type");
 		}
 
 		return Page.of(
@@ -223,7 +241,9 @@ public class DisplayPageTemplateResourceImpl
 				LayoutPageTemplateCollectionTypeConstants.DISPLAY_PAGE,
 				layoutPageTemplateCollection.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template folder type does not match the " +
+					"display page type");
 		}
 
 		return _addDisplayPageTemplate(
@@ -253,7 +273,9 @@ public class DisplayPageTemplateResourceImpl
 				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE,
 				layoutPageTemplateEntry.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template type does not match the display " +
+					"page type");
 		}
 
 		return (ContentPageSpecification)_pageSpecificationDTOConverter.toDTO(
@@ -291,7 +313,9 @@ public class DisplayPageTemplateResourceImpl
 				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE,
 				layoutPageTemplateEntry.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template type does not match the display " +
+					"page type");
 		}
 
 		return _displayPageTemplateDTOConverter.toDTO(
@@ -382,7 +406,9 @@ public class DisplayPageTemplateResourceImpl
 				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE,
 				layoutPageTemplateEntry.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template type does not match the display " +
+					"page type");
 		}
 
 		long layoutPageTemplateCollectionId =
@@ -404,7 +430,8 @@ public class DisplayPageTemplateResourceImpl
 		if ((contentTypeClassSubtypeReference == null) ||
 			Validator.isNull(contentTypeClassSubtypeReference.getClassName())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The content type reference and class name cannot be empty");
 		}
 
 		long classNameId = _getClassNameId(
@@ -423,9 +450,9 @@ public class DisplayPageTemplateResourceImpl
 		}
 
 		long previewFileEntryId = FileEntryUtil.getPreviewFileEntryId(
-			groupId, getResourceName(),
-			_getServiceContext(displayPageTemplate, groupId),
-			displayPageTemplate.getThumbnailURLReference());
+			groupId, LayoutAdminPortletKeys.GROUP_PAGES,
+			displayPageTemplate.getThumbnailURLReference(),
+			contextUser.getUserId());
 
 		if (previewFileEntryId !=
 				layoutPageTemplateEntry.getPreviewFileEntryId()) {
@@ -554,7 +581,8 @@ public class DisplayPageTemplateResourceImpl
 		if ((contentTypeClassSubtypeReference == null) ||
 			Validator.isNull(contentTypeClassSubtypeReference.getClassName())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The content type reference and class name cannot be empty");
 		}
 
 		Map<Locale, String> nameMap = Collections.singletonMap(
@@ -599,9 +627,9 @@ public class DisplayPageTemplateResourceImpl
 				displayPageTemplate.getName(),
 				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE,
 				FileEntryUtil.getPreviewFileEntryId(
-					groupId, getResourceName(),
-					_getServiceContext(displayPageTemplate, groupId),
-					displayPageTemplate.getThumbnailURLReference()),
+					groupId, LayoutAdminPortletKeys.GROUP_PAGES,
+					displayPageTemplate.getThumbnailURLReference(),
+					contextUser.getUserId()),
 				GetterUtil.getBoolean(displayPageTemplate.getMarkedAsDefault()),
 				0L, layout.getPlid(), 0L,
 				PageSpecificationUtil.getPublishedStatus(
@@ -650,7 +678,9 @@ public class DisplayPageTemplateResourceImpl
 
 		if (layoutPageTemplateCollection == null) {
 			if (!LazyReferencingThreadLocal.isEnabled()) {
-				throw new UnsupportedOperationException();
+				throw new IllegalArgumentException(
+					"The provided external reference code does not point to " +
+						"a display page template folder");
 			}
 
 			layoutPageTemplateCollection =
@@ -662,7 +692,9 @@ public class DisplayPageTemplateResourceImpl
 					LayoutPageTemplateCollectionTypeConstants.DISPLAY_PAGE,
 					layoutPageTemplateCollection.getType())) {
 
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"The display page template folder type does not match the " +
+					"display page type");
 		}
 
 		return layoutPageTemplateCollection.getLayoutPageTemplateCollectionId();

@@ -14,6 +14,10 @@ resource "aws_iam_policy" "provider_aws_iam_policy" {
 	name="${local.cluster_name}-provider-aws-iam"
 	policy=data.aws_iam_policy_document.provider_aws_iam_policy_document.json
 }
+resource "aws_iam_policy" "provider_aws_kms_policy" {
+	name="${local.cluster_name}-provider-aws-kms"
+	policy=data.aws_iam_policy_document.provider_aws_kms_policy_document.json
+}
 resource "aws_iam_policy" "provider_aws_opensearch_policy" {
 	name="${local.cluster_name}-provider-aws-opensearch"
 	policy=data.aws_iam_policy_document.provider_aws_opensearch_policy_document.json
@@ -41,6 +45,10 @@ resource "aws_iam_role" "provider_aws_ec2_role" {
 resource "aws_iam_role" "provider_aws_iam_role" {
 	assume_role_policy=data.aws_iam_policy_document.provider_aws_iam_assume_role_policy_document.json
 	name="${local.cluster_name}-provider-aws-iam-role"
+}
+resource "aws_iam_role" "provider_aws_kms_role" {
+	assume_role_policy=data.aws_iam_policy_document.provider_aws_kms_assume_role_policy_document.json
+	name="${local.cluster_name}-provider-aws-kms-role"
 }
 resource "aws_iam_role" "provider_aws_opensearch_role" {
 	assume_role_policy=data.aws_iam_policy_document.provider_aws_opensearch_assume_role_policy_document.json
@@ -70,6 +78,10 @@ resource "aws_iam_role_policy_attachment" "provider_aws_iam_attachment" {
 	policy_arn=aws_iam_policy.provider_aws_iam_policy.arn
 	role=aws_iam_role.provider_aws_iam_role.name
 }
+resource "aws_iam_role_policy_attachment" "provider_aws_kms_attachment" {
+	policy_arn=aws_iam_policy.provider_aws_kms_policy.arn
+	role=aws_iam_role.provider_aws_kms_role.name
+}
 resource "aws_iam_role_policy_attachment" "provider_aws_opensearch_attachment" {
 	policy_arn=aws_iam_policy.provider_aws_opensearch_policy.arn
 	role=aws_iam_role.provider_aws_opensearch_role.name
@@ -81,10 +93,6 @@ resource "aws_iam_role_policy_attachment" "provider_aws_rds_attachment" {
 resource "aws_iam_role_policy_attachment" "provider_aws_s3_attachment" {
 	policy_arn=aws_iam_policy.provider_aws_s3_policy.arn
 	role=aws_iam_role.provider_aws_s3_role.name
-}
-resource "aws_iam_service_linked_role" "opensearch_linked_role" {
-	aws_service_name="opensearchservice.amazonaws.com"
-	count=local.should_create_opensearch_linked_role ? 1 : 0
 }
 resource "kubernetes_manifest" "function_auto_ready" {
 	manifest={
@@ -111,6 +119,9 @@ resource "kubernetes_manifest" "function_auto_ready_runtime_config" {
 		}
 		spec={
 			deploymentTemplate={
+				metadata={
+					annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+				}
 				spec={
 					selector={
 						matchLabels={
@@ -118,6 +129,9 @@ resource "kubernetes_manifest" "function_auto_ready_runtime_config" {
 						}
 					}
 					template={
+						metadata={
+							annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+						}
 						spec={
 							containers=[
 								{
@@ -131,8 +145,10 @@ resource "kubernetes_manifest" "function_auto_ready_runtime_config" {
 											memory="128Mi"
 										}
 									}
+									securityContext=local.default_crossplane_container_security_context
 								},
-							]
+							],
+							securityContext=local.default_crossplane_pod_security_context
 						}
 					}
 				}
@@ -166,6 +182,9 @@ resource "kubernetes_manifest" "function_go_templating_runtime_config" {
 		}
 		spec={
 			deploymentTemplate={
+				metadata={
+					annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+				}
 				spec={
 					selector={
 						matchLabels={
@@ -173,6 +192,9 @@ resource "kubernetes_manifest" "function_go_templating_runtime_config" {
 						}
 					}
 					template={
+						metadata={
+							annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+						}
 						spec={
 							containers=[
 								{
@@ -186,8 +208,10 @@ resource "kubernetes_manifest" "function_go_templating_runtime_config" {
 											memory="128Mi"
 										}
 									}
+									securityContext=local.default_crossplane_container_security_context
 								},
-							]
+							],
+							securityContext=local.default_crossplane_pod_security_context
 						}
 					}
 				}
@@ -221,6 +245,9 @@ resource "kubernetes_manifest" "function_tag_manager_runtime_config" {
 		}
 		spec={
 			deploymentTemplate={
+				metadata={
+					annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+				}
 				spec={
 					selector={
 						matchLabels={
@@ -228,6 +255,9 @@ resource "kubernetes_manifest" "function_tag_manager_runtime_config" {
 						}
 					}
 					template={
+						metadata={
+							annotations=local.deploymentruntimeconfig_opentelemetry_annotations
+						}
 						spec={
 							containers=[
 								{
@@ -241,8 +271,10 @@ resource "kubernetes_manifest" "function_tag_manager_runtime_config" {
 											memory="128Mi"
 										}
 									}
+									securityContext=local.default_crossplane_container_security_context
 								},
-							]
+							],
+							securityContext=local.default_crossplane_pod_security_context
 						}
 					}
 				}

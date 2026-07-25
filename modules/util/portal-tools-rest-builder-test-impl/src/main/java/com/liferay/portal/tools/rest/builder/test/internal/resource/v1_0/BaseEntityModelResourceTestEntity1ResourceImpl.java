@@ -5,6 +5,7 @@
 
 package com.liferay.portal.tools.rest.builder.test.internal.resource.v1_0;
 
+import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.petra.function.UnsafeBiConsumer;
 import com.liferay.petra.function.UnsafeConsumer;
 import com.liferay.petra.function.UnsafeFunction;
@@ -71,7 +72,7 @@ public abstract class BaseEntityModelResourceTestEntity1ResourceImpl
 	/**
 	 * Invoke this method with the command line:
 	 *
-	 * curl -X 'GET' 'http://localhost:8080/o/test/v1.0/entity-model-resource-test-entities1'  -u 'test@liferay.com:test'
+	 * curl -X 'GET' 'http://localhost:8080/o/portal-tools-rest-builder-test/v1.0/entity-model-resource-test-entities1'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
 		description = "Retrieve all EntityModelResourceTestEntity1 items."
@@ -170,6 +171,15 @@ public abstract class BaseEntityModelResourceTestEntity1ResourceImpl
 			@Override
 			public Locale getPreferredLocale() {
 				return LocaleUtil.fromLanguageId(languageId);
+			}
+
+			@Override
+			public boolean isAcceptAllLanguages() {
+				if (ExportImportThreadLocal.isExportInProcess()) {
+					return true;
+				}
+
+				return AcceptLanguage.super.isAcceptAllLanguages();
 			}
 
 		};
@@ -284,7 +294,7 @@ public abstract class BaseEntityModelResourceTestEntity1ResourceImpl
 	}
 
 	protected String getApplicationPath() {
-		return "test";
+		return "portal-tools-rest-builder-test";
 	}
 
 	public void setVulcanBatchEngineExportTaskResource(
@@ -754,3 +764,4 @@ public abstract class BaseEntityModelResourceTestEntity1ResourceImpl
 			BaseEntityModelResourceTestEntity1ResourceImpl.class);
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1060220654

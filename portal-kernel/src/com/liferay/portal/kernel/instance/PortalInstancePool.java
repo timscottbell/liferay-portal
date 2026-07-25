@@ -5,11 +5,14 @@
 
 package com.liferay.portal.kernel.instance;
 
-import com.liferay.portal.kernel.dao.jdbc.DataAccess;
+import com.liferay.petra.function.UnsafeFunction;
+import com.liferay.portal.kernel.dao.jdbc.CurrentConnection;
+import com.liferay.portal.kernel.dao.jdbc.CurrentConnectionUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.InfrastructureUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.PropsUtil;
 
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.sql.DataSource;
 
 /**
  * @author Tina Tian
@@ -161,16 +166,17 @@ public class PortalInstancePool {
 		_portalInstances.remove(companyId);
 	}
 
-	private static long _getCompanyIdBySQL(String webId) throws SQLException {
-		try (Connection connection = DataAccess.getConnection();
-			PreparedStatement preparedStatement = connection.prepareStatement(
+	private static long _getCompanyIdBySQL(Connection connection, String webId)
+		throws SQLException {
+
+		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select companyId from Company where webId = ?")) {
 
 			preparedStatement.setString(1, webId);
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				if (resultSet.next()) {
-					return resultSet.getLong(1);
+					return resultSet.getLong("companyId");
 				}
 			}
 		}
@@ -178,10 +184,12 @@ public class PortalInstancePool {
 		throw new IllegalArgumentException("Invalid web ID" + webId);
 	}
 
+	private static long _getCompanyIdBySQL(String webId) throws SQLException {
+		return _read(connection -> _getCompanyIdBySQL(connection, webId));
+	}
+
 	private static long[] _getCompanyIdsBySQL() throws SQLException {
-		try (Connection connection = DataAccess.getConnection()) {
-			return _getCompanyIdsBySQL(connection);
-		}
+		return _read(connection -> _getCompanyIdsBySQL(connection));
 	}
 
 	private static long[] _getCompanyIdsBySQL(Connection connection)
@@ -197,6 +205,7 @@ public class PortalInstancePool {
 
 		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select companyId from Company");
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			while (resultSet.next()) {
@@ -212,9 +221,7 @@ public class PortalInstancePool {
 	}
 
 	private static long _getDefaultCompanyIdBySQL() throws SQLException {
-		try (Connection connection = DataAccess.getConnection()) {
-			return _getDefaultCompanyIdBySQL(connection);
-		}
+		return _read(connection -> _getDefaultCompanyIdBySQL(connection));
 	}
 
 	private static long _getDefaultCompanyIdBySQL(Connection connection)
@@ -228,7 +235,7 @@ public class PortalInstancePool {
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				if (resultSet.next()) {
-					return resultSet.getLong(1);
+					return resultSet.getLong("companyId");
 				}
 			}
 		}
@@ -236,16 +243,17 @@ public class PortalInstancePool {
 		return 0;
 	}
 
-	private static String _getWebIdBySQL(long companyId) throws SQLException {
-		try (Connection connection = DataAccess.getConnection();
-			PreparedStatement preparedStatement = connection.prepareStatement(
+	private static String _getWebIdBySQL(Connection connection, long companyId)
+		throws SQLException {
+
+		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select webId from Company where companyId = ?")) {
 
 			preparedStatement.setLong(1, companyId);
 
 			try (ResultSet resultSet = preparedStatement.executeQuery()) {
 				if (resultSet.next()) {
-					return resultSet.getString(1);
+					return resultSet.getString("webId");
 				}
 			}
 		}
@@ -253,12 +261,22 @@ public class PortalInstancePool {
 		throw new IllegalArgumentException("Invalid company ID" + companyId);
 	}
 
+	private static String _getWebIdBySQL(long companyId) throws SQLException {
+		return _read(connection -> _getWebIdBySQL(connection, companyId));
+	}
+
 	private static String[] _getWebIdsBySQL() throws SQLException {
+		return _read(connection -> _getWebIdsBySQL(connection));
+	}
+
+	private static String[] _getWebIdsBySQL(Connection connection)
+		throws SQLException {
+
 		List<String> webIds = new ArrayList<>();
 
-		try (Connection connection = DataAccess.getConnection();
-			PreparedStatement preparedStatement = connection.prepareStatement(
+		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select webId from Company");
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			while (resultSet.next()) {
@@ -269,6 +287,35 @@ public class PortalInstancePool {
 		}
 
 		return webIds.toArray(new String[0]);
+	}
+
+	private static <T> T _read(
+			UnsafeFunction<Connection, T, SQLException> unsafeFunction)
+		throws SQLException {
+
+		DataSource dataSource = InfrastructureUtil.getDataSource();
+
+		// Reuse the current transaction's connection when one is bound, so a
+		// read issued mid-transaction sees that transaction's own uncommitted
+		// writes instead of opening a second connection that blocks on them on
+		// a database without snapshot reads. Fall back to a fresh connection,
+		// which must be closed, when there is no bound connection, which also
+		// covers reads that run before the current connection helper is wired
+
+		CurrentConnection currentConnection =
+			CurrentConnectionUtil.getCurrentConnection();
+
+		if (currentConnection != null) {
+			Connection connection = currentConnection.getConnection(dataSource);
+
+			if (connection != null) {
+				return unsafeFunction.apply(connection);
+			}
+		}
+
+		try (Connection connection = dataSource.getConnection()) {
+			return unsafeFunction.apply(connection);
+		}
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(

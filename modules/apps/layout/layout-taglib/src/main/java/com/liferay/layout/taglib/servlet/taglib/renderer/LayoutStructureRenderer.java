@@ -61,10 +61,10 @@ import com.liferay.layout.util.structure.LayoutStructureItem;
 import com.liferay.layout.util.structure.LayoutStructureItemUtil;
 import com.liferay.layout.util.structure.RowStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.collection.EmptyCollectionOptions;
+import com.liferay.petra.io.unsync.UnsyncStringWriter;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.petra.string.StringUtil;
-import com.liferay.portal.kernel.io.unsync.UnsyncStringWriter;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutConstants;
@@ -1141,21 +1141,32 @@ public class LayoutStructureRenderer {
 							getButtonLabelJSONObject()
 					).put(
 						"renderURL",
-						HttpComponentsUtil.addParameters(
-							StringBundler.concat(
-								_themeDisplay.getPortalURL(),
-								_themeDisplay.getPathMain(), "/portal",
-								"/render_form_relationship_layout_structure_",
-								"item"),
-							"formRelationshipLayoutStructureItemId",
-							formRelationshipStyledLayoutStructureItem.
-								getItemId(),
-							"p_l_id", _themeDisplay.getPlid(),
-							"parentItemExternalReferenceCode",
-							parentItemExternalReferenceCode,
-							"segmentsExperienceId",
-							SegmentsExperienceUtil.getSegmentsExperienceId(
-								_httpServletRequest))
+						() -> {
+							long groupId = _themeDisplay.getScopeGroupId();
+
+							if (layoutDisplayPageObjectProvider != null) {
+								groupId =
+									layoutDisplayPageObjectProvider.
+										getGroupId();
+							}
+
+							return HttpComponentsUtil.addParameters(
+								StringBundler.concat(
+									_themeDisplay.getPortalURL(),
+									_themeDisplay.getPathMain(), "/portal",
+									"/render_form_relationship_layout_",
+									"structure_item"),
+								"doAsGroupId", groupId, "p_l_id",
+								_themeDisplay.getPlid(),
+								"formRelationshipLayoutStructureItemId",
+								formRelationshipStyledLayoutStructureItem.
+									getItemId(),
+								"parentItemExternalReferenceCode",
+								parentItemExternalReferenceCode,
+								"segmentsExperienceId",
+								SegmentsExperienceUtil.getSegmentsExperienceId(
+									_httpServletRequest));
+						}
 					).build());
 			}
 		}
@@ -1327,9 +1338,17 @@ public class LayoutStructureRenderer {
 
 		boolean readOnly = false;
 
-		if ((layoutDisplayPageObjectProvider != null) &&
-			!_hasPermission(
-				ActionKeys.UPDATE, layoutDisplayPageObjectProvider)) {
+		String layoutMode = ParamUtil.getString(
+			PortalUtil.getOriginalServletRequest(_httpServletRequest),
+			"p_l_mode", Constants.VIEW);
+
+		if (Objects.equals(layoutMode, Constants.READ) ||
+			((layoutDisplayPageObjectProvider != null) &&
+			 Objects.equals(
+				 layoutDisplayPageObjectProvider.getClassName(),
+				 formStyledLayoutStructureItem.getClassName()) &&
+			 !_hasPermission(
+				 ActionKeys.UPDATE, layoutDisplayPageObjectProvider))) {
 
 			readOnly = true;
 		}
@@ -1337,8 +1356,22 @@ public class LayoutStructureRenderer {
 		JspWriter jspWriter = _pageContext.getOut();
 
 		jspWriter.write("<form action=\"");
-		jspWriter.write(
-			_renderLayoutStructureDisplayContext.getEditInfoItemActionURL());
+
+		String editInfoItemActionURL =
+			_renderLayoutStructureDisplayContext.getEditInfoItemActionURL();
+
+		editInfoItemActionURL = HttpComponentsUtil.addParameter(
+			editInfoItemActionURL, "formItemId",
+			formStyledLayoutStructureItem.getItemId());
+		editInfoItemActionURL = HttpComponentsUtil.addParameter(
+			editInfoItemActionURL, "p_l_id", _themeDisplay.getPlid());
+		editInfoItemActionURL = HttpComponentsUtil.addParameter(
+			editInfoItemActionURL, "segmentsExperienceId",
+			SegmentsExperienceUtil.getSegmentsExperienceId(
+				_httpServletRequest));
+
+		jspWriter.write(editInfoItemActionURL);
+
 		jspWriter.write("\" class=\"");
 		jspWriter.write(formStyledLayoutStructureItem.getUniqueCssClass());
 		jspWriter.write(StringPool.SPACE);
@@ -1501,9 +1534,8 @@ public class LayoutStructureRenderer {
 
 			jspWriter.write("<div class=\"alert alert-danger\">");
 			jspWriter.write(
-				HtmlUtil.escape(
-					_renderLayoutStructureDisplayContext.getErrorMessage(
-						formStyledLayoutStructureItem, infoForm)));
+				_renderLayoutStructureDisplayContext.getErrorMessage(
+					formStyledLayoutStructureItem, infoForm));
 			jspWriter.write("</div>");
 
 			SessionErrors.remove(

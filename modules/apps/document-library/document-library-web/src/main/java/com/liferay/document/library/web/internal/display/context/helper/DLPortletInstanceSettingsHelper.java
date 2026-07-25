@@ -128,13 +128,12 @@ public class DLPortletInstanceSettingsHelper {
 			return null;
 		}
 
-		ThemeDisplay themeDisplay = _dlRequestHelper.getThemeDisplay();
+		String selectedGroupExternalReferenceCode =
+			dlPortletInstanceSettings.getSelectedGroupExternalReferenceCode();
 
-		Group selectedGroup =
-			GroupLocalServiceUtil.getGroupByExternalReferenceCode(
-				dlPortletInstanceSettings.
-					getSelectedGroupExternalReferenceCode(),
-				themeDisplay.getCompanyId());
+		Group selectedGroup = _getSelectedGroup(
+			dlPortletInstanceSettings, selectedGroupExternalReferenceCode,
+			_dlRequestHelper.getThemeDisplay());
 
 		return DLAppLocalServiceUtil.getFolderByExternalReferenceCode(
 			rootFolderExternalReferenceCode, selectedGroup.getGroupId());
@@ -164,10 +163,11 @@ public class DLPortletInstanceSettingsHelper {
 		try {
 			ThemeDisplay themeDisplay = _dlRequestHelper.getThemeDisplay();
 
-			Group selectedGroup =
+			Group selectedGroup = _getSelectedGroup(
 				GroupLocalServiceUtil.getGroupByExternalReferenceCode(
 					selectedGroupExternalReferenceCode,
-					themeDisplay.getCompanyId());
+					themeDisplay.getCompanyId()),
+				themeDisplay);
 
 			String selectedRepositoryExternalReferenceCode =
 				dlPortletInstanceSettings.
@@ -243,6 +243,34 @@ public class DLPortletInstanceSettingsHelper {
 		allEntryColumns += ",modified-date,create-date";
 
 		return StringUtil.split(allEntryColumns);
+	}
+
+	private Group _getSelectedGroup(
+			DLPortletInstanceSettings dlPortletInstanceSettings,
+			String selectedGroupExternalReferenceCode,
+			ThemeDisplay themeDisplay)
+		throws PortalException {
+
+		if (Validator.isNull(selectedGroupExternalReferenceCode)) {
+			return themeDisplay.getScopeGroup();
+		}
+
+		return _getSelectedGroup(
+			GroupLocalServiceUtil.getGroupByExternalReferenceCode(
+				dlPortletInstanceSettings.
+					getSelectedGroupExternalReferenceCode(),
+				themeDisplay.getCompanyId()),
+			themeDisplay);
+	}
+
+	private Group _getSelectedGroup(Group group, ThemeDisplay themeDisplay) {
+		Group scopeGroup = themeDisplay.getScopeGroup();
+
+		if (group.isStagingGroup() && !scopeGroup.isStagingGroup()) {
+			return group.getLiveGroup();
+		}
+
+		return group;
 	}
 
 	private void _populateDisplayViews() {

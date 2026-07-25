@@ -44,14 +44,19 @@ import com.liferay.layout.util.structure.FragmentStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.LayoutStructure;
 import com.liferay.layout.util.structure.LayoutStructureItem;
 import com.liferay.layout.util.structure.RowStyledLayoutStructureItem;
+import com.liferay.object.constants.ObjectDefinitionSettingConstants;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
 import com.liferay.object.constants.ObjectFolderConstants;
 import com.liferay.object.model.ObjectDefinition;
+import com.liferay.object.model.ObjectDefinitionSetting;
 import com.liferay.object.model.ObjectEntryFolder;
 import com.liferay.object.service.ObjectDefinitionLocalServiceUtil;
 import com.liferay.object.service.ObjectDefinitionServiceUtil;
+import com.liferay.object.service.ObjectDefinitionSettingLocalServiceUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.petra.string.StringUtil;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
@@ -73,11 +78,13 @@ import com.liferay.portal.kernel.service.ServiceContextFactory;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Constants;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.ScopeUtil;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
@@ -468,6 +475,45 @@ public class ActionUtil {
 		}
 	}
 
+	public static List<Long> getAcceptedDepotEntryGroupIds(
+		List<Long> depotEntryGroupIds, long objectDefinitionId) {
+
+		ObjectDefinitionSetting acceptAllGroupsSetting =
+			ObjectDefinitionSettingLocalServiceUtil.
+				fetchObjectDefinitionSetting(
+					objectDefinitionId,
+					ObjectDefinitionSettingConstants.NAME_ACCEPT_ALL_GROUPS);
+
+		if ((acceptAllGroupsSetting != null) &&
+			GetterUtil.getBoolean(acceptAllGroupsSetting.getValue())) {
+
+			return depotEntryGroupIds;
+		}
+
+		ObjectDefinitionSetting acceptedGroupIdsSetting =
+			ObjectDefinitionSettingLocalServiceUtil.
+				fetchObjectDefinitionSetting(
+					objectDefinitionId,
+					ObjectDefinitionSettingConstants.NAME_ACCEPTED_GROUP_IDS);
+
+		if ((acceptedGroupIdsSetting == null) ||
+			Validator.isNull(acceptedGroupIdsSetting.getValue())) {
+
+			return depotEntryGroupIds;
+		}
+
+		List<Long> acceptedGroupIds = new ArrayList<>();
+
+		for (String groupId :
+				StringUtil.split(acceptedGroupIdsSetting.getValue())) {
+
+			acceptedGroupIds.add(GetterUtil.getLong(groupId));
+		}
+
+		return new ArrayList<>(
+			SetUtil.intersect(acceptedGroupIds, depotEntryGroupIds));
+	}
+
 	public static List<DropdownItem> getAllSectionCreationMenuDropdownItems(
 		HttpServletRequest httpServletRequest) {
 
@@ -515,15 +561,6 @@ public class ActionUtil {
 		return StringBundler.concat(
 			themeDisplay.getPathFriendlyURLPublic(),
 			GroupConstants.CMS_FRIENDLY_URL, "/add-space-members");
-	}
-
-	public static String getBaseBulkActionTaskReportURL(
-		String className, ThemeDisplay themeDisplay) {
-
-		return StringBundler.concat(
-			themeDisplay.getPathFriendlyURLPublic(),
-			GroupConstants.CMS_FRIENDLY_URL, "/e/bulk-action-task/",
-			PortalUtil.getClassNameId(className));
 	}
 
 	public static String getBaseSpaceSettingsURL(ThemeDisplay themeDisplay) {
@@ -651,15 +688,25 @@ public class ActionUtil {
 				objectEntryFolder.getExternalReferenceCode();
 		}
 
-		List<DropdownItem> dropdownItems = new ArrayList<>(
-			List.of(
-				getCreateFolderDropdownItem(
-					httpServletRequest, objectEntryFolderExternalReferenceCode),
-				getCMSBasicWebContentDropdownItem(
-					httpServletRequest, objectEntryFolderExternalReferenceCode),
-				getCMSBlogDropdownItem(
-					httpServletRequest,
-					objectEntryFolderExternalReferenceCode)));
+		List<DropdownItem> dropdownItems = new ArrayList<>();
+
+		dropdownItems.add(
+			getCreateFolderDropdownItem(
+				httpServletRequest, objectEntryFolderExternalReferenceCode));
+
+		if (FeatureFlagManagerUtil.isEnabled(
+				PortalUtil.getCompanyId(httpServletRequest), "LPD-62272")) {
+
+			dropdownItems.add(
+				getGenerateContentWithAIDropdownItem(httpServletRequest));
+		}
+
+		dropdownItems.add(
+			getCMSBasicWebContentDropdownItem(
+				httpServletRequest, objectEntryFolderExternalReferenceCode));
+		dropdownItems.add(
+			getCMSBlogDropdownItem(
+				httpServletRequest, objectEntryFolderExternalReferenceCode));
 
 		List<DropdownItem> contentsCustomDropdownItems =
 			getContentsCustomDropdownItems(
@@ -870,6 +917,29 @@ public class ActionUtil {
 					httpServletRequest,
 					objectEntryFolderExternalReferenceCode)));
 
+		if (FeatureFlagManagerUtil.isEnabled(
+				PortalUtil.getCompanyId(httpServletRequest), "LPD-62272")) {
+
+			long groupId = InfoItemUtil.getGroupId(httpServletRequest);
+
+			dropdownItems.add(
+				getGenerateImageWithAIDropdownItem(
+					groupId,
+					LanguageUtil.get(
+						httpServletRequest, "generate-single-image-with-ai"),
+					LanguageUtil.get(
+						httpServletRequest, "generate-single-image"),
+					objectEntryFolderExternalReferenceCode));
+			dropdownItems.add(
+				getGenerateImageWithAIDropdownItem(
+					groupId,
+					LanguageUtil.get(
+						httpServletRequest, "generate-multiple-images-with-ai"),
+					LanguageUtil.get(
+						httpServletRequest, "generate-multiple-images"),
+					objectEntryFolderExternalReferenceCode));
+		}
+
 		List<DropdownItem> filesCustomDropdownItems =
 			getFilesCustomDropdownItems(
 				httpServletRequest, objectEntryFolderExternalReferenceCode);
@@ -882,6 +952,73 @@ public class ActionUtil {
 		dropdownItems.addAll(filesCustomDropdownItems);
 
 		return dropdownItems;
+	}
+
+	public static DropdownItem getGenerateContentWithAIDropdownItem(
+		HttpServletRequest httpServletRequest) {
+
+		return DropdownItemBuilder.putData(
+			"action", "generateContentWithAI"
+		).putData(
+			"contentTypes",
+			() -> {
+				ThemeDisplay themeDisplay =
+					(ThemeDisplay)httpServletRequest.getAttribute(
+						WebKeys.THEME_DISPLAY);
+
+				try {
+					return String.valueOf(
+						JSONUtil.toJSONArray(
+							ObjectDefinitionServiceUtil.getCMSObjectDefinitions(
+								themeDisplay.getCompanyId(),
+								new String[] {
+									ObjectFolderConstants.
+										EXTERNAL_REFERENCE_CODE_CONTENT_STRUCTURES
+								}),
+							objectDefinition -> JSONUtil.put(
+								"externalReferenceCode",
+								objectDefinition.getExternalReferenceCode()
+							).put(
+								"label",
+								objectDefinition.getLabel(
+									themeDisplay.getLocale())
+							).put(
+								"name", objectDefinition.getName()
+							)));
+				}
+				catch (Exception exception) {
+					if (_log.isDebugEnabled()) {
+						_log.debug(exception);
+					}
+
+					return String.valueOf(JSONFactoryUtil.createJSONArray());
+				}
+			}
+		).setIcon(
+			"stars"
+		).setLabel(
+			LanguageUtil.get(httpServletRequest, "generate-content-with-ai")
+		).build();
+	}
+
+	public static DropdownItem getGenerateImageWithAIDropdownItem(
+		long groupId, String label, String message,
+		String objectEntryFolderExternalReferenceCode) {
+
+		return DropdownItemBuilder.putData(
+			"action", "generateImageWithAI"
+		).putData(
+			"groupId", String.valueOf(groupId)
+		).putData(
+			"message", message
+		).putData(
+			"objectEntryFolderExternalReferenceCode",
+			objectEntryFolderExternalReferenceCode
+		).setIcon(
+			"stars"
+		).setLabel(
+			label
+		).build();
 	}
 
 	public static String getRecycleBinURL(ThemeDisplay themeDisplay) {
@@ -1178,7 +1315,7 @@ public class ActionUtil {
 			0, contributedRendererKey, fragmentEntry.getType(), serviceContext);
 	}
 
-	private static LayoutStructure _addInputFragmentEntryLink(
+	private static void _addInputFragmentEntryLink(
 			List<FragmentEntryLink> addedFragmentEntryLinks,
 			JSONObject configurationJSONObject, FormManager formManager,
 			String fragmentEntryKey, InfoField<?> infoField, Layout layout,
@@ -1189,7 +1326,7 @@ public class ActionUtil {
 		throws Exception {
 
 		if (infoField == null) {
-			return layoutStructure;
+			return;
 		}
 
 		FragmentStyledLayoutStructureItem fragmentStyledLayoutStructureItem =
@@ -1199,7 +1336,7 @@ public class ActionUtil {
 				serviceContext);
 
 		if (fragmentStyledLayoutStructureItem == null) {
-			return layoutStructure;
+			return;
 		}
 
 		fragmentStyledLayoutStructureItem.updateItemConfig(
@@ -1230,8 +1367,6 @@ public class ActionUtil {
 		if (fragmentEntryLink != null) {
 			addedFragmentEntryLinks.add(fragmentEntryLink);
 		}
-
-		return layoutStructure;
 	}
 
 	private static LayoutStructure _addInputFragmentEntryLinks(

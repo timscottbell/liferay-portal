@@ -117,11 +117,7 @@ public class SegmentsExperiencePersistenceTest {
 
 	@Test
 	public void testUpdateExisting() throws Exception {
-		long pk = RandomTestUtil.nextLong();
-
-		SegmentsExperience newSegmentsExperience = _persistence.create(pk);
-
-		newSegmentsExperience.setMvccVersion(RandomTestUtil.nextLong());
+		SegmentsExperience newSegmentsExperience = addSegmentsExperience();
 
 		newSegmentsExperience.setCtCollectionId(RandomTestUtil.nextLong());
 
@@ -163,7 +159,9 @@ public class SegmentsExperiencePersistenceTest {
 
 		newSegmentsExperience.setLastPublishDate(RandomTestUtil.nextDate());
 
-		_segmentsExperiences.add(_persistence.update(newSegmentsExperience));
+		newSegmentsExperience = _persistence.update(newSegmentsExperience);
+
+		_segmentsExperiences.add(newSegmentsExperience);
 
 		SegmentsExperience existingSegmentsExperience =
 			_persistence.findByPrimaryKey(
@@ -295,6 +293,21 @@ public class SegmentsExperiencePersistenceTest {
 			RandomTestUtil.nextLong(), RandomTestUtil.nextLong());
 
 		_persistence.countByG_P(0L, 0L);
+	}
+
+	@Test
+	public void testCountByG_A() throws Exception {
+		_persistence.countByG_A(
+			RandomTestUtil.nextLong(), RandomTestUtil.randomBoolean());
+
+		_persistence.countByG_A(0L, RandomTestUtil.randomBoolean());
+	}
+
+	@Test
+	public void testCountByG_AArrayable() throws Exception {
+		_persistence.countByG_A(
+			new long[] {RandomTestUtil.nextLong(), 0L},
+			RandomTestUtil.randomBoolean());
 	}
 
 	@Test
@@ -801,8 +814,6 @@ public class SegmentsExperiencePersistenceTest {
 
 		SegmentsExperience segmentsExperience = _persistence.create(pk);
 
-		segmentsExperience.setMvccVersion(RandomTestUtil.nextLong());
-
 		segmentsExperience.setCtCollectionId(RandomTestUtil.nextLong());
 
 		segmentsExperience.setUuid(RandomTestUtil.randomString());
@@ -853,3 +864,4 @@ public class SegmentsExperiencePersistenceTest {
 	private ClassLoader _dynamicQueryClassLoader;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:543106300

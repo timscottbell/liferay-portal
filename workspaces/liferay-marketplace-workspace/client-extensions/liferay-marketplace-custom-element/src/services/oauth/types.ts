@@ -53,9 +53,9 @@ export type LicenseKey = {
 export type LicenseTypePayload = {
 	licenseEntry: {
 		description: string;
-		hostName: string;
-		ipAddresses: string;
-		macAddresses: string;
+		hostName: string | undefined;
+		ipAddresses: string | undefined;
+		macAddresses: string | undefined;
 		orderId: string;
 		productId?: string;
 		productPurchaseKey: string;
@@ -122,37 +122,6 @@ export type Properties2 = {
 	licenses: string;
 	sizing: string;
 	version: string;
-};
-
-export type KoroneikiChildAccounts = {
-	assignedTeams: null;
-	code: string;
-	contactEmailAddress: string;
-	contacts: null;
-	customerContacts: null;
-	dataRegion: string;
-	dateCreated: string;
-	dateModified: string;
-	description: string;
-	entitlements: Entitlement[];
-	externalLinks: ExternalLink[];
-	faxNumber: string;
-	internal: boolean;
-	key: string;
-	language: string;
-	logoId: number;
-	name: string;
-	parentAccountKey: string;
-	phoneNumber: string;
-	postalAddresses: PostalAddress[];
-	productPurchases: null;
-	profileEmailAddress: string;
-	properties: AccountProperties;
-	region: string;
-	status: string;
-	tier: string;
-	website: string;
-	workerContacts: null;
 };
 
 export type Entitlement = {

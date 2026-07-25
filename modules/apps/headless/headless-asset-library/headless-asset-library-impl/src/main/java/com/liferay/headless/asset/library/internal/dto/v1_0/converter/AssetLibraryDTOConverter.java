@@ -16,6 +16,7 @@ import com.liferay.headless.asset.library.dto.v1_0.MimeTypeLimit;
 import com.liferay.headless.asset.library.dto.v1_0.Settings;
 import com.liferay.headless.asset.library.internal.resource.v1_0.BaseAssetLibraryResourceImpl;
 import com.liferay.headless.asset.library.internal.util.AssetLibraryUtil;
+import com.liferay.headless.asset.library.internal.util.CreatorUtil;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.service.CompanyLocalService;
@@ -25,6 +26,9 @@ import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PrefsPropsUtil;
+import com.liferay.portal.kernel.util.PropsKeys;
+import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.vulcan.dto.converter.DTOConverter;
@@ -93,6 +97,10 @@ public class AssetLibraryDTOConverter
 							depotEntryGroupRel -> _toConnectedSite(
 								depotEntryGroupRel, dtoConverterContext),
 							ConnectedSite.class)));
+				setCreator(
+					() -> CreatorUtil.toCreator(
+						_portal,
+						_userLocalService.fetchUser(group.getCreatorUserId())));
 				setCreatorUserId(group::getCreatorUserId);
 				setDateCreated(depotEntry::getCreateDate);
 				setDateModified(
@@ -107,6 +115,7 @@ public class AssetLibraryDTOConverter
 						dtoConverterContext.isAcceptAllLanguages(),
 						group.getDescriptionMap()));
 				setExternalReferenceCode(group::getExternalReferenceCode);
+				setFriendlyURL(group::getFriendlyURL);
 				setId(depotEntry::getDepotEntryId);
 				setName(() -> group.getName(dtoConverterContext.getLocale()));
 				setName_i18n(
@@ -218,8 +227,20 @@ public class AssetLibraryDTOConverter
 					() -> GetterUtil.getBoolean(
 						unicodeProperties.get("trashEnabled"), true));
 				setTrashEntriesMaxAge(
-					() -> GetterUtil.getInteger(
-						unicodeProperties.getProperty("trashEntriesMaxAge")));
+					() -> {
+						int trashEntriesMaxAge = GetterUtil.getInteger(
+							unicodeProperties.getProperty(
+								"trashEntriesMaxAge"));
+
+						if (trashEntriesMaxAge > 0) {
+							return trashEntriesMaxAge;
+						}
+
+						return PrefsPropsUtil.getInteger(
+							group.getCompanyId(),
+							PropsKeys.TRASH_ENTRIES_MAX_AGE,
+							PropsValues.TRASH_ENTRIES_MAX_AGE);
+					});
 				setUseCustomLanguages(
 					() -> !GetterUtil.getBoolean(
 						unicodeProperties.get("inheritLocales")));

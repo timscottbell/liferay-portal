@@ -7,30 +7,41 @@ import ClayButton from '@clayui/button';
 import ClayIcon from '@clayui/icon';
 import {openConfirmModal} from '@liferay/layout-js-components-web';
 import {openToast} from 'frontend-js-components-web';
-import {addParams, navigate} from 'frontend-js-web';
+import {addParams, navigate, sub} from 'frontend-js-web';
 import React, {Dispatch} from 'react';
 
-import StructureService from '../../common/services/StructureService';
+import SpaceService from '../../common/services/SpaceService';
+import StructureService, {
+	StructureServiceError,
+} from '../../common/services/StructureService';
+import {ObjectDefinitions} from '../../common/types/ObjectDefinition';
+import {Space} from '../../common/types/Space';
 import {config} from '../config';
 import {CacheKey} from '../contexts/CacheContext';
 import {Action, State} from '../contexts/StateContext';
 import selectHistory from '../selectors/selectHistory';
+import selectPublishedChildren from '../selectors/selectPublishedChildren';
 import selectStructureChildren from '../selectors/selectStructureChildren';
 import selectStructureERC from '../selectors/selectStructureERC';
 import selectStructureId from '../selectors/selectStructureId';
 import selectStructureLabel from '../selectors/selectStructureLabel';
 import selectStructureLocalizedLabel from '../selectors/selectStructureLocalizedLabel';
 import selectStructureName from '../selectors/selectStructureName';
+import selectStructurePath from '../selectors/selectStructurePath';
+import selectStructureSettings from '../selectors/selectStructureSettings';
 import selectStructureSpaces from '../selectors/selectStructureSpaces';
 import selectStructureStatus from '../selectors/selectStructureStatus';
 import selectStructureUuid from '../selectors/selectStructureUuid';
 import selectStructureWorkflows from '../selectors/selectStructureWorkflows';
 import DisplayPageService from '../services/DisplayPageService';
+import buildStructureErrorAction from './buildStructureErrorAction';
 
 type Props = {
 	dispatch: Dispatch<Action>;
+	objectDefinitions: ObjectDefinitions;
 	showExperienceLink: boolean;
 	showWarnings?: boolean;
+	spaces: Space[];
 	staleCache: (key: CacheKey) => void;
 	state: State;
 	validate: () => boolean;
@@ -38,8 +49,10 @@ type Props = {
 
 export default async function handlePublishStructure({
 	dispatch,
+	objectDefinitions,
 	showExperienceLink,
 	showWarnings = true,
+	spaces: allSpaces,
 	staleCache,
 	state,
 	validate,
@@ -114,11 +127,88 @@ export default async function handlePublishStructure({
 	const label = selectStructureLabel(state);
 	const localizedLabel = selectStructureLocalizedLabel(state);
 	const name = selectStructureName(state);
-	const spaces = selectStructureSpaces(state);
+	const path = selectStructurePath(state);
+	const publishedChildren = selectPublishedChildren(state);
+	const settings = selectStructureSettings(state);
+	const structureSpaces = selectStructureSpaces(state);
 	const status = selectStructureStatus(state);
-	const structureId = selectStructureId(state);
+	let structureId = selectStructureId(state);
 	const workflows = selectStructureWorkflows(state);
 	const uuid = selectStructureUuid(state);
+
+	const objectDefinition = objectDefinitions[erc];
+
+	const spaces = structureSpaces === 'all' ? 'all' : [...structureSpaces];
+
+	if (spaces !== 'all') {
+		const removedSpaces = getRemovedSpaces(
+			objectDefinition,
+			structureSpaces,
+			allSpaces
+		);
+
+		const restoredSpaceNames = [];
+
+		for (const removedSpace of removedSpaces) {
+			const {data, error} = await SpaceService.getSpaceContents({
+				path,
+				siteId: removedSpace.siteId,
+			});
+
+			if (!data || error) {
+				openToast({
+					message: Liferay.Language.get(
+						'an-unexpected-error-occurred'
+					),
+					type: 'danger',
+				});
+
+				return;
+			}
+
+			const contents = data.totalCount;
+
+			if (contents > 0) {
+				spaces.push(removedSpace.externalReferenceCode);
+
+				restoredSpaceNames.push(removedSpace.name);
+			}
+		}
+
+		if (restoredSpaceNames.length) {
+			const text =
+				restoredSpaceNames.length === 1
+					? sub(
+							Liferay.Language.get(
+								'the-space-x-cannot-be-removed-because-it-has-content-created-from-this-structure.-when-publishing-this-space-will-still-be-available-for-this-structure'
+							),
+							restoredSpaceNames[0]
+						)
+					: sub(
+							Liferay.Language.get(
+								'the-spaces-x-cannot-be-removed-because-they-have-content-created-from-this-structure'
+							),
+							restoredSpaceNames.join(', ')
+						);
+
+			const confirm = await openConfirmModal({
+				buttonLabel: Liferay.Language.get('publish'),
+				center: true,
+				status: 'warning',
+				text,
+				title: Liferay.Language.get('space-availability'),
+			});
+
+			if (!confirm) {
+				return;
+			}
+
+			dispatch({
+				spaces,
+				type: 'update-structure',
+			});
+		}
+	}
 
 	const onSuccess = async () => {
 		staleCache('object-definitions');
@@ -175,14 +265,8 @@ export default async function handlePublishStructure({
 
 	const previousStatus = state.structure.status;
 
-	const onError = () =>
-		dispatch({
-			error: 'unexpected',
-			property: 'global',
-			status: previousStatus,
-			type: 'add-error',
-			uuid,
-		});
+	const onError = (error: StructureServiceError) =>
+		dispatch(buildStructureErrorAction({error, previousStatus, uuid}));
 
 	dispatch({status: 'publishing', type: 'set-structure-status'});
 
@@ -192,21 +276,25 @@ export default async function handlePublishStructure({
 			erc,
 			label,
 			name,
+			publishedChildren,
+			settings,
 			spaces,
 			status: 'published',
 			workflows,
 		});
 
 		if (error) {
-			onError();
+			onError(error);
 
 			return;
 		}
 		else if (data) {
+			structureId = data.id;
+
 			dispatch({id: data.id, type: 'publish-structure'});
 		}
 	}
-	else if (status === 'draft') {
+	else if (status === 'draft' || status === 'published') {
 		const {error} = await StructureService.updateStructure({
 			children,
 			erc,
@@ -214,35 +302,15 @@ export default async function handlePublishStructure({
 			id,
 			label,
 			name,
+			publishedChildren,
+			settings,
 			spaces,
 			status: 'published',
 			workflows,
 		});
 
 		if (error) {
-			onError();
-
-			return;
-		}
-		else {
-			dispatch({type: 'publish-structure'});
-		}
-	}
-	else if (status === 'published') {
-		const {error} = await StructureService.updateStructure({
-			children,
-			erc,
-			history,
-			id,
-			label,
-			name,
-			spaces,
-			status: 'published',
-			workflows,
-		});
-
-		if (error) {
-			onError();
+			onError(error);
 
 			return;
 		}
@@ -260,4 +328,46 @@ export default async function handlePublishStructure({
 	}
 
 	onSuccess();
+}
+
+function getRemovedSpaces(
+	objectDefinition: ObjectDefinitions[string] | undefined,
+	spaces: State['structure']['spaces'],
+	allSpaces: Space[]
+): Space[] {
+	if (!objectDefinition) {
+		return [];
+	}
+
+	const settings = objectDefinition.objectDefinitionSettings || [];
+
+	const acceptAllGroups = settings.find(
+		({name}) => name === 'acceptAllGroups'
+	)?.value;
+
+	if (acceptAllGroups === 'true') {
+		return [];
+	}
+
+	const acceptedGroupExternalReferenceCodes = settings.find(
+		({name}) => name === 'acceptedGroupExternalReferenceCodes'
+	)?.value;
+
+	const previousSpaces =
+		acceptedGroupExternalReferenceCodes?.split(',').filter(Boolean) || [];
+
+	if (spaces === 'all') {
+		return [];
+	}
+
+	const currentSpaces = new Set(spaces);
+
+	return previousSpaces
+		.filter((erc) => !currentSpaces.has(erc))
+		.map((erc) =>
+			allSpaces.find(
+				({externalReferenceCode}) => externalReferenceCode === erc
+			)
+		)
+		.filter((space): space is Space => Boolean(space));
 }

@@ -56,7 +56,6 @@ import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.FeatureFlag;
-import com.liferay.portal.test.rule.FeatureFlags;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -81,9 +80,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Thiago Buarque
  */
-@FeatureFlags(
-	featureFlags = {@FeatureFlag("LPD-17564"), @FeatureFlag("LPD-34594")}
-)
+@FeatureFlag("LPD-17564")
 @RunWith(Arquillian.class)
 public class AssetUsageResourceTest extends BaseAssetUsageResourceTestCase {
 
@@ -121,7 +118,7 @@ public class AssetUsageResourceTest extends BaseAssetUsageResourceTestCase {
 		_depotEntry = _depotEntryLocalService.addDepotEntry(
 			Collections.singletonMap(
 				LocaleUtil.US, RandomTestUtil.randomString()),
-			null, DepotConstants.TYPE_ASSET_LIBRARY, _serviceContext);
+			null, DepotConstants.TYPE_SPACE, _serviceContext);
 
 		_objectEntryFolder =
 			_objectEntryFolderLocalService.
@@ -164,7 +161,7 @@ public class AssetUsageResourceTest extends BaseAssetUsageResourceTestCase {
 			() -> StringBundler.concat(
 				_themeDisplay.getPortalURL(), _portal.getPathMain(),
 				GroupConstants.CMS_FRIENDLY_URL,
-				"/edit_content_item?&p_l_mode=read&p_p_state=",
+				"/edit_content_item?p_l_mode=read&p_p_state=",
 				LiferayWindowState.POP_UP, "&objectEntryId=",
 				objectEntry.getObjectEntryId()));
 
@@ -348,7 +345,7 @@ public class AssetUsageResourceTest extends BaseAssetUsageResourceTestCase {
 		themeDisplay.setPortalURL(
 			testCompany.getPortalURL(testGroup.getGroupId()));
 		themeDisplay.setServerName("localhost");
-		themeDisplay.setServerPort(8080);
+		themeDisplay.setServerPort(PortalUtil.getPortalServerPort(false));
 		themeDisplay.setSiteGroupId(testGroup.getGroupId());
 		themeDisplay.setUser(testCompany.getGuestUser());
 

@@ -21,6 +21,7 @@ import com.liferay.dynamic.data.mapping.model.DDMFormInstanceVersion;
 import com.liferay.dynamic.data.mapping.model.DDMFormLayout;
 import com.liferay.dynamic.data.mapping.model.DDMFormSuccessPageSettings;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
+import com.liferay.dynamic.data.mapping.model.LocalizedValue;
 import com.liferay.dynamic.data.mapping.model.impl.DDMFormInstanceImpl;
 import com.liferay.dynamic.data.mapping.render.DDMFormFieldRenderingContext;
 import com.liferay.dynamic.data.mapping.service.DDMFormInstanceLocalService;
@@ -32,6 +33,7 @@ import com.liferay.dynamic.data.mapping.service.DDMStructureLocalService;
 import com.liferay.dynamic.data.mapping.storage.DDMStorageAdapterRegistry;
 import com.liferay.dynamic.data.mapping.storage.constants.FieldConstants;
 import com.liferay.dynamic.data.mapping.test.util.DDMFormTestUtil;
+import com.liferay.dynamic.data.mapping.test.util.DDMFormValuesTestUtil;
 import com.liferay.dynamic.data.mapping.util.DDMFormValuesMerger;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.json.JSONFactoryImpl;
@@ -59,6 +61,7 @@ import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.theme.PortletDisplay;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.Constants;
+import com.liferay.portal.kernel.util.LocaleThreadLocal;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PortalUtil;
@@ -577,11 +580,26 @@ public class DDMFormDisplayContextTest {
 
 		_mockWorkflowDefinitionLinkLocalService(false);
 
-		DDMFormDisplayContext ddmFormDisplayContext =
-			_createDDMFormDisplayContext();
+		Locale themeDisplayLocale = LocaleThreadLocal.getThemeDisplayLocale();
 
-		Assert.assertEquals(
-			submitLabel, ddmFormDisplayContext.getSubmitLabel());
+		LocaleThreadLocal.setThemeDisplayLocale(LocaleUtil.US);
+
+		try {
+			DDMFormDisplayContext ddmFormDisplayContext =
+				_createDDMFormDisplayContext();
+
+			Assert.assertEquals(
+				submitLabel, ddmFormDisplayContext.getSubmitLabel());
+
+			Mockito.verify(
+				_portal
+			).getResourceBundle(
+				LocaleUtil.SPAIN
+			);
+		}
+		finally {
+			LocaleThreadLocal.setThemeDisplayLocale(themeDisplayLocale);
+		}
 	}
 
 	@Test
@@ -599,6 +617,58 @@ public class DDMFormDisplayContextTest {
 
 		Assert.assertEquals(
 			submitLabel, ddmFormDisplayContext.getSubmitLabel());
+	}
+
+	@Test
+	public void testGetSuccessPage() throws Exception {
+		DDMFormSuccessPageSettings ddmFormSuccessPageSettings = Mockito.mock(
+			DDMFormSuccessPageSettings.class);
+
+		String enValue = RandomTestUtil.randomString();
+		String ptValue = RandomTestUtil.randomString();
+
+		LocalizedValue localizedValue =
+			DDMFormValuesTestUtil.createLocalizedValue(
+				enValue, ptValue, LocaleUtil.SPAIN);
+
+		Mockito.when(
+			ddmFormSuccessPageSettings.getBody()
+		).thenReturn(
+			localizedValue
+		);
+
+		Mockito.when(
+			ddmFormSuccessPageSettings.getTitle()
+		).thenReturn(
+			localizedValue
+		);
+
+		MockRenderRequest mockRenderRequest = new MockRenderRequest();
+
+		mockRenderRequest.addPreferredLocale(LocaleUtil.US);
+		mockRenderRequest.setAttribute(
+			WebKeys.THEME_DISPLAY, _mockThemeDisplay(false));
+
+		DDMFormDisplayContext ddmFormDisplayContext = Mockito.spy(
+			_createDDMFormDisplayContext(mockRenderRequest));
+
+		Mockito.doReturn(
+			ddmFormSuccessPageSettings
+		).when(
+			ddmFormDisplayContext
+		).getDDMFormSuccessPageSettings();
+
+		Assert.assertEquals(
+			enValue, ddmFormDisplayContext.getSuccessPageDescription());
+		Assert.assertEquals(
+			enValue, ddmFormDisplayContext.getSuccessPageTitle());
+
+		mockRenderRequest.addPreferredLocale(LocaleUtil.BRAZIL);
+
+		Assert.assertEquals(
+			ptValue, ddmFormDisplayContext.getSuccessPageDescription());
+		Assert.assertEquals(
+			ptValue, ddmFormDisplayContext.getSuccessPageTitle());
 	}
 
 	@Test
@@ -895,8 +965,8 @@ public class DDMFormDisplayContextTest {
 			Mockito.mock(DDMFormValuesMerger.class), _ddmFormWebConfiguration,
 			Mockito.mock(DDMStorageAdapterRegistry.class),
 			_ddmStructureLocalService, _groupLocalService,
-			new JSONFactoryImpl(), null, null, null, null, null,
-			Mockito.mock(Portal.class), renderRequest, new MockRenderResponse(),
+			new JSONFactoryImpl(), null, null, null, null, null, _portal,
+			renderRequest, new MockRenderResponse(),
 			Mockito.mock(RoleLocalService.class),
 			Mockito.mock(UserLocalService.class),
 			_workflowDefinitionLinkLocalService);
@@ -1298,6 +1368,7 @@ public class DDMFormDisplayContextTest {
 		new MockHttpServletRequest();
 	private final MockHttpServletRequest _mockHttpServletRequest2 =
 		new MockHttpServletRequest();
+	private final Portal _portal = Mockito.mock(Portal.class);
 	private MockedStatic<PortletPermissionUtil>
 		_portletPermissionUtilMockedStatic;
 	private final MockedStatic<PrefsParamUtil> _prefsParamUtilMockedStatic =

@@ -23,11 +23,13 @@ import com.liferay.exportimport.kernel.service.ExportImportLocalService;
 import com.liferay.exportimport.kernel.staging.StagingURLHelperUtil;
 import com.liferay.exportimport.kernel.staging.StagingUtil;
 import com.liferay.exportimport.kernel.staging.constants.StagingConstants;
+import com.liferay.petra.io.StreamUtil;
 import com.liferay.petra.io.unsync.UnsyncByteArrayInputStream;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.lang.ThreadContextClassLoaderUtil;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.bean.BeanReference;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.NoSuchGroupException;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
@@ -61,6 +63,9 @@ import com.liferay.portal.kernel.service.LayoutSetBranchLocalService;
 import com.liferay.portal.kernel.service.PortletPreferenceValueLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.service.persistence.LayoutPersistence;
+import com.liferay.portal.kernel.service.persistence.LayoutSetBranchPersistence;
+import com.liferay.portal.kernel.service.persistence.PortletPreferencesPersistence;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.FileUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -71,9 +76,9 @@ import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropertiesParamUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.StreamUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.util.comparator.LayoutSetBranchCreateDateComparator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.service.http.GroupServiceHttp;
 import com.liferay.portlet.exportimport.service.base.StagingLocalServiceBaseImpl;
@@ -84,6 +89,7 @@ import jakarta.portlet.PortletRequest;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 
 import java.util.Date;
@@ -124,7 +130,7 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 		}
 
 		LayoutSetBranch layoutSetBranch =
-			_layoutSetBranchLocalService.fetchLayoutSetBranch(
+			_layoutSetBranchPersistence.fetchByG_P_N(
 				targetGroupId, false,
 				LayoutSetBranchConstants.MASTER_BRANCH_NAME);
 
@@ -143,7 +149,7 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 			ExportImportDateUtil.clearLastPublishDate(targetGroupId, false);
 		}
 
-		layoutSetBranch = _layoutSetBranchLocalService.fetchLayoutSetBranch(
+		layoutSetBranch = _layoutSetBranchPersistence.fetchByG_P_N(
 			targetGroupId, true, LayoutSetBranchConstants.MASTER_BRANCH_NAME);
 
 		if (branchingPrivate && (layoutSetBranch == null)) {
@@ -708,8 +714,9 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 		Map<Long, LayoutRevision> layoutRevisions = new HashMap<>();
 
 		List<LayoutSetBranch> layoutSetBranches =
-			_layoutSetBranchLocalService.getLayoutSetBranches(
-				groupId, privateLayout);
+			_layoutSetBranchPersistence.findByG_P(
+				groupId, privateLayout, QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+				LayoutSetBranchCreateDateComparator.getInstance(true));
 
 		boolean publishedToLive = false;
 
@@ -995,10 +1002,8 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 					new RepositoryModelTitleComparator<FileEntry>(true));
 
 			for (FileEntry fileEntry : fileEntries) {
-				try {
-					StreamUtil.transfer(
-						fileEntry.getContentStream(),
-						StreamUtil.uncloseable(fileOutputStream));
+				try (InputStream inputStream = fileEntry.getContentStream()) {
+					StreamUtil.transfer(inputStream, fileOutputStream, false);
 				}
 				finally {
 					PortletFileRepositoryUtil.deletePortletFileEntry(
@@ -1119,7 +1124,8 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 		try {
 			StagingAdvicesThreadLocal.setEnabled(false);
 
-			layout = _layoutLocalService.fetchLayout(layoutRevision.getPlid());
+			layout = _layoutPersistence.fetchByPrimaryKey(
+				layoutRevision.getPlid());
 		}
 		finally {
 			StagingAdvicesThreadLocal.setEnabled(
@@ -1154,7 +1160,7 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 			layout.getPlid());
 
 		List<PortletPreferences> portletPreferencesList =
-			_portletPreferencesLocalService.getPortletPreferencesByPlid(
+			_portletPreferencesPersistence.findByPlid(
 				layoutRevision.getLayoutRevisionId());
 
 		for (PortletPreferences portletPreferences : portletPreferencesList) {
@@ -1276,14 +1282,23 @@ public class StagingLocalServiceImpl extends StagingLocalServiceBaseImpl {
 	@BeanReference(type = LayoutLocalService.class)
 	private LayoutLocalService _layoutLocalService;
 
+	@BeanReference(type = LayoutPersistence.class)
+	private LayoutPersistence _layoutPersistence;
+
 	@BeanReference(type = LayoutRevisionLocalService.class)
 	private LayoutRevisionLocalService _layoutRevisionLocalService;
 
 	@BeanReference(type = LayoutSetBranchLocalService.class)
 	private LayoutSetBranchLocalService _layoutSetBranchLocalService;
 
+	@BeanReference(type = LayoutSetBranchPersistence.class)
+	private LayoutSetBranchPersistence _layoutSetBranchPersistence;
+
 	@BeanReference(type = PortletPreferencesLocalService.class)
 	private PortletPreferencesLocalService _portletPreferencesLocalService;
+
+	@BeanReference(type = PortletPreferencesPersistence.class)
+	private PortletPreferencesPersistence _portletPreferencesPersistence;
 
 	@BeanReference(type = PortletPreferenceValueLocalService.class)
 	private PortletPreferenceValueLocalService

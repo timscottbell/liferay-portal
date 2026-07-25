@@ -63,6 +63,11 @@ jest.mock('../../js/utils/openCMPModal', () => ({
 	openCMPModal: (...args: any[]) => mockOpenCMPModal(...args),
 }));
 
+jest.mock('../../js/components/modal/UpdateDueDateModalContent', () => ({
+	__esModule: true,
+	default: () => null,
+}));
+
 jest.mock('../../js/utils/toastUtil', () => ({
 	displayAssignSuccessToast: (...args: any[]) =>
 		mockDisplayAssignSuccessToast(...args),
@@ -83,7 +88,11 @@ afterEach(() => {
 describe('Kanban Task', () => {
 	const task = {
 		actions: {
+			assignToMe: true,
+			delete: true,
+			get: true,
 			subscribe: true,
+			update: true,
 		},
 		embedded: {
 			assignTo: {name: 'Alice', portrait: 'p.jpg'},
@@ -102,9 +111,11 @@ describe('Kanban Task', () => {
 				value={{
 					boardData: {},
 					changeTaskStatus: jest.fn(),
+					hasAddTaskPermission: true,
 					itemsActions,
 					loadData: mockLoadData,
 					projectId,
+					projectObjectDefinitionId: 123,
 				}}
 			>
 				<Task {...task} />
@@ -132,14 +143,44 @@ describe('Kanban Task', () => {
 		});
 	});
 
+	it('hides other items actions when task only has view permissions', () => {
+		const taskWithOnlyViewPermission = {
+			...task,
+			actions: {
+				assignToMe: false,
+				delete: false,
+				get: true,
+				subscribe: false,
+				update: false,
+			},
+		};
+
+		const {queryByText} = render(
+			<KanbanViewContext.Provider
+				value={{itemsActions: [], loadData: mockLoadData} as any}
+			>
+				<Task {...taskWithOnlyViewPermission} />
+			</KanbanViewContext.Provider>
+		);
+
+		expect(queryByText('view')).toBeInTheDocument();
+
+		expect(queryByText('assign-to-...')).not.toBeInTheDocument();
+		expect(queryByText('delete')).not.toBeInTheDocument();
+		expect(queryByText('edit')).not.toBeInTheDocument();
+		expect(queryByText('update-due-date')).not.toBeInTheDocument();
+		expect(queryByText('watch-task')).not.toBeInTheDocument();
+	});
+
 	it('navigates when edit and view actions are clicked', async () => {
 		const itemsActions = [
-			{items: []},
+			{items: [], type: 'group'},
 			{
 				items: [
 					{data: {id: 'edit'}, href: '/edit/{embedded.id}'},
 					{data: {id: 'actionLink'}, href: '/view/{embedded.id}'},
 				],
+				type: 'group',
 			},
 		];
 
@@ -168,6 +209,14 @@ describe('Kanban Task', () => {
 		expect(mockOpenCMPModal).toHaveBeenCalledTimes(1);
 	});
 
+	it('opens update due date modal', () => {
+		const {getByText} = renderTask();
+
+		fireEvent.click(getByText('update-due-date'));
+
+		expect(mockOpenCMPModal).toHaveBeenCalledTimes(1);
+	});
+
 	it('renders due date when projectId is provided', () => {
 		const taskWithDueDate = {
 			...task,
@@ -182,9 +231,11 @@ describe('Kanban Task', () => {
 				value={{
 					boardData: {},
 					changeTaskStatus: jest.fn(),
+					hasAddTaskPermission: true,
 					itemsActions: [],
 					loadData: mockLoadData,
 					projectId: '123',
+					projectObjectDefinitionId: 123,
 				}}
 			>
 				<Task {...taskWithDueDate} />
@@ -205,6 +256,17 @@ describe('Kanban Task', () => {
 		expect(getByText('In Progress')).toBeInTheDocument();
 	});
 
+	it('shows all items actions when task has full permissions', () => {
+		const {queryByText} = renderTask();
+
+		expect(queryByText('assign-to-...')).toBeInTheDocument();
+		expect(queryByText('delete')).toBeInTheDocument();
+		expect(queryByText('edit')).toBeInTheDocument();
+		expect(queryByText('update-due-date')).toBeInTheDocument();
+		expect(queryByText('view')).toBeInTheDocument();
+		expect(queryByText('watch-task')).toBeInTheDocument();
+	});
+
 	it('shows error toast when assign-to-me fails', async () => {
 		mockGetUserAccount.mockResolvedValue({
 			externalReferenceCode: 'u1',
@@ -218,6 +280,79 @@ describe('Kanban Task', () => {
 
 		await waitFor(() => {
 			expect(mockDisplayErrorToast).toHaveBeenCalledWith('error');
+		});
+	});
+
+	describe('stop-watching-task', () => {
+		const taskWithSubscription = {
+			...task,
+			actions: {
+				subscribe: false,
+				unsubscribe: true,
+			},
+		};
+
+		it('stops watching a task successfully', async () => {
+			mockPostUnsubscribeTaskByExternalReferenceCode.mockResolvedValue({
+				error: null,
+			});
+
+			const {getByText} = render(
+				<KanbanViewContext.Provider
+					value={{
+						boardData: {},
+						changeTaskStatus: jest.fn(),
+						hasAddTaskPermission: true,
+						itemsActions: [],
+						loadData: mockLoadData,
+						projectId: '',
+						projectObjectDefinitionId: 123,
+					}}
+				>
+					<Task {...taskWithSubscription} />
+				</KanbanViewContext.Provider>
+			);
+
+			fireEvent.click(getByText('stop-watching-task'));
+
+			await waitFor(() => {
+				expect(
+					mockPostUnsubscribeTaskByExternalReferenceCode
+				).toHaveBeenCalledWith({
+					externalReferenceCode: 'erc-1',
+					scopeKey: 1,
+				});
+				expect(mockLoadData).toHaveBeenCalled();
+				expect(mockDisplayRequestSuccessToast).toHaveBeenCalled();
+			});
+		});
+
+		it('shows an error toast when stop watching task fails', async () => {
+			mockPostUnsubscribeTaskByExternalReferenceCode.mockResolvedValue({
+				error: 'error',
+			});
+
+			const {getByText} = render(
+				<KanbanViewContext.Provider
+					value={{
+						boardData: {},
+						changeTaskStatus: jest.fn(),
+						hasAddTaskPermission: true,
+						itemsActions: [],
+						loadData: mockLoadData,
+						projectId: '',
+						projectObjectDefinitionId: 123,
+					}}
+				>
+					<Task {...taskWithSubscription} />
+				</KanbanViewContext.Provider>
+			);
+
+			fireEvent.click(getByText('stop-watching-task'));
+
+			await waitFor(() => {
+				expect(mockDisplayErrorToast).toHaveBeenCalledWith('error');
+			});
 		});
 	});
 
@@ -251,74 +386,6 @@ describe('Kanban Task', () => {
 			const {getByText} = renderTask();
 
 			fireEvent.click(getByText('watch-task'));
-
-			await waitFor(() => {
-				expect(mockDisplayErrorToast).toHaveBeenCalledWith('error');
-			});
-		});
-	});
-
-	describe('stop-watching-task', () => {
-		const taskWithSubscription = {
-			...task,
-			actions: {
-				subscribe: false,
-			},
-		};
-
-		it('stops watching a task successfully', async () => {
-			mockPostUnsubscribeTaskByExternalReferenceCode.mockResolvedValue({
-				error: null,
-			});
-
-			const {getByText} = render(
-				<KanbanViewContext.Provider
-					value={{
-						boardData: {},
-						changeTaskStatus: jest.fn(),
-						itemsActions: [],
-						loadData: mockLoadData,
-						projectId: '',
-					}}
-				>
-					<Task {...taskWithSubscription} />
-				</KanbanViewContext.Provider>
-			);
-
-			fireEvent.click(getByText('stop-watching-task'));
-
-			await waitFor(() => {
-				expect(
-					mockPostUnsubscribeTaskByExternalReferenceCode
-				).toHaveBeenCalledWith({
-					externalReferenceCode: 'erc-1',
-					scopeKey: 1,
-				});
-				expect(mockLoadData).toHaveBeenCalled();
-				expect(mockDisplayRequestSuccessToast).toHaveBeenCalled();
-			});
-		});
-
-		it('shows an error toast when stop watching task fails', async () => {
-			mockPostUnsubscribeTaskByExternalReferenceCode.mockResolvedValue({
-				error: 'error',
-			});
-
-			const {getByText} = render(
-				<KanbanViewContext.Provider
-					value={{
-						boardData: {},
-						changeTaskStatus: jest.fn(),
-						itemsActions: [],
-						loadData: mockLoadData,
-						projectId: '',
-					}}
-				>
-					<Task {...taskWithSubscription} />
-				</KanbanViewContext.Provider>
-			);
-
-			fireEvent.click(getByText('stop-watching-task'));
 
 			await waitFor(() => {
 				expect(mockDisplayErrorToast).toHaveBeenCalledWith('error');

@@ -17,8 +17,11 @@ import User, {UserProps} from './User';
 
 interface ProjectInfoSummaryProps {
 	dueDate: string;
+	funnelStages: string[];
+	hasUpdatePermission: boolean;
 	initialState: string;
 	manager: UserProps;
+	personas: string[];
 	projectId: string;
 	sponsor: UserProps;
 	states: State[];
@@ -27,8 +30,11 @@ interface ProjectInfoSummaryProps {
 
 export default function ProjectInfoSummary({
 	dueDate,
+	funnelStages,
+	hasUpdatePermission,
 	initialState,
 	manager,
+	personas,
 	projectId,
 	sponsor,
 	states,
@@ -45,7 +51,9 @@ export default function ProjectInfoSummary({
 					label: 'State',
 					value: (
 						<StateSelector
-							disabled={stateSelectorDisabled}
+							disabled={
+								!hasUpdatePermission || stateSelectorDisabled
+							}
 							onChange={async (key: string) => {
 								setStateSelectorDisabled(true);
 
@@ -80,11 +88,49 @@ export default function ProjectInfoSummary({
 					value: DateRenderer({value: dueDate}) ?? '',
 				},
 				{
-					label: 'Tags',
+					label: Liferay.Language.get('personas'),
 					value: (
-						<div>
+						<div className="lfr-cmp__info-categories">
+							{personas.map((persona) => (
+								<Label
+									displayType="secondary"
+									inverse
+									key={persona}
+								>
+									{persona}
+								</Label>
+							))}
+						</div>
+					),
+				},
+				{
+					label: Liferay.Language.get('funnel-stages'),
+					value: (
+						<div className="lfr-cmp__info-categories">
+							{funnelStages.map((stage) => (
+								<Label
+									displayType="secondary"
+									inverse
+									key={stage}
+								>
+									{stage}
+								</Label>
+							))}
+						</div>
+					),
+				},
+				{
+					label: Liferay.Language.get('tags'),
+					value: (
+						<div className="lfr-cmp__info-categories">
 							{tags.map((tag) => (
-								<Label key={tag}>{tag}</Label>
+								<Label
+									displayType="secondary"
+									inverse
+									key={tag}
+								>
+									{tag}
+								</Label>
 							))}
 						</div>
 					),

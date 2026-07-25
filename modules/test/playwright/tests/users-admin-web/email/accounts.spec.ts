@@ -10,9 +10,14 @@ import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {usersAndOrganizationsPagesTest} from '../../../fixtures/usersAndOrganizationsPagesTest';
+import {MockMockPage} from '../../../pages/smtp-server/MockMockPage';
 import {getRandomInt} from '../../../utils/getRandomInt';
 import getRandomString from '../../../utils/getRandomString';
-import {performLoginViaApi, performLogout} from '../../../utils/performLogin';
+import {
+	performLoginViaApi,
+	performLogout,
+	performUserSwitch,
+} from '../../../utils/performLogin';
 import {waitForAlert} from '../../../utils/waitForAlert';
 
 export const test = mergeTests(
@@ -35,7 +40,6 @@ test(
 		editUserPage,
 		emailDomainsInstanceSettingsPage,
 		page,
-		smtpMockServerPage,
 	}) => {
 		await emailDomainsInstanceSettingsPage.goto();
 
@@ -76,14 +80,14 @@ test(
 
 			await performLogout(page);
 
-			await smtpMockServerPage.goto(page);
+			const mockMockPage = new MockMockPage(page);
 
-			await smtpMockServerPage.emailLink(name).click();
+			await mockMockPage.assertEmail({
+				body: `Test Test has invited you to join ${name}.`,
+				subject: name,
+			});
 
-			await expect(smtpMockServerPage.emailHeading(name)).toBeVisible();
-			await expect(smtpMockServerPage.emailBody(name)).toBeVisible();
-
-			await smtpMockServerPage.createAccountLink.click();
+			await page.getByRole('link', {name: 'Create Account'}).click();
 
 			await editUserPage.firstNameInput.fill(randomString);
 			await editUserPage.lastNameInput.fill(randomString);
@@ -115,8 +119,7 @@ test(
 			).toBeVisible();
 		}
 		finally {
-			await performLogout(page);
-			await performLoginViaApi({page, screenName: 'test'});
+			await performUserSwitch(page, 'test');
 
 			await emailDomainsInstanceSettingsPage.enableEmailDomainValidation(
 				false

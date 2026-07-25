@@ -19,6 +19,9 @@ import com.liferay.jenkins.results.parser.job.property.JobPropertyFactory;
 import com.liferay.jenkins.results.parser.test.clazz.TestClass;
 import com.liferay.jenkins.results.parser.test.clazz.TestClassMethod;
 import com.liferay.jenkins.results.parser.test.clazz.group.AxisTestClassGroup;
+import com.liferay.jenkins.results.parser.test.clazz.group.FunctionalAxisTestClassGroup;
+import com.liferay.jenkins.results.parser.test.clazz.group.JUnitAxisTestClassGroup;
+import com.liferay.jenkins.results.parser.test.clazz.group.PlaywrightAxisTestClassGroup;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,8 +34,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.lang.WordUtils;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -144,18 +145,8 @@ public class BatchBuildTestrayCaseResult
 			return buildReport.getJobName() + " timed out after 2 hours";
 		}
 
-		String errorMessage = buildReport.getFailureMessage();
-
-		if (JenkinsResultsParserUtil.isNullOrEmpty(errorMessage)) {
-			return "Failed for unknown reason";
-		}
-
-		if (errorMessage.contains("\n")) {
-			errorMessage = errorMessage.substring(
-				0, errorMessage.indexOf("\n"));
-		}
-
-		errorMessage = errorMessage.trim();
+		String errorMessage = formatErrorMessage(
+			buildReport.getFailureMessage());
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(errorMessage)) {
 			return "Failed for unknown reason";
@@ -226,9 +217,8 @@ public class BatchBuildTestrayCaseResult
 
 			for (String teamComponentName : teamComponentNames.split(",")) {
 				if (teamComponentName.equals(componentName)) {
-					teamName = teamName.replace("-", " ");
-
-					return WordUtils.capitalize(teamName);
+					return _upperCaseFirstLetterOfEachWord(
+						teamName.replace("-", " "));
 				}
 			}
 		}
@@ -253,16 +243,54 @@ public class BatchBuildTestrayCaseResult
 
 		testrayAttachments.add(_getGradlePluginsAttachment());
 		testrayAttachments.add(_getJenkinsConsoleTestrayAttachment());
-		testrayAttachments.add(getTopLevelBuildDatabaseTestrayAttachment());
-		testrayAttachments.add(getTopLevelBuildReportTestrayAttachment());
-		testrayAttachments.add(getTopLevelJenkinsConsoleTestrayAttachment());
-		testrayAttachments.add(getTopLevelJenkinsReportTestrayAttachment());
-		testrayAttachments.add(getTopLevelJobSummaryTestrayAttachment());
-		testrayAttachments.add(_getWarningsTestrayAttachment());
+		testrayAttachments.add(getParentTestrayCaseResultTestrayAttachment());
+		testrayAttachments.add(getWarningsTestrayAttachment());
+
+		AxisTestClassGroup axisTestClassGroup = getAxisTestClassGroup();
+
+		if (axisTestClassGroup instanceof FunctionalAxisTestClassGroup ||
+			axisTestClassGroup instanceof JUnitAxisTestClassGroup) {
+
+			testrayAttachments.addAll(getLiferayLogTestrayAttachments());
+			testrayAttachments.addAll(getLiferayOSGiLogTestrayAttachments());
+		}
+		else if (axisTestClassGroup instanceof PlaywrightAxisTestClassGroup) {
+			testrayAttachments.addAll(getLiferayLogTestrayAttachments());
+		}
 
 		testrayAttachments.removeAll(Collections.singleton(null));
 
 		return testrayAttachments;
+	}
+
+	@Override
+	public TestrayComponent getTestrayComponent() {
+		TestrayComponent testrayComponent = super.getTestrayComponent();
+
+		if (testrayComponent != null) {
+			return testrayComponent;
+		}
+
+		String componentName = getComponentName();
+
+		if (JenkinsResultsParserUtil.isNullOrEmpty(componentName)) {
+			return null;
+		}
+
+		TestrayBuild testrayBuild = getTestrayBuild();
+
+		if (testrayBuild == null) {
+			return null;
+		}
+
+		TestrayProject testrayProject = testrayBuild.getTestrayProject();
+
+		testrayComponent = testrayProject.getTestrayComponentByName(
+			componentName);
+
+		setTestrayComponent(testrayComponent);
+
+		return testrayComponent;
 	}
 
 	@Override
@@ -279,7 +307,7 @@ public class BatchBuildTestrayCaseResult
 
 	@Override
 	public String[] getWarnings() {
-		TestrayAttachment testrayAttachment = _getWarningsTestrayAttachment();
+		TestrayAttachment testrayAttachment = getWarningsTestrayAttachment();
 
 		if (testrayAttachment == null) {
 			return null;
@@ -319,6 +347,55 @@ public class BatchBuildTestrayCaseResult
 		}
 
 		return null;
+	}
+
+	protected TestReport findTestReport() {
+		return null;
+	}
+
+	protected String formatErrorMessage(String errorMessage) {
+		if (JenkinsResultsParserUtil.isNullOrEmpty(errorMessage)) {
+			return null;
+		}
+
+		errorMessage = errorMessage.replaceAll("</?pre>", "");
+
+		errorMessage = errorMessage.replace("&gt;", ">");
+		errorMessage = errorMessage.replace("&lt;", "<");
+		errorMessage = errorMessage.replace("&quot;", "\"");
+		errorMessage = errorMessage.replace("&amp;", "&");
+
+		StringBuilder sb = new StringBuilder();
+
+		for (String errorMessageLine : errorMessage.split("\n")) {
+			if (errorMessageLine.matches(
+					"(\\s*\\[exec\\])*\\s*at\\s+\\S+\\(.*\\)\\s*")) {
+
+				continue;
+			}
+
+			sb.append(errorMessageLine);
+			sb.append("\n");
+		}
+
+		errorMessage = sb.toString();
+
+		errorMessage = errorMessage.trim();
+
+		if (JenkinsResultsParserUtil.isNullOrEmpty(errorMessage)) {
+			return null;
+		}
+
+		int errorMessageMaxLength = _getErrorMessageMaxLength();
+
+		if (errorMessage.length() > errorMessageMaxLength) {
+			String truncatedErrorMessage = errorMessage.substring(
+				0, Math.max(0, errorMessageMaxLength - 4));
+
+			errorMessage = truncatedErrorMessage + "\n...";
+		}
+
+		return errorMessage;
 	}
 
 	protected AxisTestClassGroup getAxisTestClassGroup() {
@@ -392,7 +469,12 @@ public class BatchBuildTestrayCaseResult
 	}
 
 	protected TestReport getTestReport() {
-		return null;
+		if (!_testReportComputed) {
+			_testReport = findTestReport();
+			_testReportComputed = true;
+		}
+
+		return _testReport;
 	}
 
 	protected long getTestResultDuration() {
@@ -434,7 +516,8 @@ public class BatchBuildTestrayCaseResult
 				testResultErrors = "Unable to run test on CI";
 			}
 
-			String failureMessage = buildReport.getFailureMessage();
+			String failureMessage = formatErrorMessage(
+				buildReport.getFailureMessage());
 
 			if (JenkinsResultsParserUtil.isNullOrEmpty(failureMessage)) {
 				return testResultErrors;
@@ -457,16 +540,7 @@ public class BatchBuildTestrayCaseResult
 			testResultErrors = buildReport.getFailureMessage();
 		}
 
-		if (JenkinsResultsParserUtil.isNullOrEmpty(testResultErrors)) {
-			return "Failed for unknown reason";
-		}
-
-		if (testResultErrors.contains("\n")) {
-			testResultErrors = testResultErrors.substring(
-				0, testResultErrors.indexOf("\n"));
-		}
-
-		testResultErrors = testResultErrors.trim();
+		testResultErrors = formatErrorMessage(testResultErrors);
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(testResultErrors)) {
 			return "Failed for unknown reason";
@@ -576,6 +650,11 @@ public class BatchBuildTestrayCaseResult
 		return _topLevelStandaloneBuildTestrayCaseResult;
 	}
 
+	protected TestrayAttachment getWarningsTestrayAttachment() {
+		return getTestrayAttachment(
+			getBuildReport(), "Warnings", getAxisName() + "/warnings.html.gz");
+	}
+
 	@Override
 	protected void initBuildReport() {
 		TopLevelBuildReport topLevelBuildReport = getTopLevelBuildReport();
@@ -611,6 +690,25 @@ public class BatchBuildTestrayCaseResult
 		}
 
 		return testrayAttachments;
+	}
+
+	private int _getErrorMessageMaxLength() {
+		try {
+			String errorMessageMaxLength =
+				JenkinsResultsParserUtil.getBuildProperty(
+					"testray.case.result.error.message.max.length");
+
+			if ((errorMessageMaxLength != null) &&
+				errorMessageMaxLength.matches("\\d+")) {
+
+				return Integer.parseInt(errorMessageMaxLength);
+			}
+
+			return _ERROR_MESSAGE_MAX_LENGTH_DEFAULT;
+		}
+		catch (IOException ioException) {
+			throw new RuntimeException(ioException);
+		}
 	}
 
 	private List<TestrayAttachment> _getGCLogsTestrayAttachments() {
@@ -765,10 +863,19 @@ public class BatchBuildTestrayCaseResult
 		return testrayAttachments;
 	}
 
-	private TestrayAttachment _getWarningsTestrayAttachment() {
-		return getTestrayAttachment(
-			getBuildReport(), "Warnings", getAxisName() + "/warnings.html.gz");
+	private String _upperCaseFirstLetterOfEachWord(String string) {
+		StringBuilder sb = new StringBuilder(string);
+
+		for (int i = 0; i < sb.length(); i++) {
+			if ((i == 0) || (sb.charAt(i - 1) == ' ')) {
+				sb.setCharAt(i, Character.toUpperCase(sb.charAt(i)));
+			}
+		}
+
+		return sb.toString();
 	}
+
+	private static final int _ERROR_MESSAGE_MAX_LENGTH_DEFAULT = 50000;
 
 	private static final Pattern _dockerLogsURLPattern = Pattern.compile(
 		"https?://.+/(?<key>docker-logs/(?<fileName>[^/]+.log).txt.gz)");
@@ -780,6 +887,8 @@ public class BatchBuildTestrayCaseResult
 	private final AxisTestClassGroup _axisTestClassGroup;
 	private A _testClass;
 	private B _testClassMethod;
+	private TestReport _testReport;
+	private boolean _testReportComputed;
 	private TopLevelStandaloneBuildTestrayCaseResult
 		_topLevelStandaloneBuildTestrayCaseResult;
 

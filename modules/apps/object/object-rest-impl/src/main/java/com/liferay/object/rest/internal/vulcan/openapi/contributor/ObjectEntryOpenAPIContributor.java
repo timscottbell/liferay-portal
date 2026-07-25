@@ -124,17 +124,19 @@ public class ObjectEntryOpenAPIContributor extends BaseOpenAPIContributor {
 
 				Operation operation = pathItem.getGet();
 
-				List<Parameter> parameters = operation.getParameters();
+				if (operation != null) {
+					List<Parameter> parameters = operation.getParameters();
 
-				parameters.add(
-					1,
-					new Parameter() {
-						{
-							in("query");
-							name("assigneeUserExternalReferenceCode");
-							schema(new StringSchema());
-						}
-					});
+					parameters.add(
+						1,
+						new Parameter() {
+							{
+								in("query");
+								name("assigneeUserExternalReferenceCode");
+								schema(new StringSchema());
+							}
+						});
+				}
 			}
 
 			if (!key.contains("objectActionName") &&
@@ -210,10 +212,30 @@ public class ObjectEntryOpenAPIContributor extends BaseOpenAPIContributor {
 			schemas.remove("TaxonomyCategoryBrief");
 		}
 
-		if (!_objectDefinition.isEnableObjectEntryVersioning()) {
+		if (!_objectDefinition.isEnableComments() &&
+			!_objectDefinition.isEnableObjectEntryVersioning()) {
+
 			objectDefinitionSchemaProperties.remove("systemProperties");
 
 			schemas.remove("SystemProperties");
+		}
+		else {
+			Schema systemPropertiesSchema = schemas.get("SystemProperties");
+
+			if (systemPropertiesSchema != null) {
+				Map<String, Schema> systemPropertiesSchemaProperties =
+					systemPropertiesSchema.getProperties();
+
+				if (systemPropertiesSchemaProperties != null) {
+					if (!_objectDefinition.isEnableComments()) {
+						systemPropertiesSchemaProperties.remove("comments");
+					}
+
+					if (!_objectDefinition.isEnableObjectEntryVersioning()) {
+						systemPropertiesSchemaProperties.remove("version");
+					}
+				}
+			}
 		}
 
 		if ((openAPIContext != null) &&

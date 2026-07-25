@@ -30,6 +30,11 @@ public class MarketplaceConstants {
 
 	public static final String ORDER_PAYMENT_METHOD_PAYPAL_LABEL = "PayPal";
 
+	public static final int ORDER_PAYMENT_STATUS_AUTHORIZED = 2;
+
+	public static final String ORDER_PAYMENT_STATUS_AUTHORIZED_LABEL =
+		"Authorized";
+
 	public static final int ORDER_PAYMENT_STATUS_COMPLETED = 0;
 
 	public static final int ORDER_PAYMENT_STATUS_NOT_REQUIRED = 23;
@@ -64,6 +69,13 @@ public class MarketplaceConstants {
 
 	public static final String ORDER_STATUS_PROCESSING_LABEL = "Processing";
 
+	public static final String PAYMENT_STATUS_COMPLETED_LABEL = "Completed";
+
+	public static final String PAYMENT_STATUS_NOT_REQUIRED_LABEL =
+		"Not Required";
+
+	public static final String PAYMENT_STATUS_PENDING_LABEL = "Pending";
+
 	public static final String PUBSUB_TOPIC_NAME_KORONEIKI_ACCOUNT_CREATE =
 		"koroneiki.account.create";
 
@@ -81,6 +93,26 @@ public class MarketplaceConstants {
 
 		if (Objects.equals(paymentMethod, ORDER_PAYMENT_METHOD_PAYPAL)) {
 			return ORDER_PAYMENT_METHOD_PAYPAL_LABEL;
+		}
+
+		return null;
+	}
+
+	public static String getOrderPaymentStatusLabel(int paymentStatus) {
+		if (paymentStatus == ORDER_PAYMENT_STATUS_AUTHORIZED) {
+			return ORDER_PAYMENT_STATUS_AUTHORIZED_LABEL;
+		}
+
+		if (paymentStatus == ORDER_PAYMENT_STATUS_COMPLETED) {
+			return PAYMENT_STATUS_COMPLETED_LABEL;
+		}
+
+		if (paymentStatus == ORDER_PAYMENT_STATUS_NOT_REQUIRED) {
+			return PAYMENT_STATUS_NOT_REQUIRED_LABEL;
+		}
+
+		if (paymentStatus == ORDER_PAYMENT_STATUS_PENDING) {
+			return PAYMENT_STATUS_PENDING_LABEL;
 		}
 
 		return null;

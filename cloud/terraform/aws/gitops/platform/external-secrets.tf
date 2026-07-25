@@ -8,6 +8,7 @@ resource "helm_release" "external_secrets" {
 		yamlencode(
 			{
 				certController={
+					podAnnotations=local.karpenter_pod_annotations
 					resources={
 						limits={
 							memory="512Mi"
@@ -19,6 +20,7 @@ resource "helm_release" "external_secrets" {
 					}
 				}
 				installCRDs=true
+				podAnnotations=local.karpenter_pod_annotations
 				resources={
 					limits={
 						memory="512Mi"
@@ -29,6 +31,7 @@ resource "helm_release" "external_secrets" {
 					}
 				}
 				webhook={
+					podAnnotations=local.karpenter_pod_annotations
 					resources={
 						limits={
 							memory="256Mi"
@@ -41,6 +44,6 @@ resource "helm_release" "external_secrets" {
 				}
 			}),
 	]
-	version="1.0.0"
+	version=var.external_secrets_helm_chart_version
 	wait=true
 }

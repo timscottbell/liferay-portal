@@ -6,6 +6,8 @@
 package com.liferay.fragment.internal.upgrade.v3_0_0.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.change.tracking.model.CTCollection;
+import com.liferay.change.tracking.service.CTCollectionLocalService;
 import com.liferay.change.tracking.test.util.BaseCTUpgradeProcessTestCase;
 import com.liferay.fragment.entry.processor.constants.FragmentEntryProcessorConstants;
 import com.liferay.fragment.model.FragmentCollection;
@@ -13,12 +15,15 @@ import com.liferay.fragment.model.FragmentEntry;
 import com.liferay.fragment.model.FragmentEntryLink;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
 import com.liferay.fragment.service.FragmentEntryLinkLocalServiceUtil;
+import com.liferay.fragment.service.FragmentEntryLocalService;
 import com.liferay.fragment.test.util.FragmentEntryTestUtil;
 import com.liferay.fragment.test.util.FragmentTestUtil;
 import com.liferay.layout.test.util.ContentLayoutTestUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
+import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.cache.MultiVMPool;
+import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.dao.db.DB;
 import com.liferay.portal.kernel.dao.db.DBInspector;
 import com.liferay.portal.kernel.dao.db.DBManagerUtil;
@@ -111,7 +116,14 @@ public class FragmentEntryLinkUpgradeProcessTest
 
 	@After
 	public void tearDown() throws Exception {
-		DataAccess.cleanUp(_connection);
+		try {
+			_dropFragmentEntryLinkColumn("fragmentEntryId");
+
+			_dropFragmentEntryLinkColumn("originalFragmentEntryLinkId");
+		}
+		finally {
+			DataAccess.cleanUp(_connection);
+		}
 	}
 
 	@Test
@@ -183,6 +195,96 @@ public class FragmentEntryLinkUpgradeProcessTest
 
 		_assertFragmentEntryLinks(expectedValuesMap, fragmentEntryLinkIds);
 		_assertFragmentEntryLinkTableColumns();
+	}
+
+	@Test
+	public void testUpgradeWhenFragmentEntryExistsInProductionAndCTCollection()
+		throws Exception {
+
+		FragmentCollection fragmentCollection =
+			FragmentTestUtil.addFragmentCollection(_layout.getGroupId());
+
+		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
+			fragmentCollection.getFragmentCollectionId());
+
+		FragmentEntryLink originalFragmentEntryLink =
+			ContentLayoutTestUtil.addFragmentEntryLinkToLayout(
+				null, fragmentEntry.getCss(), fragmentEntry.getConfiguration(),
+				fragmentEntry.getExternalReferenceCode(),
+				ScopeUtil.getItemScopeExternalReferenceCode(
+					fragmentEntry.getGroupId(), _draftLayout.getGroupId()),
+				fragmentEntry.getHtml(), fragmentEntry.getJs(), _draftLayout,
+				fragmentEntry.getFragmentEntryKey(), fragmentEntry.getType(),
+				null, 0, _segmentsExperienceId);
+
+		CTCollection ctCollection = _ctCollectionLocalService.addCTCollection(
+			null, TestPropsValues.getCompanyId(), TestPropsValues.getUserId(),
+			0, RandomTestUtil.randomString(), null);
+
+		String ctFragmentEntryERC = RandomTestUtil.randomString();
+		String ctOriginalFragmentEntryLinkERC = RandomTestUtil.randomString();
+
+		try (SafeCloseable safeCloseable =
+				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
+					ctCollection.getCtCollectionId())) {
+
+			fragmentEntry.setExternalReferenceCode(ctFragmentEntryERC);
+
+			fragmentEntry = _fragmentEntryLocalService.updateFragmentEntry(
+				fragmentEntry);
+
+			originalFragmentEntryLink.setExternalReferenceCode(
+				ctOriginalFragmentEntryLinkERC);
+
+			originalFragmentEntryLink =
+				_fragmentEntryLinkLocalService.updateFragmentEntryLink(
+					originalFragmentEntryLink);
+
+			FragmentEntryLink fragmentEntryLink =
+				ContentLayoutTestUtil.addFragmentEntryLinkToLayout(
+					null, fragmentEntry.getCss(),
+					fragmentEntry.getConfiguration(),
+					fragmentEntry.getExternalReferenceCode(),
+					ScopeUtil.getItemScopeExternalReferenceCode(
+						fragmentEntry.getGroupId(), _draftLayout.getGroupId()),
+					fragmentEntry.getHtml(), fragmentEntry.getJs(),
+					_draftLayout, fragmentEntry.getFragmentEntryKey(),
+					fragmentEntry.getType(), null, 0, _segmentsExperienceId);
+
+			fragmentEntryLink.setOriginalFragmentEntryLinkERC(
+				originalFragmentEntryLink.getExternalReferenceCode());
+
+			fragmentEntryLink =
+				_fragmentEntryLinkLocalService.updateFragmentEntryLink(
+					fragmentEntryLink);
+
+			List<Long> fragmentEntryLinkIds = Arrays.asList(
+				fragmentEntryLink.getFragmentEntryLinkId());
+
+			Map<Long, Map<String, Object>> expectedValuesMap =
+				_getExpectedValues(fragmentEntryLinkIds);
+
+			_updateFragmentEntryLinks(expectedValuesMap, fragmentEntryLinkIds);
+
+			runUpgrade();
+
+			_assertFragmentEntryLinks(expectedValuesMap, fragmentEntryLinkIds);
+			_assertFragmentEntryLinkTableColumns();
+
+			FragmentEntryLink upgradedFragmentEntryLink =
+				_fragmentEntryLinkLocalService.getFragmentEntryLink(
+					fragmentEntryLink.getFragmentEntryLinkId());
+
+			Assert.assertEquals(
+				ctFragmentEntryERC,
+				upgradedFragmentEntryLink.getFragmentEntryERC());
+			Assert.assertEquals(
+				ctOriginalFragmentEntryLinkERC,
+				upgradedFragmentEntryLink.getOriginalFragmentEntryLinkERC());
+		}
+		finally {
+			_ctCollectionLocalService.deleteCTCollection(ctCollection);
+		}
 	}
 
 	@Override
@@ -287,6 +389,15 @@ public class FragmentEntryLinkUpgradeProcessTest
 				"FragmentEntryLink", "originalFragmentEntryLinkId"));
 	}
 
+	private void _dropFragmentEntryLinkColumn(String columnName)
+		throws Exception {
+
+		if (_dbInspector.hasColumn("FragmentEntryLink", columnName)) {
+			_db.alterTableDropColumn(
+				_connection, "FragmentEntryLink", columnName);
+		}
+	}
+
 	private Map<Long, Map<String, Object>> _getExpectedValues(
 			List<Long> fragmentEntryLinkIds)
 		throws Exception {
@@ -349,11 +460,10 @@ public class FragmentEntryLinkUpgradeProcessTest
 
 	private void _updateFragmentEntryLinks() throws Exception {
 		_db.alterTableAddColumn(
+			_connection, "FragmentEntryLink", "fragmentEntryId", "LONG");
+		_db.alterTableAddColumn(
 			_connection, "FragmentEntryLink", "originalFragmentEntryLinkId",
 			"LONG");
-
-		_db.alterTableAddColumn(
-			_connection, "FragmentEntryLink", "fragmentEntryId", "LONG");
 
 		Group guestGroup = GroupLocalServiceUtil.getFriendlyURLGroup(
 			PortalUtil.getDefaultCompanyId(),
@@ -377,47 +487,46 @@ public class FragmentEntryLinkUpgradeProcessTest
 			fragmentEntryLinkIds);
 
 		try (Connection connection = DataAccess.getConnection();
+
 			PreparedStatement preparedStatement = connection.prepareStatement(
 				StringBundler.concat(
-					"select FragmentEntryLink1.ctCollectionId, ",
-					"FragmentEntry.fragmentEntryId, ",
-					"FragmentEntryLink1.fragmentEntryLinkId, ",
-					"FragmentEntryLink2.fragmentEntryLinkId from ",
+					"select FragmentEntryLink1.ctCollectionId, FragmentEntry.",
+					"fragmentEntryId, FragmentEntryLink1.fragmentEntryLinkId ",
+					"as fragmentEntryLinkId1, FragmentEntryLink2.",
+					"fragmentEntryLinkId as fragmentEntryLinkId2 from ",
 					"FragmentEntryLink FragmentEntryLink1 left join ",
-					"FragmentEntryLink FragmentEntryLink2 on ",
-					"(FragmentEntryLink2.ctCollectionId = ",
-					"FragmentEntryLink1.ctCollectionId or ",
-					"FragmentEntryLink2.ctCollectionId = 0) and ",
-					"FragmentEntryLink1.originalFragmentEntryLinkERC = ",
+					"FragmentEntryLink FragmentEntryLink2 on (",
+					"FragmentEntryLink2.ctCollectionId = FragmentEntryLink1.",
+					"ctCollectionId or FragmentEntryLink2.ctCollectionId = 0) ",
+					"and FragmentEntryLink1.originalFragmentEntryLinkERC = ",
 					"FragmentEntryLink2.externalReferenceCode left join ",
 					"FragmentEntry on (FragmentEntry.ctCollectionId = ",
-					"FragmentEntryLink1.ctCollectionId or ",
-					"FragmentEntry.ctCollectionId = 0) and ",
-					"FragmentEntry.externalReferenceCode = ",
-					"FragmentEntryLink1.fragmentEntryERC left join Group_ on ",
-					"(Group_.ctCollectionId = ",
-					"FragmentEntryLink1.ctCollectionId or ",
-					"Group_.ctCollectionId = 0) and ( ",
-					"Group_.externalReferenceCode = ",
-					"FragmentEntryLink1.fragmentEntryScopeERC or ( ",
-					"Group_.groupId = FragmentEntryLink1.groupId and ",
-					"FragmentEntryLink1.fragmentEntryScopeERC is null)) and ",
-					"FragmentEntry.groupId = Group_.groupId"));
+					"FragmentEntryLink1.ctCollectionId or FragmentEntry.",
+					"ctCollectionId = 0) and FragmentEntry.",
+					"externalReferenceCode = FragmentEntryLink1.",
+					"fragmentEntryERC left join Group_ on (Group_.",
+					"ctCollectionId = FragmentEntryLink1.ctCollectionId or ",
+					"Group_.ctCollectionId = 0) and ( Group_.",
+					"externalReferenceCode = FragmentEntryLink1.",
+					"fragmentEntryScopeERC or ( Group_.groupId = ",
+					"FragmentEntryLink1.groupId and FragmentEntryLink1.",
+					"fragmentEntryScopeERC is null)) and FragmentEntry.",
+					"groupId = Group_.groupId"));
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			while (resultSet.next()) {
-				long ctCollectionId = resultSet.getLong(1);
-				long fragmentEntryId = resultSet.getLong(2);
-				long fragmentEntryLinkId1 = resultSet.getLong(3);
-				long fragmentEntryLinkId2 = resultSet.getLong(4);
-
 				_db.runSQL(
 					StringBundler.concat(
 						"update FragmentEntryLink set ",
-						"originalFragmentEntryLinkId = ", fragmentEntryLinkId2,
-						", fragmentEntryId = ", fragmentEntryId,
-						" where fragmentEntryLinkId = ", fragmentEntryLinkId1,
-						" and ctCollectionId = ", ctCollectionId));
+						"originalFragmentEntryLinkId = ",
+						resultSet.getLong("fragmentEntryLinkId2"),
+						", fragmentEntryId = ",
+						resultSet.getLong("fragmentEntryId"),
+						" where fragmentEntryLinkId = ",
+						resultSet.getLong("fragmentEntryLinkId1"),
+						" and ctCollectionId = ",
+						resultSet.getLong("ctCollectionId")));
 			}
 		}
 
@@ -447,12 +556,11 @@ public class FragmentEntryLinkUpgradeProcessTest
 		_assertFragmentEntryLinks(expectedValuesMap, fragmentEntryLinkIds);
 	}
 
-	@Inject(
-		filter = "(&(component.name=com.liferay.fragment.internal.upgrade.registry.FragmentServiceUpgradeStepRegistrator))"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	private Connection _connection;
+
+	@Inject
+	private CTCollectionLocalService _ctCollectionLocalService;
+
 	private DB _db;
 	private DBInspector _dbInspector;
 	private Layout _draftLayout;
@@ -462,6 +570,9 @@ public class FragmentEntryLinkUpgradeProcessTest
 
 	@Inject
 	private FragmentEntryLinkLocalService _fragmentEntryLinkLocalService;
+
+	@Inject
+	private FragmentEntryLocalService _fragmentEntryLocalService;
 
 	@Inject
 	private GroupLocalService _groupLocalService;
@@ -475,5 +586,10 @@ public class FragmentEntryLinkUpgradeProcessTest
 
 	@Inject
 	private SegmentsExperienceLocalService _segmentsExperienceLocalService;
+
+	@Inject(
+		filter = "(&(component.name=com.liferay.fragment.internal.upgrade.registry.FragmentServiceUpgradeStepRegistrator))"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

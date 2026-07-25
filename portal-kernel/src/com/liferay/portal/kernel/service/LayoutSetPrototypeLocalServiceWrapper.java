@@ -493,3 +493,4 @@ public class LayoutSetPrototypeLocalServiceWrapper
 	private LayoutSetPrototypeLocalService _layoutSetPrototypeLocalService;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-1796530927

@@ -15,6 +15,7 @@ export class ServerAdministrationPage {
 	private readonly executeButton: Locator;
 	private readonly scriptBox: Locator;
 	private readonly scriptLink: Locator;
+	private readonly scriptOutput: Locator;
 
 	constructor(page: Page) {
 		this.uiElementsPage = new UIElementsPage(page);
@@ -23,6 +24,18 @@ export class ServerAdministrationPage {
 		this.executeButton = page.getByRole('button', {name: 'Execute'});
 		this.scriptBox = page.getByLabel('Script', {exact: true});
 		this.scriptLink = page.getByRole('link', {name: 'Script'});
+		this.scriptOutput = page.locator('b:text-is("Output") + pre');
+	}
+
+	async goto(tabs1?: string) {
+		let url =
+			'/group/control_panel/manage?p_p_id=com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view';
+
+		if (tabs1) {
+			url += `&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_tabs1=${tabs1}`;
+		}
+
+		await this.page.goto(url);
 	}
 
 	async executeAction(action: EActions) {
@@ -42,5 +55,9 @@ export class ServerAdministrationPage {
 		await this.executeButton.click();
 		await this.uiElementsPage.anySuccessAlert.waitFor({state: 'visible'});
 		await this.uiElementsPage.anySuccessAlert.waitFor({state: 'hidden'});
+	}
+
+	async getScriptOutput(): Promise<string | null> {
+		return await this.scriptOutput.textContent();
 	}
 }

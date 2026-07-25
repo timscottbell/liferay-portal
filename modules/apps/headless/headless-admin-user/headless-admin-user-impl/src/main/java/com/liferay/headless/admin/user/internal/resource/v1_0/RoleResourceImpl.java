@@ -5,6 +5,7 @@
 
 package com.liferay.headless.admin.user.internal.resource.v1_0;
 
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.headless.admin.user.dto.v1_0.Role;
 import com.liferay.headless.admin.user.dto.v1_0.RolePermission;
@@ -168,8 +169,10 @@ public class RoleResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<com.liferay.portal.kernel.model.Role>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
 
 			@Override
 			public String getKey() {
@@ -182,8 +185,8 @@ public class RoleResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return com.liferay.portal.kernel.model.Role.class.getName();
+			public Class<com.liferay.portal.kernel.model.Role> getModelClass() {
+				return com.liferay.portal.kernel.model.Role.class;
 			}
 
 			@Override
@@ -194,6 +197,11 @@ public class RoleResourceImpl
 			@Override
 			public Scope getScope() {
 				return Scope.COMPANY;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_USERS;
 			}
 
 		};
@@ -276,7 +284,9 @@ public class RoleResourceImpl
 			_roleService.getRole(roleId);
 
 		serviceBuilderRole = _roleService.updateRole(
-			serviceBuilderRole.getExternalReferenceCode(),
+			GetterUtil.get(
+				role.getExternalReferenceCode(),
+				serviceBuilderRole.getExternalReferenceCode()),
 			serviceBuilderRole.getRoleId(),
 			GetterUtil.get(role.getName(), serviceBuilderRole.getName()),
 			(Map<Locale, String>)GetterUtil.getObject(
@@ -284,14 +294,8 @@ public class RoleResourceImpl
 			(Map<Locale, String>)GetterUtil.getObject(
 				_getDescriptionMap(role),
 				serviceBuilderRole.getDescriptionMap()),
-			serviceBuilderRole.getSubtype(),
+			GetterUtil.get(role.getSubtype(), serviceBuilderRole.getSubtype()),
 			ServiceContextFactory.getInstance(contextHttpServletRequest));
-
-		serviceBuilderRole = _roleService.updateExternalReferenceCode(
-			serviceBuilderRole,
-			GetterUtil.get(
-				role.getExternalReferenceCode(),
-				serviceBuilderRole.getExternalReferenceCode()));
 
 		_addResourcePermission(role, serviceBuilderRole);
 
@@ -374,7 +378,8 @@ public class RoleResourceImpl
 		com.liferay.portal.kernel.model.Role serviceBuilderRole =
 			_roleService.addRole(
 				role.getExternalReferenceCode(), className, 0, role.getName(),
-				_getTitleMap(role), _getDescriptionMap(role), type, null,
+				_getTitleMap(role), _getDescriptionMap(role), type,
+				role.getSubtype(),
 				ServiceContextFactory.getInstance(contextHttpServletRequest));
 
 		_addResourcePermission(role, serviceBuilderRole);
@@ -468,22 +473,20 @@ public class RoleResourceImpl
 		if (serviceBuilderRole == null) {
 			serviceBuilderRole = _roleService.addRole(
 				role.getExternalReferenceCode(), className, 0, role.getName(),
-				_getTitleMap(role), _getDescriptionMap(role), type, null,
-				serviceContext);
+				_getTitleMap(role), _getDescriptionMap(role), type,
+				role.getSubtype(), serviceContext);
 		}
 		else {
 			serviceBuilderRole = _roleService.updateRole(
-				serviceBuilderRole.getExternalReferenceCode(),
-				serviceBuilderRole.getRoleId(),
-				GetterUtil.get(role.getName(), serviceBuilderRole.getName()),
-				_getTitleMap(role), _getDescriptionMap(role), null,
-				serviceContext);
-
-			serviceBuilderRole = _roleService.updateExternalReferenceCode(
-				serviceBuilderRole,
 				GetterUtil.get(
 					role.getExternalReferenceCode(),
-					serviceBuilderRole.getExternalReferenceCode()));
+					serviceBuilderRole.getExternalReferenceCode()),
+				serviceBuilderRole.getRoleId(),
+				GetterUtil.get(role.getName(), serviceBuilderRole.getName()),
+				_getTitleMap(role), _getDescriptionMap(role),
+				GetterUtil.get(
+					role.getSubtype(), serviceBuilderRole.getSubtype()),
+				serviceContext);
 		}
 
 		_addResourcePermission(role, serviceBuilderRole);
@@ -519,22 +522,28 @@ public class RoleResourceImpl
 			Role role, com.liferay.portal.kernel.model.Role serviceBuilderRole)
 		throws Exception {
 
-		if (ArrayUtil.isNotEmpty(role.getRolePermissions())) {
-			for (RolePermission rolePermission : role.getRolePermissions()) {
-				if (rolePermission.getScope() ==
-						ResourceConstants.SCOPE_INDIVIDUAL) {
+		if (ArrayUtil.isEmpty(role.getRolePermissions())) {
+			return;
+		}
 
-					continue;
-				}
+		for (RolePermission rolePermission : role.getRolePermissions()) {
+			int scope = Math.toIntExact(rolePermission.getScope());
 
-				for (String actionId : rolePermission.getActionIds()) {
-					_resourcePermissionService.addResourcePermission(
-						contextUser.getGroupId(), contextCompany.getCompanyId(),
-						rolePermission.getResourceName(),
-						Math.toIntExact(rolePermission.getScope()),
-						rolePermission.getPrimaryKey(),
-						serviceBuilderRole.getRoleId(), actionId);
-				}
+			if (scope == ResourceConstants.SCOPE_INDIVIDUAL) {
+				continue;
+			}
+
+			String primKey = rolePermission.getPrimaryKey();
+
+			if (scope == ResourceConstants.SCOPE_COMPANY) {
+				primKey = String.valueOf(contextCompany.getCompanyId());
+			}
+
+			for (String actionId : rolePermission.getActionIds()) {
+				_resourcePermissionService.addResourcePermission(
+					contextUser.getGroupId(), contextCompany.getCompanyId(),
+					rolePermission.getResourceName(), scope, primKey,
+					serviceBuilderRole.getRoleId(), actionId);
 			}
 		}
 	}

@@ -9,21 +9,16 @@ import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.configuration.DLConfiguration;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
+import com.liferay.frontend.data.set.model.FDSActionDropdownItemBuilder;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.DropdownItem;
 import com.liferay.info.constants.InfoDisplayWebKeys;
 import com.liferay.info.localized.InfoLocalizedValue;
 import com.liferay.object.constants.ObjectFolderConstants;
-import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntryFolder;
 import com.liferay.object.service.ObjectDefinitionService;
-import com.liferay.object.service.ObjectDefinitionSettingLocalService;
 import com.liferay.object.service.ObjectEntryFolderLocalServiceUtil;
 import com.liferay.petra.function.transform.TransformUtil;
-import com.liferay.petra.string.StringBundler;
-import com.liferay.petra.string.StringPool;
-import com.liferay.portal.kernel.editor.configuration.EditorConfiguration;
-import com.liferay.portal.kernel.editor.configuration.EditorConfigurationFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
@@ -35,14 +30,8 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
-import com.liferay.portal.kernel.model.Layout;
-import com.liferay.portal.kernel.portlet.LiferayWindowState;
-import com.liferay.portal.kernel.portlet.RequestBackedPortletURLFactoryUtil;
-import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
-import com.liferay.portal.kernel.util.ArrayUtil;
-import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
@@ -50,8 +39,10 @@ import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.PropsUtil;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.site.cms.site.initializer.internal.util.ActionUtil;
+import com.liferay.site.cms.site.initializer.internal.util.CommentUtil;
 import com.liferay.site.cms.site.initializer.internal.util.PermissionUtil;
 import com.liferay.translation.exporter.TranslationInfoItemFieldValuesExporter;
 import com.liferay.translation.exporter.TranslationInfoItemFieldValuesExporterRegistry;
@@ -60,7 +51,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,11 +64,7 @@ public abstract class BaseSectionDisplayContext {
 		DepotEntryLocalService depotEntryLocalService,
 		DLConfiguration dlConfiguration, GroupLocalService groupLocalService,
 		HttpServletRequest httpServletRequest, Language language,
-		ObjectDefinitionService objectDefinitionService,
-		ObjectDefinitionSettingLocalService objectDefinitionSettingLocalService,
-		ModelResourcePermission<ObjectEntryFolder>
-			objectEntryFolderModelResourcePermission,
-		Portal portal,
+		ObjectDefinitionService objectDefinitionService, Portal portal,
 		TranslationInfoItemFieldValuesExporterRegistry
 			translationInfoItemFieldValuesExporterRegistry) {
 
@@ -102,32 +88,30 @@ public abstract class BaseSectionDisplayContext {
 		objectEntryFolder = _getObjectEntryFolder(
 			themeDisplay.getCompanyId(),
 			httpServletRequest.getAttribute(InfoDisplayWebKeys.INFO_ITEM));
-
-		_sectionDisplayContextHelper = new SectionDisplayContextHelper(
-			depotEntryLocalService, groupLocalService, language,
-			objectDefinitionSettingLocalService,
-			objectEntryFolderModelResourcePermission, portal);
 	}
 
 	public String getAdditionalAPIURLParameters() {
-		return _sectionDisplayContextHelper.getAdditionalAPIURLParameters(
+		return SectionDisplayContextUtil.getAdditionalAPIURLParameters(
 			getCMSSectionFilterString(), httpServletRequest,
 			getRootObjectEntryFolderExternalReferenceCode());
 	}
 
 	public Map<String, Object> getAdditionalProps() {
 		return HashMapBuilder.<String, Object>put(
-			"assetLibraries",
-			_sectionDisplayContextHelper.getDepotEntriesJSONArray(
-				httpServletRequest,
-				getRootObjectEntryFolderExternalReferenceCode())
+			"additionalAPIURLParameters",
+			() -> {
+				if (isFolderSearchEnabled()) {
+					return getAdditionalAPIURLParameters();
+				}
+
+				return null;
+			}
 		).put(
-			"autocompleteURL",
-			() -> StringBundler.concat(
-				"/o/search/v1.0/search?emptySearch=",
-				"true&entryClassNames=com.liferay.portal.kernel.model.User,",
-				"com.liferay.portal.kernel.model.UserGroup&nestedFields=",
-				"embedded")
+			"assetLibraries",
+			SectionDisplayContextUtil.getDepotEntriesJSONArray(
+				httpServletRequest)
+		).put(
+			"autocompleteURL", SectionDisplayContextUtil.getAutocompleteURL()
 		).put(
 			"availableExportFileFormats",
 			() -> TransformUtil.transform(
@@ -135,7 +119,7 @@ public abstract class BaseSectionDisplayContext {
 					getTranslationInfoItemFieldValuesExporters(),
 				this::_getExportFileFormatJSONObject)
 		).put(
-			"availableTargetLocales",
+			"availableLocales",
 			_getLocalesJSONArray(
 				themeDisplay.getLocale(),
 				LanguageUtil.getAvailableLocales(themeDisplay.getSiteGroupId()))
@@ -147,6 +131,11 @@ public abstract class BaseSectionDisplayContext {
 			"brokenLinksCheckerEnabled",
 			GetterUtil.getBoolean(
 				PropsUtil.get(PropsKeys.CMS_BROKEN_LINKS_CHECKER_ENABLED))
+		).put(
+			"candidateAssetLibraries",
+			SectionDisplayContextUtil.getDepotEntriesJSONArray(
+				httpServletRequest,
+				getRootObjectEntryFolderExternalReferenceCode())
 		).put(
 			"cmsGroupId",
 			() -> {
@@ -166,78 +155,14 @@ public abstract class BaseSectionDisplayContext {
 			}
 		).put(
 			"collaboratorURLs",
-			() -> {
-				Map<String, String> collaboratorURLs = new HashMap<>();
-
-				for (ObjectDefinition objectDefinition :
-						_objectDefinitionService.getCMSObjectDefinitions(
-							themeDisplay.getCompanyId(),
-							getObjectFolderExternalReferenceCodes())) {
-
-					collaboratorURLs.put(
-						objectDefinition.getClassName(),
-						StringBundler.concat(
-							"/o", objectDefinition.getRESTContextPath(),
-							"/{objectEntryId}/collaborators"));
-				}
-
-				collaboratorURLs.put(
-					ObjectEntryFolder.class.getName(),
-					"/o/headless-object/v1.0/object-entry-folders" +
-						"/{objectEntryFolderId}/collaborators");
-
-				return collaboratorURLs;
-			}
+			() -> SectionDisplayContextUtil.getCollaboratorURLs(
+				themeDisplay.getCompanyId(), _objectDefinitionService,
+				getObjectFolderExternalReferenceCodes())
 		).put(
-			"commentsProps",
-			HashMapBuilder.<String, Object>put(
-				"addCommentURL",
-				StringBundler.concat(
-					themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-					GroupConstants.CMS_FRIENDLY_URL,
-					"/add_content_item_comment")
-			).put(
-				"deleteCommentURL",
-				StringBundler.concat(
-					themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-					GroupConstants.CMS_FRIENDLY_URL,
-					"/delete_content_item_comment")
-			).put(
-				"editCommentURL",
-				StringBundler.concat(
-					themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-					GroupConstants.CMS_FRIENDLY_URL,
-					"/edit_content_item_comment")
-			).put(
-				"editorConfig",
-				() -> {
-					EditorConfiguration contentItemCommentEditorConfiguration =
-						EditorConfigurationFactoryUtil.getEditorConfiguration(
-							StringPool.BLANK, "contentItemCommentEditor",
-							StringPool.BLANK, Collections.emptyMap(),
-							themeDisplay,
-							RequestBackedPortletURLFactoryUtil.create(
-								httpServletRequest));
-
-					Map<String, Object> data =
-						contentItemCommentEditorConfiguration.getData();
-
-					return data.get("editorConfig");
-				}
-			).put(
-				"getCommentsURL",
-				StringBundler.concat(
-					themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-					GroupConstants.CMS_FRIENDLY_URL, "/get_asset_comments")
-			).build()
+			"commentsProps", CommentUtil.getCommentsProps(httpServletRequest)
 		).put(
 			"contentViewURL",
-			StringBundler.concat(
-				themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-				GroupConstants.CMS_FRIENDLY_URL,
-				"/edit_content_item?&p_l_mode=read&p_p_state=",
-				LiferayWindowState.POP_UP, "&redirect=",
-				themeDisplay.getURLCurrent(), "&objectEntryId={embedded.id}")
+			SectionDisplayContextUtil.getContentViewURL(themeDisplay)
 		).put(
 			"defaultPermissionAdditionalProps",
 			PermissionUtil.getDefaultPermissionAdditionalProps(
@@ -249,7 +174,8 @@ public abstract class BaseSectionDisplayContext {
 					return null;
 				}
 
-				return _getFileMimeTypeCssClasses();
+				return SectionDisplayContextUtil.getFileMimeTypeCssClasses(
+					_dlConfiguration);
 			}
 		).put(
 			"fileMimeTypeIcons",
@@ -258,30 +184,15 @@ public abstract class BaseSectionDisplayContext {
 					return null;
 				}
 
-				return _getFileMimeTypeIcons();
+				return SectionDisplayContextUtil.getFileMimeTypeIcons(
+					_dlConfiguration);
 			}
 		).put(
 			"objectDefinitionCssClasses",
-			HashMapBuilder.put(
-				"default", "content-icon-custom-structure"
-			).put(
-				"L_CMS_BASIC_WEB_CONTENT", "content-icon-basic-content"
-			).put(
-				"L_CMS_BLOG", "content-icon-blog"
-			).put(
-				"L_CMS_EXTERNAL_VIDEO", "file-icon-color-3"
-			).build()
+			SectionDisplayContextUtil.getObjectDefinitionCssClasses()
 		).put(
 			"objectDefinitionIcons",
-			HashMapBuilder.put(
-				"default", "web-content"
-			).put(
-				"L_CMS_BASIC_WEB_CONTENT", "forms"
-			).put(
-				"L_CMS_BLOG", "blogs"
-			).put(
-				"L_CMS_EXTERNAL_VIDEO", "document-multimedia"
-			).build()
+			SectionDisplayContextUtil.getObjectDefinitionIcons()
 		).put(
 			"objectEntryFolderExternalReferenceCode",
 			() -> {
@@ -300,13 +211,19 @@ public abstract class BaseSectionDisplayContext {
 	}
 
 	public String getAPIURL() {
+		if (isFolderSearchEnabled()) {
+			return "/o/search/v1.0/search";
+		}
+
 		return "/o/search/v1.0/search?" + getAdditionalAPIURLParameters();
 	}
 
 	public Map<String, Object> getBreadcrumbProps() throws PortalException {
 		JSONArray jsonArray = JSONFactoryUtil.createJSONArray();
 
-		addBreadcrumbItem(jsonArray, false, null, _getLayoutName());
+		addBreadcrumbItem(
+			jsonArray, false, null,
+			SectionDisplayContextUtil.getLayoutName(themeDisplay));
 
 		return HashMapBuilder.<String, Object>put(
 			"breadcrumbItems", jsonArray
@@ -317,14 +234,19 @@ public abstract class BaseSectionDisplayContext {
 
 	public List<DropdownItem> getBulkActionDropdownItems() {
 		return ListUtil.fromArray(
-			new FDSActionDropdownItem(
-				"#", "trash", "delete",
-				LanguageUtil.get(httpServletRequest, "delete"), null, null,
-				null));
+			FDSActionDropdownItemBuilder.setHref(
+				"#"
+			).setIcon(
+				"trash"
+			).setLabel(
+				LanguageUtil.get(httpServletRequest, "delete")
+			).build(
+				"delete"
+			));
 	}
 
 	public CreationMenu getCreationMenu() {
-		return _sectionDisplayContextHelper.getCreationMenu(
+		return SectionDisplayContextUtil.getCreationMenu(
 			getCreationMenuDropdownItems(), httpServletRequest,
 			getRootObjectEntryFolderExternalReferenceCode());
 	}
@@ -336,7 +258,7 @@ public abstract class BaseSectionDisplayContext {
 	public abstract Map<String, Object> getEmptyState();
 
 	public List<FDSActionDropdownItem> getFDSActionDropdownItems() {
-		return _sectionDisplayContextHelper.getFDSActionDropdownItems(
+		return SectionDisplayContextUtil.getFDSActionDropdownItems(
 			httpServletRequest);
 	}
 
@@ -354,12 +276,12 @@ public abstract class BaseSectionDisplayContext {
 	}
 
 	protected String appendGroupIds(String filterString) {
-		return _sectionDisplayContextHelper.appendGroupIds(
+		return SectionDisplayContextUtil.appendGroupIds(
 			filterString, httpServletRequest);
 	}
 
 	protected String appendStatus(String filterString) {
-		return _sectionDisplayContextHelper.appendStatus(filterString);
+		return SectionDisplayContextUtil.appendStatus(filterString);
 	}
 
 	protected abstract String getCMSSectionFilterString();
@@ -373,6 +295,10 @@ public abstract class BaseSectionDisplayContext {
 
 	protected String getRootObjectEntryFolderExternalReferenceCode() {
 		return null;
+	}
+
+	protected boolean isFolderSearchEnabled() {
+		return false;
 	}
 
 	protected final DepotEntryLocalService depotEntryLocalService;
@@ -402,125 +328,32 @@ public abstract class BaseSectionDisplayContext {
 		);
 	}
 
-	private Map<String, String> _getFileMimeTypeCssClasses() {
-		return HashMapBuilder.put(
-			"default", "file-icon-color-0"
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.codeFileMimeTypes(), "file-icon-color-7")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.compressedFileMimeTypes(), "file-icon-color-1")
-		).putAll(
-			_getFileMimeTypeValues(
-				ArrayUtil.append(
-					_dlConfiguration.multimediaFileMimeTypes(),
-					ContentTypes.
-						APPLICATION_VND_LIFERAY_VIDEO_EXTERNAL_SHORTCUT_HTML),
-				"file-icon-color-3")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.presentationFileMimeTypes(),
-				"file-icon-color-4")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.spreadSheetFileMimeTypes(),
-				"file-icon-color-2")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.textFileMimeTypes(), "file-icon-color-6")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.vectorialFileMimeTypes(), "file-icon-color-5")
-		).build();
-	}
-
-	private Map<String, String> _getFileMimeTypeIcons() {
-		return HashMapBuilder.put(
-			"default", "document-default"
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.codeFileMimeTypes(), "document-code")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.compressedFileMimeTypes(),
-				"document-compressed")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.presentationFileMimeTypes(),
-				"document-presentation")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.spreadSheetFileMimeTypes(), "document-table")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.textFileMimeTypes(), "document-text")
-		).putAll(
-			_getFileMimeTypeValues(
-				_dlConfiguration.vectorialFileMimeTypes(), "document-vector")
-		).putAll(
-			_getFileMimeTypeMultimediaCssClasses(
-				ArrayUtil.append(
-					_dlConfiguration.multimediaFileMimeTypes(),
-					ContentTypes.
-						APPLICATION_VND_LIFERAY_VIDEO_EXTERNAL_SHORTCUT_HTML))
-		).build();
-	}
-
-	private Map<String, String> _getFileMimeTypeMultimediaCssClasses(
-		String[] mimeTypes) {
-
-		Map<String, String> fileMimeTypeMultimediaCssClasses = new HashMap<>();
-
-		for (String mimeType : mimeTypes) {
-			if (mimeType.startsWith("image")) {
-				fileMimeTypeMultimediaCssClasses.put(
-					mimeType, "document-image");
-			}
-			else {
-				fileMimeTypeMultimediaCssClasses.put(
-					mimeType, "document-multimedia");
-			}
-		}
-
-		return fileMimeTypeMultimediaCssClasses;
-	}
-
-	private Map<String, String> _getFileMimeTypeValues(
-		String[] mimeTypes, String value) {
-
-		Map<String, String> fileMimeTypeValues = new HashMap<>();
-
-		for (String mimeType : mimeTypes) {
-			fileMimeTypeValues.put(mimeType, value);
-		}
-
-		return fileMimeTypeValues;
-	}
-
-	private String _getLayoutName() {
-		Layout layout = themeDisplay.getLayout();
-
-		if (layout == null) {
-			return null;
-		}
-
-		return layout.getName(themeDisplay.getLocale(), true);
-	}
-
 	private JSONArray _getLocalesJSONArray(
 		Locale locale, Collection<Locale> locales) {
 
 		JSONArray jsonArray = JSONFactoryUtil.createJSONArray();
 
 		locales.forEach(
-			currentLocale -> jsonArray.put(
-				JSONUtil.put(
-					"displayName",
-					LocaleUtil.getLocaleDisplayName(currentLocale, locale)
-				).put(
-					"languageId", LocaleUtil.toLanguageId(currentLocale)
-				)));
+			currentLocale -> {
+				String w3cLanguageId = LocaleUtil.toW3cLanguageId(
+					currentLocale);
+
+				jsonArray.put(
+					JSONUtil.put(
+						"displayName",
+						LocaleUtil.getLocaleDisplayName(currentLocale, locale)
+					).put(
+						"id", LocaleUtil.toLanguageId(currentLocale)
+					).put(
+						"label", w3cLanguageId
+					).put(
+						"languageId", LocaleUtil.toLanguageId(currentLocale)
+					).put(
+						"name", currentLocale.getDisplayName()
+					).put(
+						"symbol", StringUtil.toLowerCase(w3cLanguageId)
+					));
+			});
 
 		return jsonArray;
 	}
@@ -556,7 +389,6 @@ public abstract class BaseSectionDisplayContext {
 
 	private final DLConfiguration _dlConfiguration;
 	private final ObjectDefinitionService _objectDefinitionService;
-	private final SectionDisplayContextHelper _sectionDisplayContextHelper;
 	private final TranslationInfoItemFieldValuesExporterRegistry
 		_translationInfoItemFieldValuesExporterRegistry;
 

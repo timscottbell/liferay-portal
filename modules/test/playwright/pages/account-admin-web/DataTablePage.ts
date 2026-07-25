@@ -5,6 +5,8 @@
 
 import {FrameLocator, Locator, Page, expect} from '@playwright/test';
 
+import {clickAndExpectToBeVisible} from '../../utils/clickAndExpectToBeVisible';
+
 export const searchTableRowByValue = async function (
 	tableLocator: Locator,
 	colPosition: number,
@@ -40,6 +42,7 @@ export class DataTablePage {
 		strictEqual?: boolean
 	) => Promise<Locator>;
 	readonly clearButton: Locator;
+	readonly clickOrderMenuItem: (option: string) => Promise<void>;
 	readonly filterButton: Locator;
 	readonly filterMenuItem: (option: string) => Locator;
 	readonly firstRow: () => Promise<Locator>;
@@ -50,7 +53,6 @@ export class DataTablePage {
 		rowIndex: number
 	) => Locator;
 	readonly orderButton: Locator;
-	readonly orderMenuItem: (option: string) => Locator;
 	readonly page: Page | FrameLocator;
 	readonly row: (
 		colPosition: number,
@@ -104,6 +106,20 @@ export class DataTablePage {
 			return null;
 		};
 		this.clearButton = page.getByRole('button', {name: 'Clear'});
+		this.clickOrderMenuItem = async (option: string) => {
+			const menuItem = page.getByRole('menuitem', {
+				exact: true,
+				name: option,
+			});
+
+			if ((await menuItem.getAttribute('aria-selected')) === 'true') {
+				await menuItem.press('Escape');
+
+				return;
+			}
+
+			await menuItem.click({timeout: 500});
+		};
 		this.filterButton = page.getByLabel('Filter', {exact: true});
 		this.filterMenuItem = (option: string) => {
 			return page.getByRole('menuitem', {
@@ -131,12 +147,6 @@ export class DataTablePage {
 			return row.getByRole('cell').nth(columnIndex);
 		};
 		this.orderButton = page.getByRole('button', {name: 'Order'});
-		this.orderMenuItem = (option: string) => {
-			return page.getByRole('menuitem', {
-				exact: true,
-				name: option,
-			});
-		};
 		this.row = async (
 			colPosition: number,
 			value: string,
@@ -170,7 +180,7 @@ export class DataTablePage {
 		this.searchButton = page.getByLabel('Search for', {exact: true});
 		this.searchInput = page
 			.getByPlaceholder('Search for', {exact: true})
-			.or(page.getByPlaceholder('Search', {exact: true}));
+			.or(page.locator('input[placeholder="Search"]:not(.sidebar *)'));
 		this.selectAllItemsCheckbox = page.getByLabel(
 			'Select All Items on the Page'
 		);
@@ -188,6 +198,15 @@ export class DataTablePage {
 			page.getByTitle(`Select View, Currently Selected: ${status}`);
 	}
 
+	async changeFilter(option: string) {
+		await clickAndExpectToBeVisible({
+			target: this.filterMenuItem(option),
+			trigger: this.filterButton,
+		});
+
+		await this.filterMenuItem(option).click({force: true});
+	}
+
 	async changeView(view: string) {
 		if (view === 'List') {
 			await expect(async () => {
@@ -198,8 +217,12 @@ export class DataTablePage {
 				});
 			}).toPass({timeout: 1500});
 
-			await this.selectViewListButton.click();
+			await this.selectViewListButton.click({force: true});
 			await expect(this.viewStatus(view)).toBeVisible();
+
+			if (await this.selectViewListButton.isVisible()) {
+				await this.selectViewListButton.press('Escape');
+			}
 
 			return;
 		}
@@ -212,8 +235,12 @@ export class DataTablePage {
 				});
 			}).toPass({timeout: 1500});
 
-			await this.selectViewCardButton.click();
+			await this.selectViewCardButton.click({force: true});
 			await expect(this.viewStatus(view)).toBeVisible();
+
+			if (await this.selectViewCardButton.isVisible()) {
+				await this.selectViewCardButton.press('Escape');
+			}
 
 			return;
 		}
@@ -224,14 +251,19 @@ export class DataTablePage {
 			await expect(this.selectViewTableButton).toBeVisible({
 				timeout: 100,
 			});
-		}).toPass({timeout: 1500});
 
-		await this.selectViewTableButton.click();
+			await this.selectViewTableButton.click({force: true, timeout: 500});
+		}).toPass({timeout: 5000});
+
 		await expect(this.viewStatus(view)).toBeVisible();
+
+		if (await this.selectViewTableButton.isVisible()) {
+			await this.selectViewTableButton.press('Escape');
+		}
 	}
 
-	async search(value: string) {
-		await this.searchInput.fill(value);
+	async search(value?: string) {
+		await this.searchInput.fill(value || '');
 		await this.searchButton.click();
 		await expect(this.searchInput).toBeEditable();
 	}

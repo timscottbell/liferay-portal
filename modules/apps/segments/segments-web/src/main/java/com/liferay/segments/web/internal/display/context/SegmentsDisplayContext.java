@@ -7,17 +7,17 @@ package com.liferay.segments.web.internal.display.context;
 
 import com.liferay.analytics.settings.configuration.AnalyticsConfiguration;
 import com.liferay.analytics.settings.rest.manager.AnalyticsSettingsManager;
-import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
-import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenuBuilder;
 import com.liferay.item.selector.ItemSelector;
 import com.liferay.item.selector.criteria.UUIDItemSelectorReturnType;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.dao.search.EmptyOnClickRowChecker;
 import com.liferay.portal.kernel.dao.search.SearchContainer;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.module.configuration.ConfigurationException;
@@ -57,6 +57,7 @@ import jakarta.portlet.RenderResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -133,18 +134,6 @@ public class SegmentsDisplayContext {
 		}
 
 		return StringPool.BLANK;
-	}
-
-	public CreationMenu getCreationMenu() {
-		return CreationMenuBuilder.addPrimaryDropdownItem(
-			dropdownItem -> {
-				dropdownItem.setHref(
-					_renderResponse.createRenderURL(), "mvcRenderCommandName",
-					"/segments/edit_segments_entry");
-				dropdownItem.setLabel(
-					_language.get(_httpServletRequest, "add-new-user-segment"));
-			}
-		).build();
 	}
 
 	public String getDeleteURL(SegmentsEntry segmentsEntry) {
@@ -264,21 +253,55 @@ public class SegmentsDisplayContext {
 				_segmentsEntryService.searchSegmentsEntries(
 					_themeDisplay.getCompanyId(),
 					_themeDisplay.getScopeGroupId(), _getKeywords(),
+					new LinkedHashMap<>(), searchContainer.getStart(),
+					searchContainer.getEnd(), _getSort()));
+		}
+		else if (!FeatureFlagManagerUtil.isEnabled(
+					CompanyConstants.SYSTEM, "LPD-78863")) {
+
+			searchContainer.setResultsAndTotal(
+				() -> _segmentsEntryService.getSegmentsEntries(
+					_themeDisplay.getScopeGroupId(),
+					new String[] {
+						SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND
+					},
 					searchContainer.getStart(), searchContainer.getEnd(),
-					_getSort()));
+					searchContainer.getOrderByComparator()),
+				_segmentsEntryService.getSegmentsEntriesCount(
+					_themeDisplay.getScopeGroupId(),
+					new String[] {
+						SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND
+					}));
 		}
 		else {
 			searchContainer.setResultsAndTotal(
 				() -> _segmentsEntryService.getSegmentsEntries(
-					_themeDisplay.getScopeGroupId(), searchContainer.getStart(),
-					searchContainer.getEnd(),
+					_themeDisplay.getScopeGroupId(),
+					new String[] {
+						SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND,
+						SegmentsEntryConstants.SOURCE_DEFAULT,
+						SegmentsEntryConstants.SOURCE_REFERRED
+					},
+					searchContainer.getStart(), searchContainer.getEnd(),
 					searchContainer.getOrderByComparator()),
 				_segmentsEntryService.getSegmentsEntriesCount(
-					_themeDisplay.getScopeGroupId()));
+					_themeDisplay.getScopeGroupId(),
+					new String[] {
+						SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND,
+						SegmentsEntryConstants.SOURCE_DEFAULT,
+						SegmentsEntryConstants.SOURCE_REFERRED
+					}));
 		}
 
-		searchContainer.setRowChecker(
-			new EmptyOnClickRowChecker(_renderResponse));
+		if (!FeatureFlagManagerUtil.isEnabled(
+				CompanyConstants.SYSTEM, "LPD-78863")) {
+
+			searchContainer.setRowChecker(null);
+		}
+		else {
+			searchContainer.setRowChecker(
+				new EmptyOnClickRowChecker(_renderResponse));
+		}
 
 		_searchContainer = searchContainer;
 
@@ -324,6 +347,12 @@ public class SegmentsDisplayContext {
 
 			return liferayAnalyticsURL + "/contacts/segments/" +
 				segmentsEntry.getSegmentsEntryKey();
+		}
+
+		if (!FeatureFlagManagerUtil.isEnabled(
+				CompanyConstants.SYSTEM, "LPD-78863")) {
+
+			return StringPool.BLANK;
 		}
 
 		return PortletURLBuilder.createRenderURL(
@@ -403,7 +432,8 @@ public class SegmentsDisplayContext {
 					_permissionChecker, segmentsEntry,
 					ActionKeys.ASSIGN_USER_ROLES)) {
 
-				return true;
+				return FeatureFlagManagerUtil.isEnabled(
+					CompanyConstants.SYSTEM, "LPD-78863");
 			}
 
 			return false;
@@ -448,8 +478,15 @@ public class SegmentsDisplayContext {
 
 	public boolean isShowUpdateAction(SegmentsEntry segmentsEntry) {
 		try {
-			return SegmentsEntryPermission.contains(
-				_permissionChecker, segmentsEntry, ActionKeys.UPDATE);
+			if (FeatureFlagManagerUtil.isEnabled(
+					CompanyConstants.SYSTEM, "LPD-78863") &&
+				SegmentsEntryPermission.contains(
+					_permissionChecker, segmentsEntry, ActionKeys.UPDATE)) {
+
+				return true;
+			}
+
+			return false;
 		}
 		catch (PortalException portalException) {
 			_log.error(portalException);
@@ -460,8 +497,15 @@ public class SegmentsDisplayContext {
 
 	public boolean isShowViewAction(SegmentsEntry segmentsEntry) {
 		try {
-			return SegmentsEntryPermission.contains(
-				_permissionChecker, segmentsEntry, ActionKeys.VIEW);
+			if (FeatureFlagManagerUtil.isEnabled(
+					CompanyConstants.SYSTEM, "LPD-78863") &&
+				SegmentsEntryPermission.contains(
+					_permissionChecker, segmentsEntry, ActionKeys.VIEW)) {
+
+				return true;
+			}
+
+			return false;
 		}
 		catch (PortalException portalException) {
 			_log.error(portalException);

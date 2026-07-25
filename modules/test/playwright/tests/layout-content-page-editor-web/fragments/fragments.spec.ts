@@ -39,7 +39,7 @@ const test = mergeTests(
 	displayPageTemplatesPagesTest,
 	documentLibraryPagesTest,
 	featureFlagsTest({
-		'LPD-11235': {enabled: true},
+		'LPD-11235': {enabled: false},
 		'LPD-17564': {enabled: true},
 		'LPD-39304': {enabled: true},
 		'LPS-178052': {enabled: true},
@@ -106,27 +106,23 @@ test.describe('Related Asset Fragment', () => {
 
 			await journalEditArticlePage.editArticle(journalArticleTitle1);
 
-			const row = page
-				.frameLocator('iframe[title="Select Basic Web Content"]')
-				.locator('.list-group-item', {hasText: journalArticleTitle2});
+			const itemCheckbox = page
+				.locator('.modal-dialog')
+				.getByLabel(`Select ${journalArticleTitle2}`);
 
 			await expect(async () => {
-				await journalEditArticlePage.openRelatedAsset(
-					'Basic Web Content'
-				);
+				await journalEditArticlePage.openRelatedAsset();
 
-				await expect(
-					page.getByText('Select Basic Web Content')
-				).toBeVisible({timeout: 3000});
+				await expect(itemCheckbox).toBeVisible({timeout: 3000});
 			}).toPass();
 
-			await row.getByRole('checkbox').check({trial: true});
-
-			await row.getByRole('checkbox').check();
+			await itemCheckbox.check();
 
 			await clickAndExpectToBeHidden({
 				target: page.locator('.modal-dialog'),
-				trigger: page.getByRole('button', {name: 'Done'}),
+				trigger: page
+					.locator('.modal-dialog')
+					.getByRole('button', {exact: true, name: 'Select'}),
 			});
 
 			await journalEditArticlePage.publishArticle(true);
@@ -196,72 +192,6 @@ test.describe('Related Asset Fragment', () => {
 			await expect(newPage.getByText(journalArticleTitle2)).toBeVisible();
 		}
 	);
-});
-
-test.describe('Banner Slider Fragment', () => {
-	test('Check the functionality of the Banner Slider fragment', async ({
-		apiHelpers,
-		page,
-		pageEditorPage,
-		site,
-	}) => {
-
-		// Create a content page with a Banner Slider fragment
-
-		const bannerSliderId = getRandomString();
-
-		const layout = await apiHelpers.headlessDelivery.createSitePage({
-			pageDefinition: getPageDefinition([
-				getFragmentDefinition({
-					id: bannerSliderId,
-					key: 'FEATURED_CONTENT-banner-slider',
-				}),
-			]),
-			siteId: site.id,
-			title: getRandomString(),
-		});
-
-		await pageEditorPage.goto(layout, site.friendlyUrlPath);
-
-		// Change the number of slides
-
-		await pageEditorPage.selectFragment(bannerSliderId);
-
-		await pageEditorPage.changeFragmentConfiguration({
-			fieldLabel: 'Number of Slides',
-			fragmentId: bannerSliderId,
-			tab: 'General',
-			value: '4',
-		});
-
-		// Check that the number of slides is displayed correctly
-
-		expect(await page.getByLabel('Focus slide').count()).toBe(4);
-
-		// Check that the fourth slide is displayed
-
-		await page.getByLabel('Focus Slide 4').click();
-
-		await expect(
-			page.locator('[data-lfr-editable-id="04-01-image"]')
-		).toBeVisible();
-
-		await pageEditorPage.editTextEditable(
-			bannerSliderId,
-			'04-02-title',
-			'New title'
-		);
-
-		// Check the banner slider is displayed correctly in the view mode
-
-		await pageEditorPage.publishPage();
-
-		await page.goto(`/web${site.friendlyUrlPath}${layout.friendlyUrlPath}`);
-
-		expect(await page.getByLabel('Focus slide').count()).toBe(4);
-
-		await expect(page.getByText('New title')).toBeAttached();
-	});
 });
 
 test.describe('Dropdown Fragment', () => {
@@ -833,6 +763,61 @@ test.describe('Image Fragment', () => {
 			).toContain('poodle.jpg');
 		}
 	);
+
+	test(
+		"Saves URL and 'Open in a new tab' configuration without showing an error",
+		{tag: '@LPD-88811'},
+		async ({apiHelpers, page, pageEditorPage, pageManagementSite}) => {
+			const imageId = getRandomString();
+
+			const imageFragment = getFragmentDefinition({
+				id: imageId,
+				key: 'BASIC_COMPONENT-image',
+			});
+
+			const layout = await apiHelpers.headlessDelivery.createSitePage({
+				pageDefinition: getPageDefinition([imageFragment]),
+				siteId: pageManagementSite.id,
+				title: getRandomString(),
+			});
+
+			await pageEditorPage.goto(
+				layout,
+				pageManagementSite.friendlyUrlPath
+			);
+
+			await pageEditorPage.selectEditable(imageId, 'image-square');
+
+			await page.getByRole('tab', {exact: true, name: 'Link'}).click();
+
+			await page
+				.getByRole('combobox', {exact: true, name: 'Link'})
+				.selectOption({label: 'URL'});
+
+			await page
+				.getByLabel('URL', {exact: true})
+				.fill('https://test.com');
+
+			const hasErrorAlert = page
+				.locator('.alert-danger', {
+					hasText: 'Error:An unexpected error occurred.',
+				})
+				.waitFor({state: 'visible', timeout: 5000})
+				.then(() => true)
+				.catch(() => false);
+
+			await page.getByLabel('Open in a new tab.', {exact: true}).check();
+
+			await pageEditorPage.waitForChangesSaved();
+
+			const link = page.locator('.component-image a').first();
+
+			await expect(link).toHaveAttribute('href', 'https://test.com');
+			await expect(link).toHaveAttribute('target', '_blank');
+
+			expect(await hasErrorAlert).toBe(false);
+		}
+	);
 });
 
 test.describe('Multiselect Fragment', () => {
@@ -1076,6 +1061,59 @@ test.describe('Paragraph Fragment', () => {
 			await expect(
 				page.getByLabel('Accessibility help')
 			).toBeInViewport();
+		}
+	);
+
+	test(
+		'Can edit text editable with special characters',
+		{tag: ['@LPD-17788', '@LPD-79331']},
+		async ({apiHelpers, page, pageEditorPage, site}) => {
+
+			// Create page with a paragraph fragment and go to edit mode
+
+			const fragmentId = getRandomString();
+
+			const fragment = getFragmentDefinition({
+				id: fragmentId,
+				key: 'BASIC_COMPONENT-paragraph',
+			});
+
+			const layout = await apiHelpers.headlessDelivery.createSitePage({
+				pageDefinition: getPageDefinition([fragment]),
+				siteId: site.id,
+				title: getRandomString(),
+			});
+
+			await pageEditorPage.goto(layout, site.friendlyUrlPath);
+
+			// Check paragraph editable can be edited
+
+			await pageEditorPage.editTextEditable(
+				fragmentId,
+				'element-text',
+				'New editable "fragment" text'
+			);
+
+			// Publish the page
+
+			await pageEditorPage.publishPage();
+
+			await page.goto(
+				`/web${site.friendlyUrlPath}${layout.friendlyUrlPath}`
+			);
+
+			// Check that the text is displayed
+
+			await expect(
+				page.getByText('New editable "fragment" text')
+			).toBeAttached();
+
+			// Check that the <p> does not have the default margin-bottom
+
+			expect(page.locator('.component-paragraph p')).toHaveCSS(
+				'margin-bottom',
+				'0px'
+			);
 		}
 	);
 });

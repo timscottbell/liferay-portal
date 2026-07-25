@@ -7,6 +7,13 @@ const wrapper = fragmentElement;
 
 const fileInput = document.getElementById(`${fragmentElementId}-file-upload`);
 const fileName = wrapper.querySelector('.forms-file-upload-file-name');
+const fileSizeError = document.getElementById(
+	`${fragmentElementId}-file-upload-error`
+);
+const fileSizeErrorMessage = document.getElementById(
+	`${fragmentElementId}-file-upload-error-message`
+);
+const formGroup = wrapper.querySelector('.form-group');
 const hiddenFileInput = document.getElementById(
 	`${fragmentElementId}-file-upload-hidden`
 );
@@ -16,6 +23,20 @@ const removeButton = document.getElementById(
 const selectButton = document.getElementById(
 	`${fragmentElementId}-file-upload-button-label`
 );
+
+const aiAssistantContainer = wrapper.querySelector('.file-upload-ai-assistant');
+
+if (aiAssistantContainer && Liferay.FeatureFlags['LPD-62272']) {
+	import('@liferay/ai-hub-cell-js-components-web/renderAIAssistantChat').then(
+		({default: renderAIAssistantChat}) => {
+			renderAIAssistantChat(aiAssistantContainer, {
+				hideTriggerLabel: true,
+				instructionDefinitionScope: 'cms',
+				triggerRound: true,
+			});
+		}
+	);
+}
 
 function showRemoveButton() {
 	removeButton.classList.remove('d-none');
@@ -31,12 +52,36 @@ if (
 }
 
 let previousFiles = null;
+let showInputError = null;
 
 function mbToBytes(mb) {
 	return mb * 1024 * 1024;
 }
 
 function onInputChange() {
+	if (
+		input.attributes.maxFileSize &&
+		fileInput.files[0] &&
+		fileInput.files[0].size > mbToBytes(input.attributes.maxFileSize)
+	) {
+		showInputError({
+			errorContainer: fileSizeError,
+			errorMessageContainer: fileSizeErrorMessage,
+			formGroup,
+			message: fileSizeErrorMessage.getAttribute(
+				'data-file-size-feedback'
+			),
+		});
+
+		fileInput.value = '';
+
+		return;
+	}
+	else {
+		fileSizeError.classList.add('sr-only');
+		formGroup.classList.remove('has-error');
+	}
+
 	if (!fileInput.files.length && previousFiles) {
 		const dataTransfer = new DataTransfer();
 
@@ -50,7 +95,10 @@ function onInputChange() {
 	}
 
 	fileName.innerText = fileInput.files[0].name;
-	fileInput.setAttribute('name', input.name);
+
+	if (!input.localizable) {
+		fileInput.setAttribute('name', input.name);
+	}
 
 	hiddenFileInput.setAttribute('name', '');
 	hiddenFileInput.value = '';
@@ -117,6 +165,7 @@ function onSelectFile(event, onChange, setTranslationInputValue) {
 							value: 'embedded.file.id',
 						},
 					},
+					folderMemoryKey: `cms-file-upload:${fileInput.id}`,
 					groupId: input.attributes.groupId,
 					maxFileSize: mbToBytes(input.attributes.maxFileSize),
 					onSelect(items) {
@@ -186,7 +235,7 @@ else {
 		showRemoveButton();
 	}
 
-	const defaultLanguageId = themeDisplay.getDefaultLanguageId();
+	const defaultLanguageId = input.attributes.defaultLanguageId;
 	const inputElement = fileInput;
 
 	let currentLanguageId = defaultLanguageId;
@@ -196,7 +245,10 @@ else {
 			getTranslationInput,
 			registerLocalizedInput,
 			registerUnlocalizedInput,
+			showInputError: showInputErrorFn,
 		}) => {
+			showInputError = showInputErrorFn;
+
 			if (input.localizable) {
 
 				// Set initial values
@@ -228,6 +280,7 @@ else {
 					input.attributes.selectFromDocumentLibrary;
 
 				const {onChange} = registerLocalizedInput({
+					availableLanguageIds: input.attributes.availableLanguageIds,
 					changeTextDirection: false,
 					customLocaleChangeHandler: true,
 					defaultLanguageId,

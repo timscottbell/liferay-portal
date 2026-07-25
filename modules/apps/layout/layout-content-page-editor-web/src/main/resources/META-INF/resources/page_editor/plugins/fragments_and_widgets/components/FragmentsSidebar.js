@@ -159,6 +159,7 @@ export default function FragmentsSidebar() {
 					collectionId: collection.fragmentCollectionId,
 					deprecated: collection.deprecated,
 					label: collection.name,
+					scope: collection.scope,
 				})),
 				id: COLLECTION_IDS.fragments,
 				label: Liferay.Language.get('fragments'),
@@ -292,10 +293,14 @@ export default function FragmentsSidebar() {
 
 						{permissions.VIEW_MARKETPLACE ? (
 							<MarketplaceButton
+								addFragmentCollectionURL={
+									config.addFragmentCollectionURL
+								}
 								body={Liferay.Language.get(
 									'we-are-excited-to-share-that-marketplace-is-now-part-of-page-builder'
 								)}
 								className="ml-1"
+								fragmentCollections={config.fragmentCollections}
 								fragmentPortletNamespace={
 									config.fragmentPortletNamespace
 								}

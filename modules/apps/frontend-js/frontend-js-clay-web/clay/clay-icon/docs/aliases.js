@@ -426,7 +426,7 @@ export const iconsData = [
 		name: 'announcement',
 	},
 	{
-		aliases: [''],
+		aliases: ['incognito', 'private', 'secret'],
 		name: 'anonymize',
 	},
 	{
@@ -475,6 +475,10 @@ export const iconsData = [
 	{
 		aliases: ['down', 'join', 'workflow'],
 		name: 'arrow-xor',
+	},
+	{
+		aliases: ['key', 'keyboard', 'navigation'],
+		name: 'arrows-all',
 	},
 	{
 		aliases: ['*', 'mandatory', 'required'],
@@ -549,6 +553,10 @@ export const iconsData = [
 		name: 'books',
 	},
 	{
+		aliases: ['assets', 'design library', 'palette'],
+		name: 'books-brush',
+	},
+	{
 		aliases: ['line', 'stroke', 'dashed', 'solid'],
 		name: 'border-style',
 	},
@@ -559,6 +567,10 @@ export const iconsData = [
 	{
 		aliases: ['chest', 'collection', 'package'],
 		name: 'box-container',
+	},
+	{
+		aliases: ['part', 'portion', 'segment'],
+		name: 'box-squared',
 	},
 	{
 		aliases: ['container', 'curly brackets', 'keys', 'object', 'record'],
@@ -667,6 +679,65 @@ export const iconsData = [
 	{
 		aliases: ['arrows', 'reload', 'repeat', 'update'],
 		name: 'change',
+	},
+	{
+		aliases: ['analytics', 'area', 'filled', 'volume'],
+		name: 'chart-area',
+	},
+	{
+		aliases: [
+			'analytics',
+			'bar',
+			'column',
+			'growth',
+			'layered',
+			'stacked',
+			'vertical',
+		],
+		name: 'chart-bar-stacked',
+	},
+	{
+		aliases: ['analytics', 'axis', 'bar', 'baseline', 'column', 'vertical'],
+		name: 'chart-bar-x-axis',
+	},
+	{
+		aliases: ['analytics', 'axis', 'bar', 'baseline', 'horizontal'],
+		name: 'chart-bar-y-axis',
+	},
+	{
+		aliases: ['analytics', 'bar', 'column', 'growth', 'vertical'],
+		name: 'chart-bar',
+	},
+	{
+		aliases: ['analytics', 'distribution', 'hollow', 'ring', 'segment'],
+		name: 'chart-donut',
+	},
+	{
+		aliases: ['analytics', 'decrease', 'down', 'fall', 'line', 'trend'],
+		name: 'chart-line-down',
+	},
+	{
+		aliases: ['analytics', 'growth', 'increase', 'line', 'trend', 'up'],
+		name: 'chart-line-up',
+	},
+	{
+		aliases: ['analytics', 'evolution', 'line', 'trend'],
+		name: 'chart-line',
+	},
+	{
+		aliases: [
+			'analytics',
+			'fill',
+			'proportion',
+			'segment',
+			'slice',
+			'solid',
+		],
+		name: 'chart-pie-fill',
+	},
+	{
+		aliases: ['analytics', 'proportion', 'segment', 'slice'],
+		name: 'chart-pie',
 	},
 	{
 		aliases: ['chat', 'bot'],
@@ -833,7 +904,7 @@ export const iconsData = [
 		name: 'diamond',
 	},
 	{
-		aliases: ['agenda', 'book', 'library'],
+		aliases: ['agenda', 'book', 'definition', 'library'],
 		name: 'diary',
 	},
 	{
@@ -1353,7 +1424,14 @@ export const iconsData = [
 		name: 'no-bot',
 	},
 	{
-		aliases: ['channel', 'commerce', 'marketing', 'sales', 'user'],
+		aliases: [
+			'channel',
+			'commerce',
+			'marketing',
+			'properties',
+			'sales',
+			'user',
+		],
 		name: 'nodes',
 	},
 	{
@@ -1495,6 +1573,10 @@ export const iconsData = [
 	{
 		aliases: ['fix'],
 		name: 'pin',
+	},
+	{
+		aliases: ['growth', 'lifecycle', 'process'],
+		name: 'plant',
 	},
 	{
 		aliases: ['control', 'multimedia'],
@@ -1809,7 +1891,7 @@ export const iconsData = [
 		name: 'special-character',
 	},
 	{
-		aliases: [''],
+		aliases: ['capacity', 'performance', 'power', 'usage'],
 		name: 'speed',
 	},
 	{
@@ -2035,6 +2117,10 @@ export const iconsData = [
 	{
 		aliases: ['deprecated'],
 		name: 'urgent',
+	},
+	{
+		aliases: ['management', 'personalization', 'settings'],
+		name: 'user-cog',
 	},
 	{
 		aliases: ['add', 'client', 'create', 'people'],

@@ -5,17 +5,18 @@
 
 import {expect, mergeTests} from '@playwright/test';
 
-import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {globalMenuPagesTest} from '../../../fixtures/globalMenuPagesTest';
+import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
+import {closeProductMenu, openProductMenu} from '../../../utils/productMenu';
 import {waitForPageToBeLoaded} from '../../../utils/waitForPageToBeLoaded';
+import {contentDashboardPagesTest} from '../../content-dashboard-web/main/fixtures/contentDashboardPagesTest';
 
 const test = mergeTests(
-	featureFlagsTest({
-		'LPD-36105': {enabled: true},
-	}),
+	contentDashboardPagesTest,
 	globalMenuPagesTest,
+	isolatedSiteTest,
 	loginTest()
 );
 
@@ -26,11 +27,11 @@ test(
 		await test.step('Click on a navigation item and check if it navigates to the correct page', async () => {
 			await globalMenuPage.goToControlPanel();
 
-			const usersAndOrganizationsItem = page.getByRole('menuitem', {
-				name: 'Users and Organizations',
+			const homeItem = page.getByRole('menuitem', {
+				name: 'Home',
 			});
 
-			await expect(usersAndOrganizationsItem).toHaveClass(/active/);
+			await expect(homeItem).toHaveClass(/active/);
 
 			const userGroupsItem = page.getByRole('menuitem', {
 				name: 'User Groups',
@@ -43,7 +44,7 @@ test(
 			await expect(
 				page.getByRole('heading', {name: 'User Groups'})
 			).toBeAttached();
-			await expect(usersAndOrganizationsItem).not.toHaveClass(/active/);
+			await expect(homeItem).not.toHaveClass(/active/);
 			await expect(userGroupsItem).toHaveClass(/active/);
 		});
 	}
@@ -71,7 +72,7 @@ test(
 
 			await page
 				.frameLocator('iframe[title="Select Site"]')
-				.getByRole('link', {name: /^Liferay( DXP)?$/})
+				.getByRole('link', {exact: true, name: 'Liferay DXP Site'})
 				.click();
 
 			await waitForPageToBeLoaded(page);
@@ -88,13 +89,13 @@ test(
 		});
 
 		await test.step('Click the toggle button and check if navigation is open/hidden', async () => {
-			const menu = page.getByLabel('Applications Menu');
+			const menu = page.getByLabel('Applications Menu', {exact: true});
 
-			await globalMenuPage.openProductMenu('Applications');
+			await openProductMenu(page);
 
 			await expect(menu).toBeVisible();
 
-			await globalMenuPage.closeProductMenu('Applications');
+			await closeProductMenu(page);
 
 			await expect(menu).not.toBeVisible();
 		});
@@ -109,7 +110,7 @@ test(
 			await globalMenuPage.goToApplications();
 		});
 
-		const menu = page.getByLabel('Applications Menu');
+		const menu = page.getByLabel('Applications Menu', {exact: true});
 		const toggler = page.getByTestId('sideNavigationToggler');
 
 		const testCases = [
@@ -147,7 +148,7 @@ test(
 	async ({globalMenuPage, page}) => {
 		await globalMenuPage.goToApplications();
 
-		const workflowItem = page.getByText('Workflow');
+		const workflowItem = page.getByRole('menuitem', {name: 'Workflow'});
 
 		try {
 			const categories = page.locator('button.collapse-icon');
@@ -191,7 +192,7 @@ test(
 	'Escape key does not close the side navigation menu',
 	{tag: '@LPD-79543'},
 	async ({globalMenuPage, page}) => {
-		const menu = page.getByLabel('Applications Menu');
+		const menu = page.getByLabel('Applications Menu', {exact: true});
 
 		await test.step('Go to an Applications Panel page', async () => {
 			await globalMenuPage.goToApplications();
@@ -205,6 +206,96 @@ test(
 			await page.reload();
 
 			await expect(menu).toBeVisible();
+		});
+	}
+);
+
+test(
+	'The side navigation shows a visible divider separating it from the content',
+	{tag: '@LPD-93647'},
+	async ({globalMenuPage, page}) => {
+		await test.step('Go to an Applications Panel page', async () => {
+			await globalMenuPage.goToApplications();
+
+			await expect(
+				page.getByLabel('Applications Menu', {exact: true})
+			).toBeVisible();
+		});
+
+		await test.step('Assert the divider border is actually rendered', async () => {
+			const {borderRightColor, borderRightStyle, borderRightWidth} =
+				await page.getByTestId('sideNavigation').evaluate((element) => {
+					const computedStyle = window.getComputedStyle(element);
+
+					return {
+						borderRightColor: computedStyle.borderRightColor,
+						borderRightStyle: computedStyle.borderRightStyle,
+						borderRightWidth: computedStyle.borderRightWidth,
+					};
+				});
+
+			expect(borderRightStyle).toBe('solid');
+
+			expect(parseFloat(borderRightWidth)).toBeGreaterThan(0);
+
+			expect(borderRightColor).not.toBe('rgba(0, 0, 0, 0)');
+		});
+	}
+);
+
+test(
+	'Side navigation remains visible after Liferay.Portlet.refresh call',
+	{tag: '@LPD-86410'},
+	async ({contentDashboardPage, page, site}) => {
+		async function expectSideNavigationToBeRendered() {
+			const sideNavigation = page.getByLabel('Applications Menu', {
+				exact: true,
+			});
+			const toggler = page.getByTestId('sideNavigationToggler');
+
+			await expect(sideNavigation).toBeVisible();
+			await expect(toggler).toBeVisible();
+
+			await toggler.click();
+
+			await expect(sideNavigation).toBeHidden();
+
+			await toggler.click();
+
+			await expect(sideNavigation).toBeVisible();
+		}
+
+		await test.step('Go to Applications > Content Dashboard', async () => {
+			await contentDashboardPage.goto(site.friendlyUrlPath);
+
+			await waitForPageToBeLoaded(page);
+
+			await expectSideNavigationToBeRendered();
+		});
+
+		const modalTitle = page.getByRole('heading', {
+			exact: true,
+			name: 'Configuration',
+		});
+
+		await test.step('Click on the settings (cog) icon to open the modal', async () => {
+			await page
+				.locator('button', {
+					has: page.locator('svg.lexicon-icon-cog'),
+				})
+				.click();
+
+			await expect(modalTitle).toBeVisible();
+		});
+
+		await test.step('Close the modal and verify side navigation visibility', async () => {
+			await page
+				.getByRole('button', {exact: true, name: 'Close'})
+				.click();
+
+			await expect(modalTitle).toBeHidden();
+
+			await expectSideNavigationToBeRendered();
 		});
 	}
 );

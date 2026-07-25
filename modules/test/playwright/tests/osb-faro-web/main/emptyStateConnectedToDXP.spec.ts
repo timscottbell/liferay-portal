@@ -6,13 +6,12 @@
 import {expect, mergeTests} from '@playwright/test';
 
 import {apiHelpersTest} from '../../../fixtures/apiHelpersTest';
-import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
+import {isolatedChannelTest} from '../../../fixtures/isolatedChannelTest';
+import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {loginAnalyticsCloudTest} from '../../../fixtures/loginAnalyticsCloudTest';
 import {loginTest} from '../../../fixtures/loginTest';
-import {liferayConfig} from '../../../liferay.config';
-import getRandomString from '../../../utils/getRandomString';
-import {syncAnalyticsCloud} from '../../analytics-settings-web/main/utils/analytics-settings';
+import {syncAnalyticsCloudViaAPI} from '../../analytics-settings-web/main/utils/analytics-settings';
 import {switchChannel} from './utils/channel';
 import {
 	ACPage,
@@ -24,87 +23,48 @@ import {addBreakdownByIndividualAttribute} from './utils/utils';
 
 export const test = mergeTests(
 	apiHelpersTest,
-	dataApiHelpersTest,
 	featureFlagsTest({
 		'LPS-178052': {enabled: true},
 	}),
+	isolatedChannelTest,
+	isolatedSiteTest,
 	loginAnalyticsCloudTest(),
 	loginTest()
 );
 
-const randomString = getRandomString();
-
-const channelName = 'My Property ' + randomString;
-const siteName = 'My Site ' + randomString;
-
-let channel;
-let project;
-let site;
-
-test.beforeEach(async ({apiHelpers, page}) => {
-	site = await apiHelpers.headlessSite.createSite({
-		name: siteName,
-	});
-
-	const result = await syncAnalyticsCloud({
+test.beforeEach(async ({analyticsChannel, apiHelpers, project, site}) => {
+	await syncAnalyticsCloudViaAPI({
 		apiHelpers,
-		channelName,
-		page,
-		siteName,
-	});
-
-	channel = result.channel;
-	project = result.project;
-});
-
-test.afterEach(async ({apiHelpers, page}) => {
-	await test.step('Delete channel', async () => {
-		await apiHelpers.jsonWebServicesOSBFaro.deleteChannel(
-			`[${channel.id}]`,
-			project.groupId
-		);
-	});
-
-	await test.step('Delete site on DXP side', async () => {
-		await page.goto(liferayConfig.environment.baseUrl);
-
-		await apiHelpers.headlessSite.deleteSite(String(site.id));
+		channel: analyticsChannel,
+		project,
+		siteId: Number(site.id),
 	});
 });
 
 test(
 	'Empty state of no assets with data source and property.',
-
 	{
 		tag: '@LRAC-10405',
 	},
-
-	async ({page}) => {
+	async ({analyticsChannel: channel, page, project}) => {
 		await test.step('Go to Analytics Cloud and Switch the property', async () => {
 			await navigateToACWorkspace({page});
 			await switchChannel({
-				channelName,
+				channelName: channel.name,
 				page,
 			});
 		});
 
-		await test.step('Go to Assets page', async () => {
+		await test.step('Go to Assets page, check empty state message', async () => {
 			await navigateToACPageViaURL({
 				acPage: ACPage.assetPage,
 				channelID: channel.id,
 				page,
 				projectID: project.groupId,
 			});
-		});
-
-		await test.step('Go to Blogs, check empty state message', async () => {
-			await navigateTo({
-				page,
-				pageName: 'Blogs',
-			});
 
 			await expect(
-				page.getByText('There are no visitors data found.')
+				page.getByText('There are no assets found.')
 			).toBeVisible();
 			await expect(
 				page.getByText(
@@ -113,7 +73,7 @@ test(
 			).toBeVisible();
 
 			await page
-				.getByRole('link', {name: 'Learn more about blogs.'})
+				.getByRole('link', {name: 'Learn more about assets.'})
 				.click();
 
 			const newPage = await page.waitForEvent('popup');
@@ -121,131 +81,7 @@ test(
 			const href = newPage.url();
 
 			await expect(href).toContain('learn.liferay.com');
-			await expect(href).toContain('/assets-analytics/blogs-analytics');
-
-			await newPage.close();
-		});
-
-		await test.step('Go to Documents and Media, check empty state message', async () => {
-			await navigateTo({
-				page,
-				pageName: 'Documents and Media',
-			});
-
-			await expect(
-				page.getByText('There are no visitors data found.')
-			).toBeVisible();
-			await expect(
-				page.getByText(
-					'Check back later to verify if data has been received from your data sources, or you can try a different date range.'
-				)
-			).toBeVisible();
-
-			await page
-				.getByRole('link', {
-					name: 'Learn more about documents and media.',
-				})
-				.click();
-
-			const newPage = await page.waitForEvent('popup');
-
-			const href = newPage.url();
-
-			await expect(href).toContain('learn.liferay.com');
-			await expect(href).toContain(
-				'/assets-analytics/documents-and-media-analytics'
-			);
-
-			await newPage.close();
-		});
-
-		await test.step('Go to Forms, check empty state message', async () => {
-			await navigateTo({
-				page,
-				pageName: 'Forms',
-			});
-
-			await expect(
-				page.getByText('There are no visitors data found.')
-			).toBeVisible();
-			await expect(
-				page.getByText(
-					'Check back later to verify if data has been received from your data sources, or you can try a different date range.'
-				)
-			).toBeVisible();
-
-			await page
-				.getByRole('link', {name: 'Learn more about forms.'})
-				.click();
-
-			const newPage = await page.waitForEvent('popup');
-
-			const href = newPage.url();
-
-			await expect(href).toContain('learn.liferay.com');
-			await expect(href).toContain('/assets-analytics/forms-analytics');
-
-			await newPage.close();
-		});
-
-		await test.step('Go to Web Content, check empty state message', async () => {
-			await navigateTo({
-				page,
-				pageName: 'Web Content',
-			});
-
-			await expect(
-				page.getByText('There are no visitors data found.')
-			).toBeVisible();
-			await expect(
-				page.getByText(
-					'Check back later to verify if data has been received from your data sources, or you can try a different date range.'
-				)
-			).toBeVisible();
-
-			await page
-				.getByRole('link', {name: 'Learn more about web content.'})
-				.click();
-
-			const newPage = await page.waitForEvent('popup');
-
-			const href = newPage.url();
-
-			await expect(href).toContain('learn.liferay.com');
-			await expect(href).toContain(
-				'/assets-analytics/web-content-analytics'
-			);
-
-			await newPage.close();
-		});
-
-		await test.step('Go Custom Tab, check empty state message', async () => {
-			await navigateTo({
-				page,
-				pageName: 'Custom',
-			});
-
-			await expect(
-				page.getByText('There are no visitors data found.')
-			).toBeVisible();
-			await expect(
-				page.getByText(
-					'Check back later to verify if data has been received from your data sources, or you can try a different date range.'
-				)
-			).toBeVisible();
-
-			await page
-				.getByRole('link', {name: 'Learn more about custom assets.'})
-				.click();
-
-			const newPage = await page.waitForEvent('popup');
-
-			const href = newPage.url();
-
-			await expect(href).toContain('learn.liferay.com');
-			await expect(href).toContain(
-				'/assets-analytics/tracking-custom-assets'
-			);
+			await expect(href).toContain('/assets-analytics');
 
 			await newPage.close();
 		});

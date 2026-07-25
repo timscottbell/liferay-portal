@@ -9,6 +9,7 @@ import ClayForm from '@clayui/form';
 import ClayPopover from '@clayui/popover';
 import {
 	API,
+	COUNTRY_SOURCE,
 	FormError,
 	Input,
 	SingleSelect,
@@ -126,6 +127,15 @@ const fieldSettingsMap = new Map<string, ObjectFieldSetting[]>([
 			{
 				name: 'showCounter',
 				value: false,
+			},
+		],
+	],
+	[
+		'PhoneNumber',
+		[
+			{
+				name: 'countrySource',
+				value: COUNTRY_SOURCE.DEFINED_BY_USER,
 			},
 		],
 	],
@@ -324,9 +334,7 @@ export default function ObjectFieldFormBase({
 			objectRelationship &&
 			objectRelationship.deletionType !== 'disassociate'
 		) {
-			return Liferay.FeatureFlags['LPD-34594']
-				? objectRelationship.edge
-				: false;
+			return objectRelationship.edge;
 		}
 
 		if (
@@ -744,48 +752,45 @@ export default function ObjectFieldFormBase({
 						/>
 					)}
 
-				{Liferay.FeatureFlags['LPD-34594'] &&
-					objectRelationship?.edge && (
-						<ClayPopover
-							alignPosition="top"
-							closeOnClickOutside={true}
-							disableScroll
-							header={Liferay.Language.get(
-								'inheritance-relationships-fields'
-							)}
-							onMouseLeave={() => setShowPopover(false)}
-							onMouseOver={() => setShowPopover(true)}
-							onShowChange={setShowPopover}
-							show={showPopover}
-							trigger={
-								<ClayIcon
-									aria-label={Liferay.Language.get(
-										'help-text'
-									)}
-									className="mandatory-tooltip-icon"
-									onFocus={() => setShowPopover(true)}
-									onMouseOver={() => setShowPopover(true)}
-									symbol="question-circle-full"
+				{objectRelationship?.edge && (
+					<ClayPopover
+						alignPosition="top"
+						closeOnClickOutside={true}
+						disableScroll
+						header={Liferay.Language.get(
+							'inheritance-relationships-fields'
+						)}
+						onMouseLeave={() => setShowPopover(false)}
+						onMouseOver={() => setShowPopover(true)}
+						onShowChange={setShowPopover}
+						show={showPopover}
+						trigger={
+							<ClayIcon
+								aria-label={Liferay.Language.get('help-text')}
+								className="mandatory-tooltip-icon"
+								onFocus={() => setShowPopover(true)}
+								onMouseOver={() => setShowPopover(true)}
+								symbol="question-circle-full"
+							/>
+						}
+					>
+						{Liferay.Language.get(
+							'the-relationship-field-cannot-be-mandatory-when-inheritance-is-enabled'
+						)}
+						&nbsp;
+						{learnResources && (
+							<LearnResourcesContext.Provider
+								value={learnResources}
+							>
+								<LearnMessage
+									className="alert-link"
+									resource="object-web"
+									resourceKey="inheritance-relationships"
 								/>
-							}
-						>
-							{Liferay.Language.get(
-								'the-relationship-field-cannot-be-mandatory-when-inheritance-is-enabled'
-							)}
-							&nbsp;
-							{learnResources && (
-								<LearnResourcesContext.Provider
-									value={learnResources}
-								>
-									<LearnMessage
-										className="alert-link"
-										resource="object-web"
-										resourceKey="inheritance-relationships"
-									/>
-								</LearnResourcesContext.Provider>
-							)}
-						</ClayPopover>
-					)}
+							</LearnResourcesContext.Provider>
+						)}
+					</ClayPopover>
+				)}
 			</ClayForm.Group>
 
 			{values.businessType === 'Picklist' &&
@@ -803,8 +808,10 @@ export default function ObjectFieldFormBase({
 					</ClayForm.Group>
 				)}
 
-			{(values.businessType === 'Text' ||
-				values.businessType === 'Integer') && (
+			{(values.businessType === 'EmailAddress' ||
+				values.businessType === 'Integer' ||
+				values.businessType === 'PhoneNumber' ||
+				values.businessType === 'Text') && (
 				<UniqueValues
 					disabled={disabled}
 					objectField={values}

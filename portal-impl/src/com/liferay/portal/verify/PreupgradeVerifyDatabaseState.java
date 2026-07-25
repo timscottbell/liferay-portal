@@ -8,18 +8,19 @@ package com.liferay.portal.verify;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.db.DBResourceUtil;
 import com.liferay.portal.db.partition.util.DBPartitionUtil;
 import com.liferay.portal.events.StartupHelperUtil;
 import com.liferay.portal.kernel.dao.db.DBInspector;
+import com.liferay.portal.kernel.db.DBResourceUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.instance.PortalInstancePool;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.ReleaseConstants;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalServiceUtil;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.PropsValues;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.upgrade.PortalUpgradeProcess;
 
 import java.sql.Connection;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Jorge Avalos
@@ -68,6 +70,15 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 		}
 
 		super.verify();
+
+		if (ListUtil.isNotEmpty(_verifyMessages)) {
+			for (String verifyMessage : _verifyMessages) {
+				_log.error(verifyMessage);
+			}
+
+			throw new VerifyException(
+				StringUtil.merge(_verifyMessages, StringPool.COMMA_AND_SPACE));
+		}
 	}
 
 	@Override
@@ -119,12 +130,23 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 				dbInspector, missingTableNames);
 
 			if (!missingTableNames.isEmpty()) {
-				throw new VerifyException(
-					"Missing tables detected: " +
+				String prefix = (missingTableNames.size() == 1) ?
+					"A missing table was detected" :
+						"Missing tables were detected";
+
+				if (PropsValues.DATABASE_PARTITION_ENABLED) {
+					prefix = StringBundler.concat(
+						prefix, " for company ",
+						CompanyThreadLocal.getNonsystemCompanyId());
+				}
+
+				_verifyMessages.add(
+					StringBundler.concat(
+						prefix, StringPool.COLON, StringPool.SPACE,
 						new TreeSet<>(
 							TransformUtil.transform(
 								missingTableNames,
-								dbInspector::normalizeName)));
+								dbInspector::normalizeName))));
 			}
 
 			Set<String> databaseViewNames = new TreeSet<>(
@@ -135,11 +157,15 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 			viewNames.removeAll(databaseViewNames);
 
 			if (!viewNames.isEmpty()) {
-				throw new VerifyException(
+				String prefix = (viewNames.size() == 1) ?
+					"A missing view was detected for company " :
+						"Missing views were detected for company ";
+
+				_verifyMessages.add(
 					StringBundler.concat(
-						"Missing views detected: ", new TreeSet<>(viewNames),
-						" in company ",
-						CompanyThreadLocal.getNonsystemCompanyId()));
+						prefix, CompanyThreadLocal.getNonsystemCompanyId(),
+						StringPool.COLON, StringPool.SPACE,
+						new TreeSet<>(viewNames)));
 			}
 		}
 
@@ -162,9 +188,19 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 		previousUpgradeStaleTableNames.retainAll(targetVersionNewTableNames);
 
 		if (!previousUpgradeStaleTableNames.isEmpty()) {
-			throw new VerifyException(
-				"Stale tables from a previous upgrade detected: " +
-					new TreeSet<>(previousUpgradeStaleTableNames));
+			String prefix = (previousUpgradeStaleTableNames.size() == 1) ?
+				"A stale table was detected" : "Stale tables were detected";
+
+			if (PropsValues.DATABASE_PARTITION_ENABLED) {
+				prefix = StringBundler.concat(
+					prefix, " for company ",
+					CompanyThreadLocal.getNonsystemCompanyId());
+			}
+
+			_verifyMessages.add(
+				StringBundler.concat(
+					prefix, StringPool.COLON, StringPool.SPACE,
+					new TreeSet<>(previousUpgradeStaleTableNames)));
 		}
 
 		_verifyColumns(dbInspector);
@@ -176,9 +212,7 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 
 		Set<String> viewNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
-		if (CompanyThreadLocal.getNonsystemCompanyId() ==
-				PortalInstancePool.getDefaultCompanyId()) {
-
+		if (CompanyThreadLocal.isDefaultCompany()) {
 			return viewNames;
 		}
 
@@ -214,6 +248,10 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 		processConcurrently(
 			columnDefinitionsMap,
 			entry -> {
+				if (!dbInspector.hasTable(entry.getKey())) {
+					return;
+				}
+
 				for (String columnDefinition : entry.getValue()) {
 					int index = columnDefinition.indexOf(StringPool.SPACE);
 
@@ -290,7 +328,7 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 		}
 
 		if (sb.length() != 0) {
-			throw new VerifyException(sb.toString());
+			_verifyMessages.add(sb.toString());
 		}
 	}
 
@@ -298,5 +336,6 @@ public class PreupgradeVerifyDatabaseState extends PreupgradeVerifyProcess {
 		PreupgradeVerifyDatabaseState.class);
 
 	private final Set<String> _falsePositive74UpgradeDroppedTableNames;
+	private final List<String> _verifyMessages = new CopyOnWriteArrayList<>();
 
 }

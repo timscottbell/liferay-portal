@@ -48,11 +48,14 @@ public class UpgradeCustomizablePortlets extends UpgradeProcess {
 
 	protected void upgradeCustomizablePreferences() throws Exception {
 		try (LoggingTimer loggingTimer = new LoggingTimer();
+
 			PreparedStatement preparedStatement1 = connection.prepareStatement(
 				"select portalPreferencesId, ownerId, ownerType, preferences " +
 					"from PortalPreferences where preferences like " +
 						"'%com.liferay.portal.model.CustomizedPages%'");
+
 			ResultSet resultSet = preparedStatement1.executeQuery();
+
 			PreparedStatement preparedStatement2 =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,
@@ -126,7 +129,8 @@ public class UpgradeCustomizablePortlets extends UpgradeProcess {
 				sb.append("portletId = ?");
 
 				try (PreparedStatement preparedStatement =
-						connection.prepareStatement(sb.toString())) {
+						AutoBatchPreparedStatementUtil.autoBatch(
+							connection, sb.toString())) {
 
 					for (String customPortletId : StringUtil.split(value)) {
 						if (!PortletIdCodec.hasInstanceId(customPortletId)) {

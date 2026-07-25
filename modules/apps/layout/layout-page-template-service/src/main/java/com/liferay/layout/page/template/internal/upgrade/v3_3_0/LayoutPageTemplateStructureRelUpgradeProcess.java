@@ -54,11 +54,14 @@ public class LayoutPageTemplateStructureRelUpgradeProcess
 	}
 
 	private List<PortletPreferences> _getPortletPreferencesByPlid(long plid) {
-		if (_portletPreferencesMap.containsKey(plid)) {
-			return _portletPreferencesMap.get(plid);
+		List<PortletPreferences> portletPreferencesList =
+			_portletPreferencesMap.get(plid);
+
+		if (portletPreferencesList != null) {
+			return portletPreferencesList;
 		}
 
-		List<PortletPreferences> portletPreferencesList =
+		portletPreferencesList =
 			_portletPreferencesLocalService.getPortletPreferencesByPlid(plid);
 
 		_portletPreferencesMap.put(
@@ -220,10 +223,12 @@ public class LayoutPageTemplateStructureRelUpgradeProcess
 
 	private void _upgradeLayoutPageTemplateStructureRel() throws Exception {
 		try (Statement s = connection.createStatement();
+
 			ResultSet resultSet = s.executeQuery(
 				"select lPageTemplateStructureRelId, segmentsExperienceId, " +
 					"data_ from LayoutPageTemplateStructureRel order by " +
 						"segmentsExperienceId desc");
+
 			PreparedStatement preparedStatement =
 				AutoBatchPreparedStatementUtil.autoBatch(
 					connection,

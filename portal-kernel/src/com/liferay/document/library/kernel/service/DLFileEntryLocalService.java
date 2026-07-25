@@ -362,11 +362,13 @@ public interface DLFileEntryLocalService
 	public DLFileEntry fetchFileEntryByName(
 		long groupId, long folderId, String name);
 
+	@Transactional(enabled = false)
 	public void forEachFileEntry(
 			long companyId, Consumer<DLFileEntry> consumer, long maximumSize,
 			String[] mimeTypes)
 		throws PortalException;
 
+	@Transactional(enabled = false)
 	public void forEachFileEntry(
 			long companyId, long classNameId, Consumer<DLFileEntry> consumer,
 			long maximumSize, String[] mimeTypes)
@@ -750,3 +752,4 @@ public interface DLFileEntryLocalService
 		throws E;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:477078314

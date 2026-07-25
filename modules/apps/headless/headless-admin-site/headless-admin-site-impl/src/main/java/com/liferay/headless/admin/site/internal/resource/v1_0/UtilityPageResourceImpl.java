@@ -6,6 +6,7 @@
 package com.liferay.headless.admin.site.internal.resource.v1_0;
 
 import com.liferay.client.extension.type.manager.CETManager;
+import com.liferay.exportimport.constants.ExportImportConstants;
 import com.liferay.exportimport.vulcan.batch.engine.ExportImportVulcanBatchEngineTaskItemDelegate;
 import com.liferay.fragment.processor.FragmentEntryProcessorRegistry;
 import com.liferay.headless.admin.site.dto.v1_0.ContentPageSpecification;
@@ -13,14 +14,14 @@ import com.liferay.headless.admin.site.dto.v1_0.PageSpecification;
 import com.liferay.headless.admin.site.dto.v1_0.UtilityPage;
 import com.liferay.headless.admin.site.dto.v1_0.UtilityPageSEOSettings;
 import com.liferay.headless.admin.site.dto.v1_0.UtilityPageSettings;
+import com.liferay.headless.admin.site.dto.v1_0.util.FileEntryUtil;
 import com.liferay.headless.admin.site.internal.dto.v1_0.util.DTOConverterContextUtil;
 import com.liferay.headless.admin.site.internal.odata.entity.v1_0.UtilityPageEntityModel;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.FileEntryUtil;
-import com.liferay.headless.admin.site.internal.resource.v1_0.util.GroupUtil;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.LayoutUtil;
 import com.liferay.headless.admin.site.internal.resource.v1_0.util.ServiceContextUtil;
 import com.liferay.headless.admin.site.internal.util.EnabledUtil;
 import com.liferay.headless.admin.site.resource.v1_0.UtilityPageResource;
+import com.liferay.headless.common.spi.util.GroupUtil;
 import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.utility.page.kernel.constants.LayoutUtilityPageEntryConstants;
@@ -47,9 +48,6 @@ import com.liferay.portal.vulcan.pagination.Pagination;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 import com.liferay.portal.vulcan.util.SearchUtil;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.tags.Tags;
-
 import jakarta.ws.rs.core.MultivaluedMap;
 
 import java.util.Collections;
@@ -74,7 +72,6 @@ public class UtilityPageResourceImpl
 	implements ExportImportVulcanBatchEngineTaskItemDelegate<UtilityPage> {
 
 	@Override
-	@Tags({@Tag(description = "[BETA]", name = "UtilityPage")})
 	public void deleteSiteUtilityPage(
 			String siteExternalReferenceCode,
 			String utilityPageExternalReferenceCode)
@@ -94,8 +91,10 @@ public class UtilityPageResourceImpl
 	}
 
 	@Override
-	public ExportImportDescriptor getExportImportDescriptor() {
-		return new ExportImportDescriptor() {
+	public ExportImportDescriptor<LayoutUtilityPageEntry>
+		getExportImportDescriptor() {
+
+		return new ExportImportDescriptor<>() {
 
 			@Override
 			public String getKey() {
@@ -108,23 +107,28 @@ public class UtilityPageResourceImpl
 			}
 
 			@Override
-			public String getModelClassName() {
-				return LayoutUtilityPageEntry.class.getName();
+			public Class<LayoutUtilityPageEntry> getModelClass() {
+				return LayoutUtilityPageEntry.class;
 			}
 
 			@Override
 			public List<String> getNestedFields() {
-				return List.of("pageSpecifications", "thumbnail");
+				return List.of("pageSpecifications", "thumbnailURLReference");
 			}
 
 			@Override
 			public String getPortletId() {
-				return LayoutAdminPortletKeys.GROUP_PAGES;
+				return LayoutAdminPortletKeys.LAYOUT_UTILITY_PAGES;
 			}
 
 			@Override
 			public Scope getScope() {
 				return Scope.SITE;
+			}
+
+			@Override
+			public String getSectionKey() {
+				return ExportImportConstants.SECTION_KEY_SITE_BUILDER;
 			}
 
 			@Override
@@ -286,6 +290,9 @@ public class UtilityPageResourceImpl
 				utilityPageSEOSettings.getDescription_i18n());
 		}
 
+		ServiceContext serviceContext = _getServiceContext(
+			groupId, utilityPage);
+
 		LayoutUtil.updateContentLayout(
 			_cetManager, _fragmentEntryProcessorRegistry,
 			_infoItemServiceRegistry, layout, layout.getNameMap(), titleMap,
@@ -293,8 +300,7 @@ public class UtilityPageResourceImpl
 			LocalizedMapUtil.getLocalizedMap(
 				utilityPage.getFriendlyUrlPath_i18n()),
 			layout.getTypeSettingsProperties(),
-			utilityPage.getPageSpecifications(),
-			_getServiceContext(groupId, utilityPage));
+			utilityPage.getPageSpecifications(), serviceContext);
 
 		if (GetterUtil.getBoolean(utilityPage.getMarkedAsDefault()) &&
 			!layoutUtilityPageEntry.isDefaultLayoutUtilityPageEntry()) {
@@ -313,9 +319,8 @@ public class UtilityPageResourceImpl
 		}
 
 		long previewFileEntryId = FileEntryUtil.getPreviewFileEntryId(
-			groupId, getResourceName(),
-			_getServiceContext(groupId, utilityPage),
-			utilityPage.getThumbnailURLReference());
+			groupId, LayoutAdminPortletKeys.GROUP_PAGES,
+			utilityPage.getThumbnailURLReference(), contextUser.getUserId());
 
 		if (previewFileEntryId !=
 				layoutUtilityPageEntry.getPreviewFileEntryId()) {
@@ -323,13 +328,13 @@ public class UtilityPageResourceImpl
 			layoutUtilityPageEntry =
 				_layoutUtilityPageEntryService.updateLayoutUtilityPageEntry(
 					layoutUtilityPageEntry.getLayoutUtilityPageEntryId(),
-					previewFileEntryId);
+					previewFileEntryId, serviceContext);
 		}
 
 		return _utilityPageDTOConverter.toDTO(
 			_layoutUtilityPageEntryService.updateLayoutUtilityPageEntry(
 				layoutUtilityPageEntry.getLayoutUtilityPageEntryId(),
-				utilityPage.getName()));
+				utilityPage.getName(), serviceContext));
 	}
 
 	@Override
@@ -386,9 +391,9 @@ public class UtilityPageResourceImpl
 				utilityPage.getExternalReferenceCode(), groupId,
 				_getLayoutPlid(groupId, utilityPage, serviceContext),
 				FileEntryUtil.getPreviewFileEntryId(
-					groupId, getResourceName(),
-					_getServiceContext(groupId, utilityPage),
-					utilityPage.getThumbnailURLReference()),
+					groupId, LayoutAdminPortletKeys.GROUP_PAGES,
+					utilityPage.getThumbnailURLReference(),
+					contextUser.getUserId()),
 				utilityPage.getMarkedAsDefault(), utilityPage.getName(),
 				_getType(utilityPage.getType()), null, serviceContext);
 
@@ -460,11 +465,14 @@ public class UtilityPageResourceImpl
 	}
 
 	private String _getType(UtilityPage.Type type) {
-		if (_externalToInternalValuesMap.containsKey(type)) {
-			return _externalToInternalValuesMap.get(type);
+		String internalType = _externalToInternalValuesMap.get(type);
+
+		if (internalType != null) {
+			return internalType;
 		}
 
-		throw new UnsupportedOperationException();
+		throw new IllegalArgumentException(
+			"The page type does not match the expected utility page type");
 	}
 
 	private void _validateUtilityPage(UtilityPage utilityPage) {
@@ -476,7 +484,8 @@ public class UtilityPageResourceImpl
 				utilityPage.getPageSpecifications()) {
 
 			if (pageSpecification.getCustomFields() != null) {
-				throw new UnsupportedOperationException();
+				throw new IllegalArgumentException(
+					"Utility pages do not support custom fields");
 			}
 		}
 	}

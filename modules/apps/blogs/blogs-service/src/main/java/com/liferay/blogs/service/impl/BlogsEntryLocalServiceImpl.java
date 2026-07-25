@@ -31,6 +31,7 @@ import com.liferay.document.library.kernel.exception.NoSuchFileEntryException;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.expando.kernel.service.ExpandoRowLocalService;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
+import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
 import com.liferay.friendly.url.exception.DuplicateFriendlyURLEntryException;
 import com.liferay.friendly.url.model.FriendlyURLEntry;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
@@ -43,6 +44,7 @@ import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.kernel.comment.CommentManager;
 import com.liferay.portal.kernel.dao.orm.QueryDefinition;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
@@ -311,8 +313,9 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 		if (!ExportImportThreadLocal.isImportInProcess()) {
 			FriendlyURLEntry friendlyURLEntry =
 				_friendlyURLEntryLocalService.addFriendlyURLEntry(
-					groupId, BlogsEntry.class, entryId, urlTitle,
-					serviceContext);
+					groupId,
+					_classNameLocalService.getClassNameId(BlogsEntry.class),
+					entryId, urlTitle, serviceContext);
 
 			urlTitle = friendlyURLEntry.getUrlTitle();
 		}
@@ -691,7 +694,9 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 		// Friendly URL
 
 		_friendlyURLEntryLocalService.deleteFriendlyURLEntry(
-			entry.getGroupId(), BlogsEntry.class, entry.getEntryId());
+			entry.getGroupId(),
+			_classNameLocalService.getClassNameId(BlogsEntry.class),
+			entry.getEntryId());
 
 		// Trash
 
@@ -743,7 +748,11 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 	public BlogsEntry fetchEntry(long groupId, String urlTitle) {
 		FriendlyURLEntry friendlyURLEntry =
 			_friendlyURLEntryLocalService.fetchFriendlyURLEntry(
-				groupId, BlogsEntry.class, urlTitle);
+				groupId,
+				_classNameLocalService.getClassNameId(BlogsEntry.class),
+				FriendlyURLEntryConstants.
+					FRIENDLY_URL_ENTRY_PARENT_CLASS_PK_DEFAULT,
+				urlTitle);
 
 		if (friendlyURLEntry != null) {
 			return blogsEntryPersistence.fetchByPrimaryKey(
@@ -817,16 +826,18 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 		BlogsEntry entry = blogsEntryPersistence.findByPrimaryKey(entryId);
 
-		BlogsEntry[] entries = blogsEntryPersistence.findByG_D_S_PrevAndNext(
-			entryId, entry.getGroupId(), entry.getDisplayDate(),
-			WorkflowConstants.STATUS_APPROVED,
-			EntryIdComparator.getInstance(true));
+		BlogsEntry[] entries = ListUtil.getPreviousAndNext(
+			blogsEntryPersistence.findByG_D_S(
+				entry.getGroupId(), entry.getDisplayDate(),
+				WorkflowConstants.STATUS_APPROVED, QueryUtil.ALL_POS,
+				QueryUtil.ALL_POS, EntryIdComparator.getInstance(true)),
+			entry::equals, BlogsEntry[]::new);
 
 		if (entries[0] == null) {
-			entries[0] = blogsEntryPersistence.fetchByG_LtD_S_Last(
+			entries[0] = blogsEntryPersistence.fetchByG_LtD_S_First(
 				entry.getGroupId(), entry.getDisplayDate(),
 				WorkflowConstants.STATUS_APPROVED,
-				EntryDisplayDateComparator.getInstance(true));
+				EntryDisplayDateComparator.getInstance(false));
 		}
 
 		if (entries[2] == null) {
@@ -850,7 +861,11 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 		FriendlyURLEntry friendlyURLEntry =
 			_friendlyURLEntryLocalService.fetchFriendlyURLEntry(
-				groupId, BlogsEntry.class, urlTitle);
+				groupId,
+				_classNameLocalService.getClassNameId(BlogsEntry.class),
+				FriendlyURLEntryConstants.
+					FRIENDLY_URL_ENTRY_PARENT_CLASS_PK_DEFAULT,
+				urlTitle);
 
 		if (friendlyURLEntry != null) {
 			return blogsEntryPersistence.findByPrimaryKey(
@@ -1249,8 +1264,9 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 			FriendlyURLEntry friendlyURLEntry =
 				_friendlyURLEntryLocalService.addFriendlyURLEntry(
-					entry.getGroupId(), BlogsEntry.class, entry.getEntryId(),
-					urlTitle, serviceContext);
+					entry.getGroupId(),
+					_classNameLocalService.getClassNameId(BlogsEntry.class),
+					entry.getEntryId(), urlTitle, serviceContext);
 
 			entry.setUrlTitle(friendlyURLEntry.getUrlTitle());
 		}
@@ -1463,8 +1479,9 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 			FriendlyURLEntry friendlyURLEntry =
 				_friendlyURLEntryLocalService.addFriendlyURLEntry(
-					entry.getGroupId(), BlogsEntry.class, entry.getEntryId(),
-					uniqueUrlTitle, serviceContext);
+					entry.getGroupId(),
+					_classNameLocalService.getClassNameId(BlogsEntry.class),
+					entry.getEntryId(), uniqueUrlTitle, serviceContext);
 
 			entry.setUrlTitle(friendlyURLEntry.getUrlTitle());
 		}

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {FrameLocator, Locator, Page} from '@playwright/test';
+import {FrameLocator, Locator, Page, expect} from '@playwright/test';
 
+import {waitForAlert} from '../../utils/waitForAlert';
 import {DataTablePage} from '../account-admin-web/DataTablePage';
-import {ApplicationsMenuPage} from '../product-navigation-applications-menu/ApplicationsMenuPage';
+import {GlobalMenuPage} from '../product-navigation-applications-menu/GlobalMenuPage';
 
 export const searchTableRowByValue = async function (
 	tableLocator: Locator,
@@ -39,19 +40,25 @@ export class UserGroupsPage {
 	readonly addUsersIFrame: FrameLocator;
 	readonly addUsersIFrameAddButton: Locator;
 	readonly addUsersTable: DataTablePage;
-	readonly applicationsMenuPage: ApplicationsMenuPage;
 	readonly assignMembersMenuItem: Locator;
 	readonly creationMenuNewButton: Locator;
 	readonly customField: (fieldName: string) => Promise<Locator>;
 	readonly deleteButton: Locator;
 	readonly deleteUserGroupWithUsersErrorMessage: Locator;
 	readonly editUserGroupMenuItem: Locator;
+	readonly exportButton: Locator;
+	readonly exportImportFrame: FrameLocator;
+	readonly exportImportMenuItem: Locator;
+	readonly globalMenuPage: GlobalMenuPage;
+	readonly goToDashboardPagesMenuItem: Locator;
+	readonly goToProfilePagesMenuItem: Locator;
 	readonly managePagesMenuItem: Locator;
 	readonly nameInput: Locator;
 	readonly newUserButton: Locator;
 	readonly newUserGroupButton: Locator;
 	readonly noUserGroupsMessage: Locator;
 	readonly noUsersMessage: Locator;
+	readonly optionsButton: Locator;
 	readonly page: Page;
 	readonly removeUserMenuItem: Locator;
 	readonly saveButton: Locator;
@@ -89,7 +96,6 @@ export class UserGroupsPage {
 				'#_com_liferay_item_selector_web_portlet_ItemSelectorPortlet_entriesSearchContainer'
 			)
 		);
-		this.applicationsMenuPage = new ApplicationsMenuPage(page);
 		this.assignMembersMenuItem = page.getByRole('menuitem', {
 			name: 'Assign Members',
 		});
@@ -97,7 +103,9 @@ export class UserGroupsPage {
 			.getByTestId('creationMenuNewButton')
 			.getByText('New');
 		this.customField = async (fieldName: string) => {
-			await page.getByText('Custom Fields').waitFor({timeout: 15 * 1000});
+			await page
+				.getByText('Custom Fields', {exact: true})
+				.waitFor({timeout: 15 * 1000});
 
 			const customField = await page.getByText(fieldName);
 
@@ -114,9 +122,28 @@ export class UserGroupsPage {
 		this.editUserGroupMenuItem = page.getByRole('menuitem', {
 			name: 'Edit',
 		});
+		this.exportButton = page
+			.frameLocator('iframe[title="Export / Import"]')
+			.getByRole('button', {name: 'Export'});
+		this.exportImportFrame = page.frameLocator(
+			'iframe[title="Export / Import"]'
+		);
+		this.exportImportMenuItem = page.getByRole('menuitem', {
+			name: 'Export / Import',
+		});
+		this.globalMenuPage = new GlobalMenuPage(page);
+		this.goToDashboardPagesMenuItem = page.getByRole('menuitem', {
+			name: 'Go to Dashboard Pages',
+		});
+		this.goToProfilePagesMenuItem = page.getByRole('menuitem', {
+			name: 'Go to Profile Pages',
+		});
 		this.managePagesMenuItem = page.getByRole('menuitem', {
 			name: 'Manage Pages',
 		});
+		this.optionsButton = page.locator(
+			'[id*="UserGroupsAdminPortlet"] [title="Options"]'
+		);
 		this.nameInput = page
 			.getByLabel('Name')
 			.or(page.getByLabel('New Name'));
@@ -229,10 +256,41 @@ export class UserGroupsPage {
 	}
 
 	async goto(forceReload?: boolean) {
-		await this.applicationsMenuPage.goToUserGroups(forceReload);
+		if (forceReload) {
+			await this.globalMenuPage.goToHome();
+		}
+
+		await this.globalMenuPage.goToControlPanel('User Groups');
+	}
+
+	async linkSiteTemplate(
+		userGroupName: string,
+		siteTemplateName: string,
+		{propagationEnabled = false}: {propagationEnabled?: boolean} = {}
+	) {
+		await expect(async () => {
+			await (await this.userGroupsTableRowActions(userGroupName)).click();
+
+			await expect(this.editUserGroupMenuItem).toBeVisible();
+		}).toPass({timeout: 5000});
+
+		await this.editUserGroupMenuItem.click();
+
+		await this.page
+			.locator('select[name$="publicLayoutSetPrototypeId"]')
+			.selectOption({label: siteTemplateName});
+
+		await this.page
+			.locator('input[name$="publicLayoutSetPrototypeLinkEnabled"]')
+			.setChecked(propagationEnabled, {force: true});
+
+		await this.saveButton.click();
+
+		await waitForAlert(this.page);
 	}
 
 	async goToWithLimitedAccess() {
-		await this.applicationsMenuPage.goToUserGroupsWithLimitedAccess();
+		await this.globalMenuPage.goToHome();
+		await this.globalMenuPage.goToControlPanel('User Groups');
 	}
 }

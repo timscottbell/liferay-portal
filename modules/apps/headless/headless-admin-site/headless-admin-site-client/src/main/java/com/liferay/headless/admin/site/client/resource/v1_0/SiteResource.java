@@ -74,11 +74,13 @@ public interface SiteResource {
 		throws Exception;
 
 	public Page<Site> getSitesPage(
-			Boolean active, String search, Pagination pagination)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, Pagination pagination)
 		throws Exception;
 
 	public HttpInvoker.HttpResponse getSitesPageHttpResponse(
-			Boolean active, String search, Pagination pagination)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, Pagination pagination)
 		throws Exception;
 
 	public Site postSite(Site site) throws Exception;
@@ -102,13 +104,15 @@ public interface SiteResource {
 		throws Exception;
 
 	public void postSitesPageExportBatch(
-			Boolean active, String search, String callbackURL,
-			String contentType, String fieldNames)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, String callbackURL, String contentType,
+			String fieldNames)
 		throws Exception;
 
 	public HttpInvoker.HttpResponse postSitesPageExportBatchHttpResponse(
-			Boolean active, String search, String callbackURL,
-			String contentType, String fieldNames)
+			Boolean active, String[] excludedExternalReferenceCodes,
+			String search, String callbackURL, String contentType,
+			String fieldNames)
 		throws Exception;
 
 	public Site putSite(String siteExternalReferenceCode, Site site)
@@ -118,11 +122,25 @@ public interface SiteResource {
 			String siteExternalReferenceCode, Site site)
 		throws Exception;
 
+	public void putSiteActivate(String siteExternalReferenceCode)
+		throws Exception;
+
+	public HttpInvoker.HttpResponse putSiteActivateHttpResponse(
+			String siteExternalReferenceCode)
+		throws Exception;
+
 	public void putSiteBatch(String callbackURL, Object object)
 		throws Exception;
 
 	public HttpInvoker.HttpResponse putSiteBatchHttpResponse(
 			String callbackURL, Object object)
+		throws Exception;
+
+	public void putSiteDeactivate(String siteExternalReferenceCode)
+		throws Exception;
+
+	public HttpInvoker.HttpResponse putSiteDeactivateHttpResponse(
+			String siteExternalReferenceCode)
 		throws Exception;
 
 	public Page<Permission> putSitePermissionsPage(
@@ -768,11 +786,12 @@ public interface SiteResource {
 		}
 
 		public Page<Site> getSitesPage(
-				Boolean active, String search, Pagination pagination)
+				Boolean active, String[] excludedExternalReferenceCodes,
+				String search, Pagination pagination)
 			throws Exception {
 
 			HttpInvoker.HttpResponse httpResponse = getSitesPageHttpResponse(
-				active, search, pagination);
+				active, excludedExternalReferenceCodes, search, pagination);
 
 			String content = httpResponse.getContent();
 
@@ -834,7 +853,8 @@ public interface SiteResource {
 		}
 
 		public HttpInvoker.HttpResponse getSitesPageHttpResponse(
-				Boolean active, String search, Pagination pagination)
+				Boolean active, String[] excludedExternalReferenceCodes,
+				String search, Pagination pagination)
 			throws Exception {
 
 			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
@@ -860,6 +880,16 @@ public interface SiteResource {
 
 			if (active != null) {
 				httpInvoker.parameter("active", String.valueOf(active));
+			}
+
+			if (excludedExternalReferenceCodes != null) {
+				for (int i = 0; i < excludedExternalReferenceCodes.length;
+					 i++) {
+
+					httpInvoker.parameter(
+						"excludedExternalReferenceCodes",
+						String.valueOf(excludedExternalReferenceCodes[i]));
+				}
 			}
 
 			if (search != null) {
@@ -1199,13 +1229,15 @@ public interface SiteResource {
 		}
 
 		public void postSitesPageExportBatch(
-				Boolean active, String search, String callbackURL,
-				String contentType, String fieldNames)
+				Boolean active, String[] excludedExternalReferenceCodes,
+				String search, String callbackURL, String contentType,
+				String fieldNames)
 			throws Exception {
 
 			HttpInvoker.HttpResponse httpResponse =
 				postSitesPageExportBatchHttpResponse(
-					active, search, callbackURL, contentType, fieldNames);
+					active, excludedExternalReferenceCodes, search, callbackURL,
+					contentType, fieldNames);
 
 			String content = httpResponse.getContent();
 
@@ -1256,8 +1288,9 @@ public interface SiteResource {
 		}
 
 		public HttpInvoker.HttpResponse postSitesPageExportBatchHttpResponse(
-				Boolean active, String search, String callbackURL,
-				String contentType, String fieldNames)
+				Boolean active, String[] excludedExternalReferenceCodes,
+				String search, String callbackURL, String contentType,
+				String fieldNames)
 			throws Exception {
 
 			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
@@ -1285,6 +1318,16 @@ public interface SiteResource {
 
 			if (active != null) {
 				httpInvoker.parameter("active", String.valueOf(active));
+			}
+
+			if (excludedExternalReferenceCodes != null) {
+				for (int i = 0; i < excludedExternalReferenceCodes.length;
+					 i++) {
+
+					httpInvoker.parameter(
+						"excludedExternalReferenceCodes",
+						String.valueOf(excludedExternalReferenceCodes[i]));
+				}
 			}
 
 			if (search != null) {
@@ -1426,6 +1469,114 @@ public interface SiteResource {
 			return httpInvoker.invoke();
 		}
 
+		public void putSiteActivate(String siteExternalReferenceCode)
+			throws Exception {
+
+			HttpInvoker.HttpResponse httpResponse = putSiteActivateHttpResponse(
+				siteExternalReferenceCode);
+
+			String content = httpResponse.getContent();
+
+			if ((httpResponse.getStatusCode() / 100) != 2) {
+				_logger.log(
+					Level.WARNING,
+					"Unable to process HTTP response content: " + content);
+				_logger.log(
+					Level.WARNING,
+					"HTTP response message: " + httpResponse.getMessage());
+				_logger.log(
+					Level.WARNING,
+					"HTTP response status code: " +
+						httpResponse.getStatusCode());
+
+				Problem.ProblemException problemException = null;
+
+				if (Objects.equals(
+						httpResponse.getContentType(), "application/json")) {
+
+					problemException = new Problem.ProblemException(
+						Problem.toDTO(content));
+				}
+				else {
+					_logger.log(
+						Level.WARNING,
+						"Unable to process content type: " +
+							httpResponse.getContentType());
+
+					Problem problem = new Problem();
+
+					problem.setStatus(
+						String.valueOf(httpResponse.getStatusCode()));
+
+					problemException = new Problem.ProblemException(problem);
+				}
+
+				throw problemException;
+			}
+			else {
+				_logger.fine("HTTP response content: " + content);
+				_logger.fine(
+					"HTTP response message: " + httpResponse.getMessage());
+				_logger.fine(
+					"HTTP response status code: " +
+						httpResponse.getStatusCode());
+			}
+
+			try {
+				return;
+			}
+			catch (Exception e) {
+				_logger.log(
+					Level.WARNING,
+					"Unable to process HTTP response: " + content, e);
+
+				throw new Problem.ProblemException(Problem.toDTO(content));
+			}
+		}
+
+		public HttpInvoker.HttpResponse putSiteActivateHttpResponse(
+				String siteExternalReferenceCode)
+			throws Exception {
+
+			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
+
+			httpInvoker.body("[]", "application/json");
+
+			if (_builder._locale != null) {
+				httpInvoker.header(
+					"Accept-Language", _builder._locale.toLanguageTag());
+			}
+
+			for (Map.Entry<String, String> entry :
+					_builder._headers.entrySet()) {
+
+				httpInvoker.header(entry.getKey(), entry.getValue());
+			}
+
+			for (Map.Entry<String, String> entry :
+					_builder._parameters.entrySet()) {
+
+				httpInvoker.parameter(entry.getKey(), entry.getValue());
+			}
+
+			httpInvoker.httpMethod(HttpInvoker.HttpMethod.PUT);
+
+			httpInvoker.path(
+				_builder._scheme + "://" + _builder._host + ":" +
+					_builder._port + _builder._contextPath +
+						"/o/headless-admin-site/v1.0/sites/{siteExternalReferenceCode}/activate");
+
+			httpInvoker.path(
+				"siteExternalReferenceCode", siteExternalReferenceCode);
+
+			if ((_builder._login != null) && (_builder._password != null)) {
+				httpInvoker.userNameAndPassword(
+					_builder._login + ":" + _builder._password);
+			}
+
+			return httpInvoker.invoke();
+		}
+
 		public void putSiteBatch(String callbackURL, Object object)
 			throws Exception {
 
@@ -1516,6 +1667,114 @@ public interface SiteResource {
 				_builder._scheme + "://" + _builder._host + ":" +
 					_builder._port + _builder._contextPath +
 						"/o/headless-admin-site/v1.0/sites/batch");
+
+			if ((_builder._login != null) && (_builder._password != null)) {
+				httpInvoker.userNameAndPassword(
+					_builder._login + ":" + _builder._password);
+			}
+
+			return httpInvoker.invoke();
+		}
+
+		public void putSiteDeactivate(String siteExternalReferenceCode)
+			throws Exception {
+
+			HttpInvoker.HttpResponse httpResponse =
+				putSiteDeactivateHttpResponse(siteExternalReferenceCode);
+
+			String content = httpResponse.getContent();
+
+			if ((httpResponse.getStatusCode() / 100) != 2) {
+				_logger.log(
+					Level.WARNING,
+					"Unable to process HTTP response content: " + content);
+				_logger.log(
+					Level.WARNING,
+					"HTTP response message: " + httpResponse.getMessage());
+				_logger.log(
+					Level.WARNING,
+					"HTTP response status code: " +
+						httpResponse.getStatusCode());
+
+				Problem.ProblemException problemException = null;
+
+				if (Objects.equals(
+						httpResponse.getContentType(), "application/json")) {
+
+					problemException = new Problem.ProblemException(
+						Problem.toDTO(content));
+				}
+				else {
+					_logger.log(
+						Level.WARNING,
+						"Unable to process content type: " +
+							httpResponse.getContentType());
+
+					Problem problem = new Problem();
+
+					problem.setStatus(
+						String.valueOf(httpResponse.getStatusCode()));
+
+					problemException = new Problem.ProblemException(problem);
+				}
+
+				throw problemException;
+			}
+			else {
+				_logger.fine("HTTP response content: " + content);
+				_logger.fine(
+					"HTTP response message: " + httpResponse.getMessage());
+				_logger.fine(
+					"HTTP response status code: " +
+						httpResponse.getStatusCode());
+			}
+
+			try {
+				return;
+			}
+			catch (Exception e) {
+				_logger.log(
+					Level.WARNING,
+					"Unable to process HTTP response: " + content, e);
+
+				throw new Problem.ProblemException(Problem.toDTO(content));
+			}
+		}
+
+		public HttpInvoker.HttpResponse putSiteDeactivateHttpResponse(
+				String siteExternalReferenceCode)
+			throws Exception {
+
+			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
+
+			httpInvoker.body("[]", "application/json");
+
+			if (_builder._locale != null) {
+				httpInvoker.header(
+					"Accept-Language", _builder._locale.toLanguageTag());
+			}
+
+			for (Map.Entry<String, String> entry :
+					_builder._headers.entrySet()) {
+
+				httpInvoker.header(entry.getKey(), entry.getValue());
+			}
+
+			for (Map.Entry<String, String> entry :
+					_builder._parameters.entrySet()) {
+
+				httpInvoker.parameter(entry.getKey(), entry.getValue());
+			}
+
+			httpInvoker.httpMethod(HttpInvoker.HttpMethod.PUT);
+
+			httpInvoker.path(
+				_builder._scheme + "://" + _builder._host + ":" +
+					_builder._port + _builder._contextPath +
+						"/o/headless-admin-site/v1.0/sites/{siteExternalReferenceCode}/deactivate");
+
+			httpInvoker.path(
+				"siteExternalReferenceCode", siteExternalReferenceCode);
 
 			if ((_builder._login != null) && (_builder._password != null)) {
 				httpInvoker.userNameAndPassword(
@@ -1771,3 +2030,4 @@ public interface SiteResource {
 	}
 
 }
+// LIFERAY-REST-BUILDER-HASH:388246280

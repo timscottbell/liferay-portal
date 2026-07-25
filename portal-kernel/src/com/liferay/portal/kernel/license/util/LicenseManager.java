@@ -8,6 +8,7 @@ package com.liferay.portal.kernel.license.util;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.license.LicenseInfo;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,8 @@ public interface LicenseManager {
 
 	public void checkLicense(String productId);
 
+	public Date getAppExpirationDate(App app);
+
 	public List<Map<String, String>> getClusterLicenseProperties(
 		String clusterNodeId);
 
@@ -50,7 +53,7 @@ public interface LicenseManager {
 
 	public Set<String> getMacAddresses();
 
-	public boolean isCMPEnabled();
+	public boolean isAppEnabled(App app);
 
 	public boolean isFreeTier();
 

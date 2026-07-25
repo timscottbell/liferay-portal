@@ -28,7 +28,6 @@ import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
-import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.xml.Element;
 
 import java.util.List;
@@ -260,20 +259,19 @@ public class AssetCategoryStagedModelDataHandler
 				null, portletDataContext.getScopeGroupId(), parentCategoryId,
 				category.getName(), vocabularyId, 2);
 
-			serviceContext.setUuid(category.getUuid());
-
 			importedCategory = _assetCategoryLocalService.addCategory(
 				category.getExternalReferenceCode(), userId,
 				portletDataContext.getScopeGroupId(), parentCategoryId,
 				_getCategoryTitleMap(
 					portletDataContext.getScopeGroupId(), category, name),
-				category.getDescriptionMap(), vocabularyId, properties,
-				serviceContext);
+				category.getDescriptionMap(), vocabularyId, category.isSystem(),
+				properties, serviceContext);
 		}
 		else {
 			String name = _getCategoryName(
-				category.getUuid(), portletDataContext.getScopeGroupId(),
-				parentCategoryId, category.getName(), vocabularyId, 2);
+				category.getExternalReferenceCode(),
+				portletDataContext.getScopeGroupId(), parentCategoryId,
+				category.getName(), vocabularyId, 2);
 
 			importedCategory = _assetCategoryLocalService.updateCategory(
 				existingCategory.getExternalReferenceCode(), userId,
@@ -283,6 +281,12 @@ public class AssetCategoryStagedModelDataHandler
 				category.getDescriptionMap(), vocabularyId, properties,
 				serviceContext);
 		}
+
+		importedCategory.setUuid(category.getUuid());
+		importedCategory.setModifiedDate(category.getModifiedDate());
+
+		importedCategory = _assetCategoryLocalService.updateAssetCategory(
+			importedCategory);
 
 		categoryIds.put(
 			category.getCategoryId(), importedCategory.getCategoryId());
@@ -332,15 +336,15 @@ public class AssetCategoryStagedModelDataHandler
 	}
 
 	private String _getCategoryName(
-			String uuid, long groupId, long parentCategoryId, String name,
-			long vocabularyId, int count)
-		throws Exception {
+		String externalReferenceCode, long groupId, long parentCategoryId,
+		String name, long vocabularyId, int count) {
 
 		AssetCategory category = _assetCategoryLocalService.fetchCategory(
 			groupId, parentCategoryId, name, vocabularyId);
 
 		if ((category == null) ||
-			(Validator.isNotNull(uuid) && uuid.equals(category.getUuid()))) {
+			Objects.equals(
+				externalReferenceCode, category.getExternalReferenceCode())) {
 
 			return name;
 		}
@@ -348,7 +352,8 @@ public class AssetCategoryStagedModelDataHandler
 		name = StringUtil.appendParentheticalSuffix(name, count);
 
 		return _getCategoryName(
-			uuid, groupId, parentCategoryId, name, vocabularyId, ++count);
+			externalReferenceCode, groupId, parentCategoryId, name,
+			vocabularyId, ++count);
 	}
 
 	private Map<Locale, String> _getCategoryTitleMap(

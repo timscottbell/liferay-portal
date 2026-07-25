@@ -6,6 +6,7 @@
 import {ObjectDefinitionAPI} from '@liferay/object-admin-rest-client-js';
 import {expect, mergeTests} from '@playwright/test';
 
+import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {pageEditorPagesTest} from '../../../fixtures/pageEditorPagesTest';
@@ -18,6 +19,7 @@ import {structureBuilderPagesTest} from './fixtures/structureBuilderPagesTest';
 import {FIELD_TYPES} from './pages/StructureBuilderPage';
 
 const test = mergeTests(
+	dataApiHelpersTest,
 	cmsPagesTest,
 	featureFlagsTest({
 		'LPD-17564': {enabled: true},
@@ -213,7 +215,7 @@ test(
 		// Assert correct label style
 
 		await expect(
-			page.locator('.label-info', {hasText: 'Text'})
+			page.locator('.label-inverse-info', {hasText: 'Text'})
 		).toBeVisible();
 
 		// Configure the field
@@ -397,6 +399,30 @@ test(
 );
 
 test(
+	'Title and File fields are locked and cannot be removed on File Content Structures',
+	{tag: '@LPD-89342'},
+	async ({page, structureBuilderPage}) => {
+		await structureBuilderPage.goToCreateStructure('file');
+
+		for (const fieldName of ['Title', 'File']) {
+			const field = page.getByRole('treeitem', {
+				exact: true,
+				name: fieldName,
+			});
+
+			await expect(field).toBeVisible();
+			await expect(field.getByText('Locked Field')).toBeVisible();
+
+			await field.hover();
+
+			await expect(
+				field.getByRole('button', {name: 'Field Options'})
+			).toBeHidden();
+		}
+	}
+);
+
+test(
 	'Fields are sorted',
 	{
 		tag: '@LPD-61206',
@@ -502,6 +528,78 @@ test(
 );
 
 test(
+	'Can customize experience after publishing a structure',
+	{tag: '@LPD-78725'},
+	async ({page, structureBuilderPage, structuresPage}) => {
+
+		// Create and publish a structure
+
+		const label = `Structure${getRandomInt()}`;
+
+		await structureBuilderPage.goToCreateStructure();
+
+		await structureBuilderPage.changeStructureSettings({
+			label,
+			name: label,
+		});
+
+		// Click on the customize editor button
+
+		await page.getByRole('button', {name: 'Customize Editor'}).click();
+
+		// Check the warning is shown
+
+		await expect(
+			page.getByText(
+				'To customize the editor you need to publish the content structure first.'
+			)
+		).toBeAttached();
+
+		// Publish the structure
+
+		await page
+			.getByRole('dialog', {
+				name: 'Publish to Customize Editor',
+			})
+			.getByRole('button', {name: 'Publish'})
+			.click();
+
+		// Go to the editor
+
+		await page
+			.getByRole('alert')
+			.getByRole('button', {name: 'Customize Editor'})
+			.click();
+
+		await structureBuilderPage.waitForEditorCustomizerModal();
+
+		// Check the title field is visible
+
+		await expect(page.getByLabel('Title (Read Only)')).toBeVisible();
+
+		// Delete the structure
+
+		await structuresPage.goto();
+
+		await structuresPage.execItemAction({
+			action: 'Delete',
+			filter: label,
+		});
+
+		await page
+			.getByPlaceholder('Confirm Content Structure Name')
+			.fill(label);
+		await page.getByRole('button', {name: 'Delete'}).click();
+
+		await waitForAlert(page, `${label} was deleted successfully`, {
+			type: 'success',
+		});
+
+		await expect(structuresPage.getItem(label)).toBeHidden();
+	}
+);
+
+test(
 	'Can drag and drop items to repeatable groups',
 	{
 		tag: '@LPD-76099',
@@ -599,5 +697,46 @@ test(
 			child: {label: 'Boolean'},
 			parent: {label: 'Group 1'},
 		});
+	}
+);
+
+test(
+	'Can republish a structure after changing its ERC',
+	{tag: '@LPD-89564'},
+	async ({apiHelpers, structureBuilderPage}) => {
+
+		// Create and publish a structure with an initial ERC
+
+		const label = `Structure${getRandomInt()}`;
+		const initialERC = getRandomString();
+
+		const structureId = await structureBuilderPage.createStructureFromData({
+			erc: initialERC,
+			label,
+			name: label,
+			page: structureBuilderPage,
+		});
+
+		// Change the ERC and republish
+
+		const updatedERC = getRandomString();
+
+		await structureBuilderPage.changeStructureSettings({erc: updatedERC});
+
+		const republishedId = await structureBuilderPage.publishStructure();
+
+		// Republishing must update the existing structure, not create a new one
+
+		expect(republishedId).toBe(structureId);
+
+		// The persisted ERC should match the updated value
+
+		const objectDefinitionAPIClient =
+			await apiHelpers.buildRestClient(ObjectDefinitionAPI);
+
+		const {body: objectDefinition} =
+			await objectDefinitionAPIClient.getObjectDefinition(structureId);
+
+		expect(objectDefinition.externalReferenceCode).toBe(updatedERC);
 	}
 );

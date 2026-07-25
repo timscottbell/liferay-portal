@@ -34,6 +34,9 @@ import java.util.function.Supplier;
  */
 @Generated("")
 @GraphQLName(description = "The type of content.", value = "ContentType")
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "The type of content."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "ContentType")
 public class ContentType implements Serializable {
@@ -233,3 +236,4 @@ public class ContentType implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-794326203

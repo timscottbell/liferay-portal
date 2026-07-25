@@ -6,8 +6,8 @@
 import {expect, mergeTests} from '@playwright/test';
 
 import {apiHelpersTest} from '../../../fixtures/apiHelpersTest';
-import {applicationsMenuPageTest} from '../../../fixtures/applicationsMenuPageTest';
 import {changeTrackingPagesTest} from '../../../fixtures/changeTrackingPagesTest';
+import {globalMenuPagesTest} from '../../../fixtures/globalMenuPagesTest';
 import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {pageEditorPagesTest} from '../../../fixtures/pageEditorPagesTest';
 import {pagesAdminPagesTest} from '../../../fixtures/pagesAdminPagesTest';
@@ -20,11 +20,11 @@ import {blogsPagesTest} from '../../blogs-web/main/fixtures/blogsPagesTest';
 import {journalPagesTest} from '../../journal-web/main/fixtures/journalPagesTest';
 
 export const test = mergeTests(
-	applicationsMenuPageTest,
-	isolatedSiteTest,
 	apiHelpersTest,
 	blogsPagesTest,
 	changeTrackingPagesTest,
+	globalMenuPagesTest,
+	isolatedSiteTest,
 	journalPagesTest,
 	pagesAdminPagesTest,
 	pageEditorPagesTest,
@@ -32,9 +32,9 @@ export const test = mergeTests(
 );
 
 test('LPD-42499 Assert correct message appears in Checking changes page', async ({
-	applicationsMenuPage,
 	changeTrackingPage,
 	ctCollection,
+	globalMenuPage,
 	page,
 	pageEditorPage,
 	pagesAdminPage,
@@ -43,7 +43,7 @@ test('LPD-42499 Assert correct message appears in Checking changes page', async 
 }) => {
 	await changeTrackingPage.workOnPublication(ctCollection);
 
-	await applicationsMenuPage.goToSite(site.name);
+	await globalMenuPage.goToSite(site.name);
 
 	const layoutTitle = getRandomString();
 
@@ -212,13 +212,18 @@ test('Publish Parallel Publications', async ({
 
 	await waitForAlert(page, `Success:${title2} was created successfully.`);
 
-	await apiHelpers.headlessChangeTracking.publishCTCollection(
-		ctCollection.body.id
-	);
+	await Promise.all([
+		apiHelpers.headlessChangeTracking.publishCTCollection(
+			ctCollection.body.id
+		),
+		apiHelpers.headlessChangeTracking.publishCTCollection(
+			ctCollection2.body.id
+		),
+	]);
 
-	await apiHelpers.headlessChangeTracking.publishCTCollection(
-		ctCollection2.body.id
-	);
+	await changeTrackingPage.assertStatus('Published', ctCollection.body.name);
+
+	await changeTrackingPage.assertStatus('Published', ctCollection2.body.name);
 
 	await journalPage.goto(site.friendlyUrlPath);
 
@@ -317,4 +322,76 @@ test('LPD-61155 View Publication history when CTProcess user is deleted', async 
 	await expect(
 		page.getByRole('link', {name: ctCollection.body.name})
 	).toBeVisible();
+});
+
+test('LPD-47293 View page friendly URL after reverting publication', async ({
+	apiHelpers,
+	changeTrackingPage,
+	ctCollection,
+	page,
+	pagesAdminPage,
+	site,
+}) => {
+	const layoutName = getRandomString();
+
+	const layout = await apiHelpers.jsonWebServicesLayout.addLayout({
+		groupId: site.id,
+		title: layoutName,
+	});
+
+	const friendlyURL = layout.friendlyURL;
+	const editedFriendlyURL = `${friendlyURL}-edited`;
+
+	const friendlyURLInput = page.getByLabel('Friendly URL').first();
+
+	await changeTrackingPage.workOnPublication(ctCollection);
+
+	await pagesAdminPage.goto(site.friendlyUrlPath);
+
+	await pagesAdminPage.clickOnAction('Configure', layoutName);
+
+	await friendlyURLInput.fill(editedFriendlyURL);
+
+	await Promise.all([
+		page.waitForLoadState('load'),
+		page.getByRole('button', {name: 'Save'}).click(),
+	]);
+
+	await pagesAdminPage.goto(site.friendlyUrlPath);
+
+	await pagesAdminPage.clickOnAction('Configure', layoutName);
+
+	await expect(friendlyURLInput).toHaveValue(editedFriendlyURL, {
+		timeout: 15000,
+	});
+
+	await changeTrackingPage.workOnProduction();
+
+	await pagesAdminPage.goto(site.friendlyUrlPath);
+
+	await pagesAdminPage.clickOnAction('Configure', layoutName);
+
+	await expect(friendlyURLInput).toHaveValue(friendlyURL, {timeout: 15000});
+
+	await apiHelpers.headlessChangeTracking.publishCTCollection(
+		ctCollection.body.id
+	);
+
+	await changeTrackingPage.assertStatus('Published', ctCollection.body.name);
+
+	await pagesAdminPage.goto(site.friendlyUrlPath);
+
+	await pagesAdminPage.clickOnAction('Configure', layoutName);
+
+	await expect(friendlyURLInput).toHaveValue(editedFriendlyURL, {
+		timeout: 15000,
+	});
+
+	await changeTrackingPage.revertPublication(ctCollection.body.name);
+
+	await pagesAdminPage.goto(site.friendlyUrlPath);
+
+	await pagesAdminPage.clickOnAction('Configure', layoutName);
+
+	await expect(friendlyURLInput).toHaveValue(friendlyURL, {timeout: 15000});
 });

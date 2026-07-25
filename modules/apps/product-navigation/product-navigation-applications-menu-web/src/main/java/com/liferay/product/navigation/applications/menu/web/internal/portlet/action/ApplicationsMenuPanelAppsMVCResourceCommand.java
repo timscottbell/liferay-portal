@@ -68,6 +68,8 @@ import java.util.List;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 
 /**
  * @author Eudaldo Alonso
@@ -184,59 +186,6 @@ public class ApplicationsMenuPanelAppsMVCResourceCommand
 				assetLibraryResource.getAssetLibrariesPinnedByMePage(
 					Pagination.of(1, 5))),
 			Pagination.of(1, 5), assetLibrariesPage.getTotalCount());
-	}
-
-	private JSONArray _getChildPanelCategoriesJSONArray(
-			HttpServletRequest httpServletRequest, String key,
-			ThemeDisplay themeDisplay)
-		throws Exception {
-
-		JSONArray childPanelCategoriesJSONArray =
-			_jsonFactory.createJSONArray();
-
-		List<PanelCategory> childPanelCategories =
-			_panelCategoryHelper.getChildPanelCategories(key, themeDisplay);
-
-		for (PanelCategory childPanelCategory : childPanelCategories) {
-			JSONArray panelAppsJSONArray = _getPanelAppsJSONArray(
-				httpServletRequest, childPanelCategory.getKey(), themeDisplay);
-
-			if ((panelAppsJSONArray == null) ||
-				(panelAppsJSONArray.length() <= 0)) {
-
-				continue;
-			}
-
-			childPanelCategoriesJSONArray.put(
-				JSONUtil.put(
-					"key", childPanelCategory.getKey()
-				).put(
-					"label",
-					childPanelCategory.getLabel(themeDisplay.getLocale())
-				).put(
-					"panelApps", panelAppsJSONArray
-				));
-		}
-
-		List<PanelApp> panelApps = _panelAppRegistry.getPanelApps(
-			key, themeDisplay.getPermissionChecker(),
-			themeDisplay.getScopeGroup());
-
-		for (PanelApp panelApp : panelApps) {
-			childPanelCategoriesJSONArray.put(
-				JSONUtil.put(
-					"key", panelApp.getKey()
-				).put(
-					"label", panelApp.getLabel(themeDisplay.getLocale())
-				).put(
-					"panelApps",
-					JSONUtil.putAll(
-						_getPanelAppJSONObject(
-							httpServletRequest, panelApp, themeDisplay))
-				));
-		}
-
-		return childPanelCategoriesJSONArray;
 	}
 
 	private JSONObject _getCMSJSONObject(
@@ -384,40 +333,6 @@ public class ApplicationsMenuPanelAppsMVCResourceCommand
 			ParamUtil.getString(httpServletRequest, "backURL"));
 	}
 
-	private JSONObject _getPanelAppJSONObject(
-			HttpServletRequest httpServletRequest, PanelApp panelApp,
-			ThemeDisplay themeDisplay)
-		throws Exception {
-
-		return JSONUtil.put(
-			"label", panelApp.getLabel(themeDisplay.getLocale())
-		).put(
-			"portletId", panelApp.getPortletId()
-		).put(
-			"url", panelApp.getPortletURL(httpServletRequest)
-		);
-	}
-
-	private JSONArray _getPanelAppsJSONArray(
-			HttpServletRequest httpServletRequest, String key,
-			ThemeDisplay themeDisplay)
-		throws Exception {
-
-		JSONArray panelAppsJSONArray = _jsonFactory.createJSONArray();
-
-		List<PanelApp> panelApps = _panelAppRegistry.getPanelApps(
-			key, themeDisplay.getPermissionChecker(),
-			themeDisplay.getScopeGroup());
-
-		for (PanelApp panelApp : panelApps) {
-			panelAppsJSONArray.put(
-				_getPanelAppJSONObject(
-					httpServletRequest, panelApp, themeDisplay));
-		}
-
-		return panelAppsJSONArray;
-	}
-
 	private JSONArray _getPanelCategoriesJSONArray(
 			HttpServletRequest httpServletRequest,
 			ResourceRequest resourceRequest, ThemeDisplay themeDisplay)
@@ -429,47 +344,16 @@ public class ApplicationsMenuPanelAppsMVCResourceCommand
 			_panelCategoryHelper.getChildPanelCategories(
 				PanelCategoryKeys.APPLICATIONS_MENU, themeDisplay);
 
-		if (FeatureFlagManagerUtil.isEnabled(
-				themeDisplay.getCompanyId(), "LPD-36105")) {
-
-			_processPanelCategories(
-				applicationsMenuPanelCategories, httpServletRequest,
-				panelCategoriesJSONArray,
-				ParamUtil.getString(resourceRequest, "selectedPortletId"),
-				themeDisplay);
-
-			return panelCategoriesJSONArray;
-		}
-
-		for (PanelCategory panelCategory : applicationsMenuPanelCategories) {
-			JSONArray childCategoriesJSONArray =
-				_getChildPanelCategoriesJSONArray(
-					httpServletRequest, panelCategory.getKey(), themeDisplay);
-
-			if ((childCategoriesJSONArray == null) ||
-				(childCategoriesJSONArray.length() <= 0)) {
-
-				continue;
-			}
-
-			panelCategoriesJSONArray.put(
-				JSONUtil.put(
-					"childCategories", childCategoriesJSONArray
-				).put(
-					"key", panelCategory.getKey()
-				).put(
-					"label", panelCategory.getLabel(themeDisplay.getLocale())
-				));
-		}
+		_processPanelCategories(
+			applicationsMenuPanelCategories, httpServletRequest,
+			panelCategoriesJSONArray,
+			ParamUtil.getString(resourceRequest, "selectedPortletId"),
+			themeDisplay);
 
 		return panelCategoriesJSONArray;
 	}
 
-	private String _getSelectedCategoryKey(long companyId, String portletId) {
-		if (!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-36105")) {
-			return null;
-		}
-
+	private String _getSelectedCategoryKey(String portletId) {
 		List<PanelCategory> childPanelCategories =
 			PanelCategoryRegistryUtil.getChildPanelCategories(
 				PanelCategoryKeys.APPLICATIONS_MENU);
@@ -628,8 +512,7 @@ public class ApplicationsMenuPanelAppsMVCResourceCommand
 			ThemeDisplay themeDisplay)
 		throws Exception {
 
-		String selectedCategoryKey = _getSelectedCategoryKey(
-			themeDisplay.getCompanyId(), selectedPortletId);
+		String selectedCategoryKey = _getSelectedCategoryKey(selectedPortletId);
 
 		for (PanelCategory panelCategory : applicationsMenuPanelCategories) {
 			PanelApp panelApp = _panelAppRegistry.getFirstAvailablePanelApp(
@@ -678,8 +561,11 @@ public class ApplicationsMenuPanelAppsMVCResourceCommand
 	@Reference
 	private Portal _portal;
 
-	@Reference
-	private RecentGroupManager _recentGroupManager;
+	@Reference(
+		policy = ReferencePolicy.DYNAMIC,
+		policyOption = ReferencePolicyOption.GREEDY
+	)
+	private volatile RecentGroupManager _recentGroupManager;
 
 	@Reference
 	private WebServerServletToken _webServerServletToken;

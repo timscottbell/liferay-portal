@@ -9,6 +9,8 @@ import {initializeCache} from './src/main/resources/META-INF/resources/page_edit
 
 initializeCache();
 
+Liferay.FeatureFlags['LPD-11235'] = true;
+
 Liferay.Util.sub.mockImplementation((key, ...args) => {
 	const argsArray = args.flatMap((arg) => arg);
 
@@ -129,8 +131,9 @@ jest.mock(
 	})
 );
 
-jest.mock(
-	'./src/main/resources/META-INF/resources/page_editor/app/utils/useIsSmallResolution',
-
-	() => jest.fn(() => false)
-);
+window.matchMedia = (query) => ({
+	addEventListener: () => {},
+	matches: false,
+	media: query,
+	removeEventListener: () => {},
+});

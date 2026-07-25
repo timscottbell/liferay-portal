@@ -47,6 +47,9 @@ import java.util.function.Supplier;
 	description = "A page on a site, which can be of type content, embedded, link to page, link to URL, page set or widget.",
 	value = "SitePage"
 )
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "A page on a site, which can be of type content, embedded, link to page, link to URL, page set or widget."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "SitePage")
 public class SitePage implements Serializable {
@@ -555,7 +558,58 @@ public class SitePage implements Serializable {
 	private Supplier<PageSettings> _pageSettingsSupplier;
 
 	@io.swagger.v3.oas.annotations.media.Schema(
-		description = "The page's specifications. A page of type content will contain 1 page specifications for its draft layout and 1 page specifications for its published layout. A page of type widget contains only 1 page specification for its published layout. This field is not returned by default. It can be requested via nestedFields."
+		description = "The page's page specification versions. This field is not returned by default. It can be requested via nestedFields."
+	)
+	@Valid
+	public PageSpecificationVersion[] getPageSpecificationVersions() {
+		if (_pageSpecificationVersionsSupplier != null) {
+			pageSpecificationVersions =
+				_pageSpecificationVersionsSupplier.get();
+
+			_pageSpecificationVersionsSupplier = null;
+		}
+
+		return pageSpecificationVersions;
+	}
+
+	public void setPageSpecificationVersions(
+		PageSpecificationVersion[] pageSpecificationVersions) {
+
+		this.pageSpecificationVersions = pageSpecificationVersions;
+
+		_pageSpecificationVersionsSupplier = null;
+	}
+
+	@JsonIgnore
+	public void setPageSpecificationVersions(
+		UnsafeSupplier<PageSpecificationVersion[], Exception>
+			pageSpecificationVersionsUnsafeSupplier) {
+
+		_pageSpecificationVersionsSupplier = () -> {
+			try {
+				return pageSpecificationVersionsUnsafeSupplier.get();
+			}
+			catch (RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			catch (Exception exception) {
+				throw new RuntimeException(exception);
+			}
+		};
+	}
+
+	@GraphQLField(
+		description = "The page's page specification versions. This field is not returned by default. It can be requested via nestedFields."
+	)
+	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
+	protected PageSpecificationVersion[] pageSpecificationVersions;
+
+	@JsonIgnore
+	private Supplier<PageSpecificationVersion[]>
+		_pageSpecificationVersionsSupplier;
+
+	@io.swagger.v3.oas.annotations.media.Schema(
+		description = "The page's specifications. A page of type content will contain 1 page specification for its draft layout and 1 page specification for its published layout. A page of type widget contains only 1 page specification for its published layout. A page of type content may also be created by sending a single content page specification. This field is not returned by default. It can be requested via nestedFields."
 	)
 	@Valid
 	public PageSpecification[] getPageSpecifications() {
@@ -593,7 +647,7 @@ public class SitePage implements Serializable {
 	}
 
 	@GraphQLField(
-		description = "The page's specifications. A page of type content will contain 1 page specifications for its draft layout and 1 page specifications for its published layout. A page of type widget contains only 1 page specification for its published layout. This field is not returned by default. It can be requested via nestedFields."
+		description = "The page's specifications. A page of type content will contain 1 page specification for its draft layout and 1 page specification for its published layout. A page of type widget contains only 1 page specification for its published layout. A page of type content may also be created by sending a single content page specification. This field is not returned by default. It can be requested via nestedFields."
 	)
 	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
 	protected PageSpecification[] pageSpecifications;
@@ -747,7 +801,9 @@ public class SitePage implements Serializable {
 	@JsonIgnore
 	private Supplier<TaxonomyCategoryBrief[]> _taxonomyCategoryBriefsSupplier;
 
-	@io.swagger.v3.oas.annotations.media.Schema
+	@io.swagger.v3.oas.annotations.media.Schema(
+		description = "The page type. As of LPD-76864, \"WidgetPage\" is deprecated; creating new widget pages is rejected with a 400 response on new installs where the LPD-76864 feature flag is disabled. Use \"ContentPage\" instead. Existing widget pages continue to render unchanged on upgraded installs where the flag is enabled."
+	)
 	@JsonGetter("type")
 	@Valid
 	public Type getType() {
@@ -792,7 +848,9 @@ public class SitePage implements Serializable {
 		};
 	}
 
-	@GraphQLField
+	@GraphQLField(
+		description = "The page type. As of LPD-76864, \"WidgetPage\" is deprecated; creating new widget pages is rejected with a 400 response on new installs where the LPD-76864 feature flag is disabled. Use \"ContentPage\" instead. Existing widget pages continue to render unchanged on upgraded installs where the flag is enabled."
+	)
 	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
 	protected Type type;
 
@@ -1106,6 +1164,29 @@ public class SitePage implements Serializable {
 			sb.append(String.valueOf(pageSettings));
 		}
 
+		PageSpecificationVersion[] pageSpecificationVersions =
+			getPageSpecificationVersions();
+
+		if (pageSpecificationVersions != null) {
+			if (sb.length() > 1) {
+				sb.append(", ");
+			}
+
+			sb.append("\"pageSpecificationVersions\": ");
+
+			sb.append("[");
+
+			for (int i = 0; i < pageSpecificationVersions.length; i++) {
+				sb.append(String.valueOf(pageSpecificationVersions[i]));
+
+				if ((i + 1) < pageSpecificationVersions.length) {
+					sb.append(", ");
+				}
+			}
+
+			sb.append("]");
+		}
+
 		PageSpecification[] pageSpecifications = getPageSpecifications();
 
 		if (pageSpecifications != null) {
@@ -1414,3 +1495,4 @@ public class SitePage implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1642070978

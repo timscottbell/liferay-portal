@@ -100,8 +100,10 @@ import org.apache.http.util.EntityUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 import org.json.JSONArray;
@@ -359,13 +361,11 @@ public class Main {
 				StructuredContent structuredContent = _toStructuredContent(
 					fileName);
 
-				if (externalReferenceCodeStructuredContents.containsKey(
-						structuredContent.getExternalReferenceCode())) {
+				StructuredContent siteStructuredContent =
+					externalReferenceCodeStructuredContents.get(
+						structuredContent.getExternalReferenceCode());
 
-					StructuredContent siteStructuredContent =
-						externalReferenceCodeStructuredContents.get(
-							structuredContent.getExternalReferenceCode());
-
+				if (siteStructuredContent != null) {
 					importedStructuredContentIds.add(
 						siteStructuredContent.getId());
 
@@ -414,15 +414,13 @@ public class Main {
 					updatedStructuredContentCount++;
 				}
 				else {
-					if (friendlyUrlPathStructuredContents.containsKey(
-							structuredContent.getFriendlyUrlPath())) {
+					StructuredContent friendlyUrlPathSiteStructuredContent =
+						friendlyUrlPathStructuredContents.get(
+							structuredContent.getFriendlyUrlPath());
 
-						StructuredContent siteStructuredContent =
-							friendlyUrlPathStructuredContents.get(
-								structuredContent.getFriendlyUrlPath());
-
+					if (friendlyUrlPathSiteStructuredContent != null) {
 						importedStructuredContentIds.add(
-							siteStructuredContent.getId());
+							friendlyUrlPathSiteStructuredContent.getId());
 
 						String relativeFileName = StringUtil.removeSubstring(
 							fileName, _baseDirName);
@@ -445,7 +443,7 @@ public class Main {
 						_deleteRAGDocument(structuredContent.getId());
 
 						_structuredContentResource.deleteStructuredContent(
-							siteStructuredContent.getId());
+							friendlyUrlPathSiteStructuredContent.getId());
 					}
 
 					String relativeFileName = StringUtil.removeSubstring(
@@ -578,6 +576,7 @@ public class Main {
 
 		try (CloseableHttpClient closeableHttpClient =
 				httpClientBuilder.build();
+
 			CloseableHttpResponse closeableHttpResponse =
 				closeableHttpClient.execute(httpDelete)) {
 
@@ -743,18 +742,16 @@ public class Main {
 		CanonicalTreeParser newTreeParser = new CanonicalTreeParser();
 		CanonicalTreeParser oldTreeParser = new CanonicalTreeParser();
 
-		RevCommit newCommit = repository.parseCommit(newRev);
+		try (ObjectReader objectReader = repository.newObjectReader()) {
+			RevCommit newCommit = repository.parseCommit(newRev);
+			RevCommit oldCommit = repository.parseCommit(oldRev);
 
-		RevCommit oldCommit = repository.parseCommit(oldRev);
+			RevTree newCommitTree = newCommit.getTree();
+			RevTree oldCommitTree = oldCommit.getTree();
 
-		newTreeParser.reset(
-			repository.newObjectReader(),
-			newCommit.getTree(
-			).getId());
-		oldTreeParser.reset(
-			repository.newObjectReader(),
-			oldCommit.getTree(
-			).getId());
+			newTreeParser.reset(objectReader, newCommitTree.getId());
+			oldTreeParser.reset(objectReader, oldCommitTree.getId());
+		}
 
 		List<DiffEntry> diffs = git.diff(
 		).setOldTree(
@@ -764,23 +761,21 @@ public class Main {
 		).call();
 
 		for (DiffEntry diff : diffs) {
-			if (diff.getNewPath(
-				).endsWith(
-					".md"
-				)) {
+			String newPath = diff.getNewPath();
 
-				_diffFileNames.add("/" + diff.getNewPath());
+			if (newPath.endsWith(".md")) {
+				_diffFileNames.add("/" + newPath);
 			}
 		}
 	}
 
 	private String _getHTML(File file) throws Exception {
-		String htmlFilePath = file.getCanonicalPath(
-		).replaceFirst(
-			_docsDirName, _baseDirName + "/site"
-		).replaceFirst(
-			"\\.md", ".html"
-		);
+		String htmlFilePath = file.getCanonicalPath();
+
+		htmlFilePath = htmlFilePath.replaceFirst(
+			_docsDirName, _baseDirName + "/site");
+
+		htmlFilePath = htmlFilePath.replaceFirst("\\.md", ".html");
 
 		File htmlFile = new File(htmlFilePath);
 
@@ -795,8 +790,10 @@ public class Main {
 				continue;
 			}
 
-			return contentField.getContentFieldValue(
-			).getData();
+			ContentFieldValue contentFieldValue =
+				contentField.getContentFieldValue();
+
+			return contentFieldValue.getData();
 		}
 
 		return StringPool.BLANK;
@@ -869,6 +866,7 @@ public class Main {
 
 		try (CloseableHttpClient closeableHttpClient =
 				httpClientBuilder.build();
+
 			CloseableHttpResponse closeableHttpResponse =
 				closeableHttpClient.execute(httpPost)) {
 
@@ -1548,6 +1546,7 @@ public class Main {
 
 		try (CloseableHttpClient closeableHttpClient =
 				httpClientBuilder.build();
+
 			CloseableHttpResponse closeableHttpResponse =
 				closeableHttpClient.execute(httpPut)) {
 

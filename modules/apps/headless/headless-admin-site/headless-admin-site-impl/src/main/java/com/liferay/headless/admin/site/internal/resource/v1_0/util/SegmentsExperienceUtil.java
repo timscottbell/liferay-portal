@@ -30,7 +30,6 @@ import com.liferay.segments.model.SegmentsEntry;
 import com.liferay.segments.model.SegmentsExperience;
 import com.liferay.segments.service.SegmentsEntryLocalServiceUtil;
 import com.liferay.segments.service.SegmentsExperienceLocalServiceUtil;
-import com.liferay.segments.service.SegmentsExperienceServiceUtil;
 
 import java.util.Objects;
 
@@ -47,7 +46,8 @@ public class SegmentsExperienceUtil {
 		throws Exception {
 
 		if (!Objects.equals(layout.getType(), LayoutConstants.TYPE_CONTENT)) {
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"Only site pages can define additional page experiences");
 		}
 
 		SegmentsEntryReference segmentsEntryReference =
@@ -57,8 +57,9 @@ public class SegmentsExperienceUtil {
 				layout.getGroupId());
 
 		SegmentsExperience segmentsExperience =
-			SegmentsExperienceServiceUtil.addSegmentsExperience(
-				pageExperience.getExternalReferenceCode(), layout.getGroupId(),
+			SegmentsExperienceLocalServiceUtil.addSegmentsExperience(
+				pageExperience.getExternalReferenceCode(),
+				serviceContext.getUserId(), layout.getGroupId(),
 				segmentsEntryReference.getExternalReferenceCode(),
 				segmentsEntryReference.getScopeExternalReferenceCode(),
 				pageExperience.getKey(), layout.getPlid(),
@@ -118,9 +119,11 @@ public class SegmentsExperienceUtil {
 
 		if (segmentsExperiencePriority != segmentsExperience.getPriority()) {
 			segmentsExperience =
-				SegmentsExperienceServiceUtil.updateSegmentsExperiencePriority(
-					segmentsExperience.getSegmentsExperienceId(),
-					segmentsExperiencePriority);
+				SegmentsExperienceLocalServiceUtil.
+					updateSegmentsExperiencePriority(
+						serviceContext.getUserId(),
+						segmentsExperience.getSegmentsExperienceId(),
+						segmentsExperiencePriority);
 		}
 
 		SegmentsEntryReference segmentsEntryReference =
@@ -129,7 +132,8 @@ public class SegmentsExperienceUtil {
 				pageExperience.getSegmentItemExternalReference(),
 				layout.getGroupId());
 
-		return SegmentsExperienceServiceUtil.updateSegmentsExperience(
+		return SegmentsExperienceLocalServiceUtil.updateSegmentsExperience(
+			serviceContext.getUserId(),
 			segmentsExperience.getSegmentsExperienceId(),
 			segmentsEntryReference.getExternalReferenceCode(),
 			segmentsEntryReference.getScopeExternalReferenceCode(),
@@ -142,7 +146,8 @@ public class SegmentsExperienceUtil {
 
 	public static void validateSegmentsExperienceLayout(Layout layout) {
 		if (!Objects.equals(layout.getType(), LayoutConstants.TYPE_CONTENT)) {
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"Only site pages can define additional page experiences");
 		}
 
 		long plid = layout.getPlid();
@@ -156,7 +161,8 @@ public class SegmentsExperienceUtil {
 				fetchLayoutPageTemplateEntryByPlid(plid);
 
 		if (layoutPageTemplateEntry != null) {
-			throw new UnsupportedOperationException();
+			throw new IllegalArgumentException(
+				"Only site pages can define additional page experiences");
 		}
 	}
 

@@ -40,6 +40,7 @@ export class JSONWebServicesLayoutApiHelper {
 		parentLayoutId = '0',
 		privateLayout = 'false',
 		title,
+		typeSettings = '',
 	}: {
 		externalReferenceCode?: string;
 		groupId: string;
@@ -48,6 +49,7 @@ export class JSONWebServicesLayoutApiHelper {
 		parentLayoutId?: string;
 		privateLayout?: string;
 		title: string;
+		typeSettings?: string;
 	}): Promise<Layout> {
 		if (options.publish && options.type !== 'content') {
 			throw new TypeError(
@@ -75,7 +77,7 @@ export class JSONWebServicesLayoutApiHelper {
 		urlSearchParams.append('keywordsMap', JSON.stringify({en_US: ''}));
 		urlSearchParams.append('robotsMap', JSON.stringify({en_US: ''}));
 		urlSearchParams.append('type', options.type);
-		urlSearchParams.append('typeSettings', '');
+		urlSearchParams.append('typeSettings', typeSettings);
 		urlSearchParams.append('hidden', 'false');
 		urlSearchParams.append(
 			'friendlyURLMap',
@@ -108,7 +110,7 @@ export class JSONWebServicesLayoutApiHelper {
 			);
 
 			await page.getByLabel(name, {exact: true}).click();
-			await page.getByLabel('Publish').click();
+			await page.getByLabel('Publish', {exact: true}).click();
 
 			expect(page.getByRole('heading', {name: 'Pages'})).toBeAttached();
 		}
@@ -134,7 +136,7 @@ export class JSONWebServicesLayoutApiHelper {
 	async getLayoutsCount(
 		groupId: number,
 		privateLayout: boolean
-	): Promise<void> {
+	): Promise<number> {
 		const urlSearchParams = new URLSearchParams();
 
 		// @ts-ignore

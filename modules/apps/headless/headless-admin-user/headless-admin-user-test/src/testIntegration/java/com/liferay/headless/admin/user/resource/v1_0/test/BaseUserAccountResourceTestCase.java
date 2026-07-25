@@ -48,6 +48,7 @@ import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -140,7 +141,8 @@ public abstract class BaseUserAccountResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -150,7 +152,8 @@ public abstract class BaseUserAccountResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -308,6 +311,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountByExternalReferenceCodeUserAccountByExternalReferenceCode_addUserAccount();
 
@@ -357,6 +361,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountByExternalReferenceCodeUserAccountByExternalReferenceCode_addUserAccount();
 
@@ -466,6 +471,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountUserAccount_addUserAccount();
 
@@ -503,6 +509,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountUserAccount_addUserAccount();
 
@@ -591,6 +598,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountUserAccountByEmailAddress_addUserAccount();
 
@@ -615,6 +623,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountUserAccountByEmailAddress_addUserAccount();
 
@@ -695,6 +704,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountUserAccountByExternalReferenceCodeByEmailAddress_addUserAccount();
 
@@ -721,6 +731,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountUserAccountByExternalReferenceCodeByEmailAddress_addUserAccount();
 
@@ -798,6 +809,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountUserAccountsByEmailAddress_addUserAccount();
 
@@ -818,6 +830,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountUserAccountsByEmailAddress_addUserAccount();
 
@@ -894,6 +907,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteAccountUserAccountsByExternalReferenceCodeByEmailAddress_addUserAccount();
 
@@ -916,6 +930,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteAccountUserAccountsByExternalReferenceCodeByEmailAddress_addUserAccount();
 
@@ -985,6 +1000,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteUserAccount_addUserAccount();
 
@@ -1016,6 +1032,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteUserAccount_addUserAccount();
 
@@ -1169,6 +1186,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount1 =
 			testGraphQLDeleteUserAccountByExternalReferenceCode_addUserAccount();
 
@@ -1208,6 +1226,7 @@ public abstract class BaseUserAccountResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		UserAccount userAccount2 =
 			testGraphQLDeleteUserAccountByExternalReferenceCode_addUserAccount();
 
@@ -2041,20 +2060,9 @@ public abstract class BaseUserAccountResourceTestCase {
 		String externalReferenceCode =
 			testGetAccountUserAccountsByExternalReferenceCodePage_getExternalReferenceCode();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountUserAccountsByExternalReferenceCode",
-			new HashMap<String, Object>() {
-				{
-					put(
-						"externalReferenceCode",
-						"\"" + externalReferenceCode + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountUserAccountsByExternalReferenceCodePageAccountUserAccount_getGraphQLField(
+				externalReferenceCode);
 
 		// No namespace
 
@@ -2124,6 +2132,27 @@ public abstract class BaseUserAccountResourceTestCase {
 				UserAccountSerDes.toDTOs(
 					accountUserAccountsByExternalReferenceCodeJSONObject.
 						getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountUserAccountsByExternalReferenceCodePageAccountUserAccount_getGraphQLField(
+				String externalReferenceCode)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountUserAccountsByExternalReferenceCode",
+			new HashMap<String, Object>() {
+				{
+					put(
+						"externalReferenceCode",
+						"\"" + externalReferenceCode + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected UserAccount
@@ -2198,8 +2227,9 @@ public abstract class BaseUserAccountResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts/batch".
-				replace("{accountId}", String.valueOf(accountId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-admin-user/v1.0/accounts/{accountId}/user-accounts/batch").
+					replace("{accountId}", String.valueOf(accountId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -2571,18 +2601,9 @@ public abstract class BaseUserAccountResourceTestCase {
 	public void testGraphQLGetAccountUserAccountsPage() throws Exception {
 		Long accountId = testGetAccountUserAccountsPage_getAccountId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountUserAccounts",
-			new HashMap<String, Object>() {
-				{
-					put("accountId", accountId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountUserAccountsPageAccountUserAccount_getGraphQLField(
+				accountId);
 
 		// No namespace
 
@@ -2640,6 +2661,25 @@ public abstract class BaseUserAccountResourceTestCase {
 			Arrays.asList(
 				UserAccountSerDes.toDTOs(
 					accountUserAccountsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountUserAccountsPageAccountUserAccount_getGraphQLField(
+				Long accountId)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountUserAccounts",
+			new HashMap<String, Object>() {
+				{
+					put("accountId", accountId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -4059,8 +4099,9 @@ public abstract class BaseUserAccountResourceTestCase {
 			public StringBuffer getRequestURL() {
 				return new StringBuffer(
 					StringBundler.concat(
-						"http://localhost:8080/o/v1.0/",
-						RandomTestUtil.randomString(), "/",
+						"http://localhost:",
+						String.valueOf(PortalUtil.getPortalServerPort(false)),
+						"/o/v1.0/", RandomTestUtil.randomString(), "/",
 						RandomTestUtil.randomString()));
 			}
 
@@ -4096,8 +4137,10 @@ public abstract class BaseUserAccountResourceTestCase {
 			@Override
 			public URI getRequestUri() {
 				return URI.create(
-					"http://localhost:8080/o/" + applicationPath +
-						resourcePath);
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath, resourcePath));
 			}
 
 			@Override
@@ -4117,7 +4160,11 @@ public abstract class BaseUserAccountResourceTestCase {
 
 			@Override
 			public URI getBaseUri() {
-				return URI.create("http://localhost:8080/o/" + applicationPath);
+				return URI.create(
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath));
 			}
 
 			@Override
@@ -4974,18 +5021,9 @@ public abstract class BaseUserAccountResourceTestCase {
 	public void testGraphQLGetUserAccountsByStatusPage() throws Exception {
 		String status = testGetUserAccountsByStatusPage_getStatus();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"userAccountsByStatus",
-			new HashMap<String, Object>() {
-				{
-					put("status", "\"" + status + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetUserAccountsByStatusPageUserAccount_getGraphQLField(
+				status);
 
 		// No namespace
 
@@ -5045,6 +5083,25 @@ public abstract class BaseUserAccountResourceTestCase {
 			Arrays.asList(
 				UserAccountSerDes.toDTOs(
 					userAccountsByStatusJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetUserAccountsByStatusPageUserAccount_getGraphQLField(
+				String status)
+		throws Exception {
+
+		return new GraphQLField(
+			"userAccountsByStatus",
+			new HashMap<String, Object>() {
+				{
+					put("status", "\"" + status + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected UserAccount
@@ -5398,17 +5455,8 @@ public abstract class BaseUserAccountResourceTestCase {
 
 	@Test
 	public void testGraphQLGetUserAccountsPage() throws Exception {
-		GraphQLField graphQLField = new GraphQLField(
-			"userAccounts",
-			new HashMap<String, Object>() {
-				{
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetUserAccountsPageUserAccount_getGraphQLField();
 
 		// No namespace
 
@@ -5463,6 +5511,23 @@ public abstract class BaseUserAccountResourceTestCase {
 			Arrays.asList(
 				UserAccountSerDes.toDTOs(
 					userAccountsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetUserAccountsPageUserAccount_getGraphQLField()
+		throws Exception {
+
+		return new GraphQLField(
+			"userAccounts",
+			new HashMap<String, Object>() {
+				{
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -6849,7 +6914,8 @@ public abstract class BaseUserAccountResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -6989,16 +7055,22 @@ public abstract class BaseUserAccountResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -7011,7 +7083,9 @@ public abstract class BaseUserAccountResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -9218,7 +9292,9 @@ public abstract class BaseUserAccountResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -9562,3 +9638,4 @@ public abstract class BaseUserAccountResourceTestCase {
 		_vulcanCRUDItemDelegateBuilderRegistry;
 
 }
+// LIFERAY-REST-BUILDER-HASH:816838257

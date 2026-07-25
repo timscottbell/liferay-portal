@@ -270,17 +270,11 @@ public class PatcherFixUtil {
 
 			String dependentComponentName = componentNames[0];
 
-			Set<String> prerequisiteComponentNames = new HashSet<>();
-
-			if (componentDependencies.containsKey(dependentComponentName)) {
-				prerequisiteComponentNames = componentDependencies.get(
-					dependentComponentName);
-			}
+			Set<String> prerequisiteComponentNames =
+				componentDependencies.computeIfAbsent(
+					dependentComponentName, key -> new HashSet<>());
 
 			prerequisiteComponentNames.add(componentNames[1]);
-
-			componentDependencies.put(
-				dependentComponentName, prerequisiteComponentNames);
 		}
 
 		return componentDependencies;
@@ -396,7 +390,8 @@ public class PatcherFixUtil {
 		}
 
 		for (PatcherFix patcherFix : patcherFixes) {
-			if ((patcherFix.getType() != PatcherFixConstants.TYPE_PATCH) &&
+			if ((patcherFix.getType() != PatcherFixConstants.TYPE_AUTO_FIX) &&
+				(patcherFix.getType() != PatcherFixConstants.TYPE_PATCH) &&
 				(patcherFix.getType() != PatcherFixConstants.TYPE_WORKAROUND) &&
 				(patcherFix.getType() != PatcherFixConstants.TYPE_REBASE)) {
 
@@ -579,28 +574,32 @@ public class PatcherFixUtil {
 			statusPatcherFixMap.put(patcherFix.getStatus(), patcherFix);
 		}
 
-		if (statusPatcherFixMap.containsKey(
-				WorkflowConstants.STATUS_FIX_REBASE_CONFLICT)) {
+		PatcherFix patcherFix = statusPatcherFixMap.get(
+			WorkflowConstants.STATUS_FIX_REBASE_CONFLICT);
 
-			return statusPatcherFixMap.get(
-				WorkflowConstants.STATUS_FIX_REBASE_CONFLICT);
+		if (patcherFix != null) {
+			return patcherFix;
 		}
-		else if (statusPatcherFixMap.containsKey(
-					WorkflowConstants.STATUS_FIX_REBASING)) {
 
-			return statusPatcherFixMap.get(
-				WorkflowConstants.STATUS_FIX_REBASING);
+		patcherFix = statusPatcherFixMap.get(
+			WorkflowConstants.STATUS_FIX_REBASING);
+
+		if (patcherFix != null) {
+			return patcherFix;
 		}
-		else if (statusPatcherFixMap.containsKey(
-					WorkflowConstants.STATUS_FIX_CONFLICT)) {
 
-			return statusPatcherFixMap.get(
-				WorkflowConstants.STATUS_FIX_CONFLICT);
+		patcherFix = statusPatcherFixMap.get(
+			WorkflowConstants.STATUS_FIX_CONFLICT);
+
+		if (patcherFix != null) {
+			return patcherFix;
 		}
-		else if (statusPatcherFixMap.containsKey(
-					WorkflowConstants.STATUS_FIX_ADDING)) {
 
-			return statusPatcherFixMap.get(WorkflowConstants.STATUS_FIX_ADDING);
+		patcherFix = statusPatcherFixMap.get(
+			WorkflowConstants.STATUS_FIX_ADDING);
+
+		if (patcherFix != null) {
+			return patcherFix;
 		}
 
 		return statusPatcherFixMap.get(WorkflowConstants.STATUS_FIX_COMPLETE);
@@ -663,6 +662,7 @@ public class PatcherFixUtil {
 			PatcherFixLocalServiceUtil.getPatcherFixes(
 				calendar.getTime(), false,
 				new int[] {
+					PatcherFixConstants.TYPE_AUTO_FIX,
 					PatcherFixConstants.TYPE_PATCH,
 					PatcherFixConstants.TYPE_WORKAROUND
 				},
@@ -1031,7 +1031,7 @@ public class PatcherFixUtil {
 	}
 
 	protected static void validateOSBPatcherFixAddJenkinsStatus(
-			PatcherFix patcherFix, String jenkinsStatusJSONString)
+			PatcherFix patcherFix, String jenkinsStatusJSON)
 		throws Exception {
 
 		if (patcherFix == null) {
@@ -1039,7 +1039,7 @@ public class PatcherFixUtil {
 		}
 
 		JenkinsUtil.validateJenkinsRequestKey(
-			patcherFix, jenkinsStatusJSONString, patcherFix.getRequestKey());
+			patcherFix, jenkinsStatusJSON, patcherFix.getRequestKey());
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(PatcherFixUtil.class);

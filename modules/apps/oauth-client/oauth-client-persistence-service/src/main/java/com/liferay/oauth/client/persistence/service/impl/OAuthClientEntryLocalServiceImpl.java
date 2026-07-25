@@ -58,15 +58,17 @@ public class OAuthClientEntryLocalServiceImpl
 
 	@Override
 	public OAuthClientEntry addOAuthClientEntry(
-			long userId, String authRequestParametersJSON,
-			String authServerWellKnownURI, String customClaimsJSON,
-			String infoJSON, String matcherField, long metadataCacheTime,
-			String oidcUserInfoMapperJSON, String tokenRequestParametersJSON)
+			String externalReferenceCode, long userId,
+			String authRequestParametersJSON, String authServerWellKnownURI,
+			String customClaimsJSON, String infoJSON, String matcherField,
+			long metadataCacheTime, String oidcUserInfoMapperJSON,
+			int tokenConnectionTimeout, String tokenRequestParametersJSON)
 		throws PortalException {
 
 		User user = _userLocalService.getUser(userId);
 
-		_validateAuthServerWellKnownURI(authServerWellKnownURI);
+		_validateAuthServerWellKnownURI(
+			user.getCompanyId(), authServerWellKnownURI);
 
 		ClientInformation clientInformation = _parseClientInformation(
 			authServerWellKnownURI, infoJSON);
@@ -115,6 +117,7 @@ public class OAuthClientEntryLocalServiceImpl
 		OAuthClientEntry oAuthClientEntry = oAuthClientEntryPersistence.create(
 			counterLocalService.increment());
 
+		oAuthClientEntry.setExternalReferenceCode(externalReferenceCode);
 		oAuthClientEntry.setCompanyId(user.getCompanyId());
 		oAuthClientEntry.setUserId(user.getUserId());
 		oAuthClientEntry.setUserName(user.getFullName());
@@ -127,6 +130,7 @@ public class OAuthClientEntryLocalServiceImpl
 		oAuthClientEntry.setMatcherField(matcherField);
 		oAuthClientEntry.setMetadataCacheTime(metadataCacheTime);
 		oAuthClientEntry.setOIDCUserInfoMapperJSON(oidcUserInfoMapperJSON);
+		oAuthClientEntry.setTokenConnectionTimeout(tokenConnectionTimeout);
 		oAuthClientEntry.setTokenRequestParametersJSON(
 			tokenRequestParametersJSON);
 
@@ -230,14 +234,15 @@ public class OAuthClientEntryLocalServiceImpl
 			long oAuthClientEntryId, String authRequestParametersJSON,
 			String authServerWellKnownURI, String customClaimsJSON,
 			String infoJSON, String matcherField, long metadataCacheTime,
-			String oidcUserInfoMapperJSON, String tokenRequestParametersJSON)
+			String oidcUserInfoMapperJSON, int tokenConnectionTimeout,
+			String tokenRequestParametersJSON)
 		throws PortalException {
 
 		OAuthClientEntry oAuthClientEntry =
-			oAuthClientEntryLocalService.getOAuthClientEntry(
-				oAuthClientEntryId);
+			oAuthClientEntryPersistence.findByPrimaryKey(oAuthClientEntryId);
 
-		_validateAuthServerWellKnownURI(authServerWellKnownURI);
+		_validateAuthServerWellKnownURI(
+			oAuthClientEntry.getCompanyId(), authServerWellKnownURI);
 
 		ClientInformation clientInformation = _parseClientInformation(
 			authServerWellKnownURI, infoJSON);
@@ -291,6 +296,7 @@ public class OAuthClientEntryLocalServiceImpl
 		oAuthClientEntry.setInfoJSON(clientInformationJSONObject.toString());
 		oAuthClientEntry.setMetadataCacheTime(metadataCacheTime);
 		oAuthClientEntry.setOIDCUserInfoMapperJSON(oidcUserInfoMapperJSON);
+		oAuthClientEntry.setTokenConnectionTimeout(tokenConnectionTimeout);
 		oAuthClientEntry.setTokenRequestParametersJSON(
 			tokenRequestParametersJSON);
 
@@ -328,19 +334,22 @@ public class OAuthClientEntryLocalServiceImpl
 		}
 	}
 
-	private void _validateAuthServerWellKnownURI(String authServerWellKnownURI)
+	private void _validateAuthServerWellKnownURI(
+			long companyId, String authServerWellKnownURI)
 		throws PortalException {
 
 		try {
 			if (authServerWellKnownURI.endsWith("local")) {
 				_oAuthClientASLocalMetadataLocalService.
-					getOAuthClientASLocalMetadata(authServerWellKnownURI);
+					getOAuthClientASLocalMetadata(
+						companyId, authServerWellKnownURI);
 
 				return;
 			}
 
 			Http.Options httpOptions = new Http.Options();
 
+			httpOptions.setCookieSpec(Http.CookieSpec.STANDARD);
 			httpOptions.setLocation(authServerWellKnownURI);
 
 			_http.URLtoString(httpOptions);

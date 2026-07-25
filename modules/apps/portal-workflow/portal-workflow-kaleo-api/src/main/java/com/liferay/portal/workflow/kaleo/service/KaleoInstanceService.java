@@ -60,3 +60,4 @@ public interface KaleoInstanceService extends BaseService {
 	public String getOSGiServiceIdentifier();
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-1054869763

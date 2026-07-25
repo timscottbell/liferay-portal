@@ -40,6 +40,7 @@ import com.liferay.portal.kernel.search.filter.Filter;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.spring.orm.LastSessionRecorderHelperUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
@@ -126,23 +127,42 @@ public class BatchEngineExportTaskExecutorImpl
 			batchEngineExportTask.setStartTime(new Date());
 
 			if (settings.isPersist()) {
-				_batchEngineExportTaskLocalService.updateBatchEngineExportTask(
-					batchEngineExportTask);
+				batchEngineExportTask =
+					_batchEngineExportTaskLocalService.
+						updateBatchEngineExportTask(batchEngineExportTask);
 			}
 
-			InputStream inputStream = BatchEngineTaskExecutorUtil.execute(
-				true, () -> _exportItems(batchEngineExportTask, settings),
-				_userLocalService.getUser(batchEngineExportTask.getUserId()));
+			BatchEngineExportTask finalBatchEngineExportTask =
+				batchEngineExportTask;
 
-			_updateBatchEngineExportTask(
+			InputStream inputStream = BatchEngineTaskExecutorUtil.execute(
+				true, () -> _exportItems(finalBatchEngineExportTask, settings),
+				_userLocalService.getUser(
+					finalBatchEngineExportTask.getUserId()));
+
+			if (settings.isPersist()) {
+				BatchEngineExportTask fetchedBatchEngineExportTask =
+					_batchEngineExportTaskLocalService.
+						fetchBatchEngineExportTask(
+							batchEngineExportTask.getBatchEngineExportTaskId());
+
+				if (fetchedBatchEngineExportTask != null) {
+					batchEngineExportTask = fetchedBatchEngineExportTask;
+				}
+			}
+
+			batchEngineExportTask = _updateBatchEngineExportTask(
 				BatchEngineTaskExecuteStatus.COMPLETED, batchEngineExportTask,
 				null, settings.isPersist());
+
+			BatchEngineExportTask updatedBatchEngineExportTask =
+				batchEngineExportTask;
 
 			return new Result() {
 
 				@Override
 				public BatchEngineExportTask getBatchEngineExportTask() {
-					return batchEngineExportTask;
+					return updatedBatchEngineExportTask;
 				}
 
 				@Override
@@ -199,6 +219,10 @@ public class BatchEngineExportTaskExecutorImpl
 	@Deactivate
 	protected void deactivate() {
 		_exportTaskPostActions.close();
+	}
+
+	private void _clearSessionPersistenceContext() {
+		LastSessionRecorderHelperUtil.syncLastSessionState();
 	}
 
 	private InputStream _exportItems(
@@ -318,6 +342,8 @@ public class BatchEngineExportTaskExecutorImpl
 							updateBatchEngineExportTask(batchEngineExportTask);
 				}
 
+				_clearSessionPersistenceContext();
+
 				if (Thread.interrupted()) {
 					throw new InterruptedException();
 				}
@@ -358,8 +384,9 @@ public class BatchEngineExportTaskExecutorImpl
 				new OutputBlob(
 					new UnsyncByteArrayInputStream(content), content.length));
 
-			_batchEngineExportTaskLocalService.updateBatchEngineExportTask(
-				batchEngineExportTask);
+			batchEngineExportTask =
+				_batchEngineExportTaskLocalService.updateBatchEngineExportTask(
+					batchEngineExportTask);
 		}
 
 		return new ByteArrayInputStream(content);
@@ -561,7 +588,7 @@ public class BatchEngineExportTaskExecutorImpl
 		return multivaluedMap;
 	}
 
-	private void _updateBatchEngineExportTask(
+	private BatchEngineExportTask _updateBatchEngineExportTask(
 		BatchEngineTaskExecuteStatus batchEngineTaskExecuteStatus,
 		BatchEngineExportTask batchEngineExportTask, String errorMessage,
 		boolean persist) {
@@ -581,6 +608,8 @@ public class BatchEngineExportTaskExecutorImpl
 			batchEngineExportTask.getCallbackURL(),
 			batchEngineExportTask.getExecuteStatus(),
 			batchEngineExportTask.getBatchEngineExportTaskId());
+
+		return batchEngineExportTask;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(

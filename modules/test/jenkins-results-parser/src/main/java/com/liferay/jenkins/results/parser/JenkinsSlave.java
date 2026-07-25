@@ -25,8 +25,8 @@ public class JenkinsSlave implements JenkinsNode<JenkinsSlave> {
 
 	public JenkinsSlave() {
 		_jenkinsMaster = JenkinsMaster.getInstance(
-			System.getenv("MASTER_HOSTNAME"));
-		_name = System.getenv("NODE_NAME");
+			Environment.get("MASTER_HOSTNAME"));
+		_name = Environment.get("NODE_NAME");
 
 		update(
 			JenkinsAPIUtil.getAPIJSONObject(
@@ -240,10 +240,10 @@ public class JenkinsSlave implements JenkinsNode<JenkinsSlave> {
 		String className = jenkinsSlaveJSONObject.getString("_class");
 
 		if (className.contains("EC2FleetNodeComputer")) {
-			Matcher matcher = _instanceIDPattern.matcher(displayName);
+			Matcher matcher = _instanceIdPattern.matcher(displayName);
 
 			if (matcher.find()) {
-				displayName = matcher.group("instanceID");
+				displayName = matcher.group("instanceId");
 			}
 		}
 
@@ -315,8 +315,8 @@ public class JenkinsSlave implements JenkinsNode<JenkinsSlave> {
 		}
 	}
 
-	private static final Pattern _instanceIDPattern = Pattern.compile(
-		".* (?<instanceID>i-[0-9a-z]+) .*");
+	private static final Pattern _instanceIdPattern = Pattern.compile(
+		".* (?<instanceId>i-[0-9a-z]+) .*");
 	private static final Pattern _namePattern = Pattern.compile(
 		"(?<prefix>.*[^\\d]+)(?<number>\\d+)");
 

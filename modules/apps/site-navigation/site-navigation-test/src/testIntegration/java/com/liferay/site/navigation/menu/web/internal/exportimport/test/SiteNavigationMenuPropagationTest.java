@@ -16,10 +16,13 @@ import com.liferay.portal.kernel.model.LayoutSet;
 import com.liferay.portal.kernel.model.LayoutSetPrototype;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
+import com.liferay.portal.kernel.service.LayoutSetLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
+import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
+import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.PortletKeys;
@@ -27,8 +30,10 @@ import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
+import com.liferay.site.navigation.constants.SiteNavigationConstants;
 import com.liferay.site.navigation.constants.SiteNavigationMenuPortletKeys;
 import com.liferay.site.navigation.model.SiteNavigationMenu;
+import com.liferay.site.navigation.service.SiteNavigationMenuLocalService;
 import com.liferay.site.navigation.test.util.SiteNavigationMenuTestUtil;
 import com.liferay.sites.kernel.util.Sites;
 
@@ -82,10 +87,6 @@ public class SiteNavigationMenuPropagationTest {
 		_siteNavigationMenu2 = SiteNavigationMenuTestUtil.addSiteNavigationMenu(
 			layoutSetPrototypeGroup, RandomTestUtil.randomString());
 
-		SiteNavigationMenuTestUtil.addSiteNavigationMenu(
-			_siteNavigationMenu1.getExternalReferenceCode(), _group,
-			_siteNavigationMenu1.getName());
-
 		_portletId = _addSiteNavigationMenuWidgetToPage(
 			_siteNavigationMenu1.getExternalReferenceCode());
 
@@ -98,13 +99,18 @@ public class SiteNavigationMenuPropagationTest {
 
 		String name = RandomTestUtil.randomString();
 
-		SiteNavigationMenuTestUtil.addSiteNavigationMenu(_group, name);
+		SiteNavigationMenu groupSiteNavigationMenu =
+			SiteNavigationMenuTestUtil.addSiteNavigationMenu(_group, name);
 
 		Group layoutSetPrototypeGroup = _layoutSetPrototype.getGroup();
 
 		SiteNavigationMenu siteNavigationMenu =
-			SiteNavigationMenuTestUtil.addSiteNavigationMenu(
-				layoutSetPrototypeGroup, name);
+			_siteNavigationMenuLocalService.addSiteNavigationMenu(
+				null, TestPropsValues.getUserId(),
+				layoutSetPrototypeGroup.getGroupId(), name,
+				SiteNavigationConstants.TYPE_DEFAULT, true,
+				ServiceContextTestUtil.getServiceContext(
+					layoutSetPrototypeGroup.getGroupId()));
 
 		_addSiteNavigationMenuWidgetToPage(
 			siteNavigationMenu.getExternalReferenceCode());
@@ -121,15 +127,20 @@ public class SiteNavigationMenuPropagationTest {
 			GetterUtil.getInteger(
 				layoutSetPrototypeSettingsUnicodeProperties.getProperty(
 					Sites.MERGE_FAIL_COUNT)));
+
+		SiteNavigationMenu propagatedSiteNavigationMenu =
+			_siteNavigationMenuLocalService.fetchSiteNavigationMenuByName(
+				_group.getGroupId(), name);
+
+		Assert.assertEquals(
+			groupSiteNavigationMenu.getSiteNavigationMenuId(),
+			propagatedSiteNavigationMenu.getSiteNavigationMenuId());
+		Assert.assertFalse(propagatedSiteNavigationMenu.isAuto());
 	}
 
 	@Test
 	public void testSiteTemplatePropagationWithDifferentSiteNavigationMenu()
 		throws Exception {
-
-		SiteNavigationMenuTestUtil.addSiteNavigationMenu(
-			_siteNavigationMenu2.getExternalReferenceCode(), _group,
-			_siteNavigationMenu2.getName());
 
 		LayoutTestUtil.updateLayoutPortletPreference(
 			_prototypeLayout, _portletId,
@@ -224,10 +235,7 @@ public class SiteNavigationMenuPropagationTest {
 	private void _propagateLayout() throws Exception {
 		MergeLayoutPrototypesThreadLocal.clearMergeComplete();
 
-		MergeLayoutPrototypesThreadLocal.setSkipMerge(false);
-
-		_sites.mergeLayoutSetPrototypeLayouts(
-			_group, _group.getPublicLayoutSet());
+		_sites.mergeLayoutSetPrototypeLayouts(_group.getPublicLayoutSet());
 	}
 
 	@Inject
@@ -239,6 +247,9 @@ public class SiteNavigationMenuPropagationTest {
 	@Inject
 	private LayoutLocalService _layoutLocalService;
 
+	@Inject
+	private LayoutSetLocalService _layoutSetLocalService;
+
 	private LayoutSetPrototype _layoutSetPrototype;
 	private String _portletId;
 
@@ -248,6 +259,9 @@ public class SiteNavigationMenuPropagationTest {
 	private Layout _prototypeLayout;
 	private SiteNavigationMenu _siteNavigationMenu1;
 	private SiteNavigationMenu _siteNavigationMenu2;
+
+	@Inject
+	private SiteNavigationMenuLocalService _siteNavigationMenuLocalService;
 
 	@Inject
 	private Sites _sites;

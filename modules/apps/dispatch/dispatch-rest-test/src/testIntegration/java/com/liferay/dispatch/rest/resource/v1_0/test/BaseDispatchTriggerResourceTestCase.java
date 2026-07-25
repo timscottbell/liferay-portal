@@ -34,6 +34,7 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -107,7 +108,8 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -234,14 +236,8 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 
 	@Test
 	public void testGraphQLGetDispatchTriggersPage() throws Exception {
-		GraphQLField graphQLField = new GraphQLField(
-			"dispatchTriggers",
-			new HashMap<String, Object>() {
-				{
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetDispatchTriggersPageDispatchTrigger_getGraphQLField();
 
 		// No namespace
 
@@ -297,6 +293,20 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 			Arrays.asList(
 				DispatchTriggerSerDes.toDTOs(
 					dispatchTriggersJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetDispatchTriggersPageDispatchTrigger_getGraphQLField()
+		throws Exception {
+
+		return new GraphQLField(
+			"dispatchTriggers",
+			new HashMap<String, Object>() {
+				{
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -413,16 +423,22 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -435,7 +451,9 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -1423,7 +1441,9 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -1700,3 +1720,4 @@ public abstract class BaseDispatchTriggerResourceTestCase {
 		_dispatchTriggerResource;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-1624823235

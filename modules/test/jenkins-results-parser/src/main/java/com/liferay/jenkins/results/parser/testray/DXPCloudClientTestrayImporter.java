@@ -6,6 +6,7 @@
 package com.liferay.jenkins.results.parser.testray;
 
 import com.liferay.jenkins.results.parser.Dom4JUtil;
+import com.liferay.jenkins.results.parser.Environment;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 
 import java.io.File;
@@ -72,7 +73,7 @@ public class DXPCloudClientTestrayImporter {
 		File resultsTarGzFile = new File(
 			JenkinsResultsParserUtil.combine(
 				String.valueOf(JenkinsResultsParserUtil.getCurrentTimeMillis()),
-				"-", String.valueOf(testrayBuild.getID()), "-results.tar.gz"));
+				"-", String.valueOf(testrayBuild.getId()), "-results.tar.gz"));
 
 		try {
 			JenkinsResultsParserUtil.delete(testrayResultsDir);
@@ -83,7 +84,7 @@ public class DXPCloudClientTestrayImporter {
 				testrayResultsDir,
 				JenkinsResultsParserUtil.combine(
 					"TESTS-dxp-cloud-client-",
-					String.valueOf(testrayBuild.getID()), ".xml"));
+					String.valueOf(testrayBuild.getId()), ".xml"));
 
 			JenkinsResultsParserUtil.write(
 				resultsFile, Dom4JUtil.format(rootElement));
@@ -131,7 +132,7 @@ public class DXPCloudClientTestrayImporter {
 	}
 
 	private static String _getEnvVarValue(String varName) {
-		String varValue = System.getenv(varName);
+		String varValue = Environment.get(varName);
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(varValue)) {
 			varValue = System.getProperty(varName);
@@ -284,7 +285,7 @@ public class DXPCloudClientTestrayImporter {
 
 		_relativeURLPath = JenkinsResultsParserUtil.combine(
 			"gcp/", _localDate.format(DateTimeFormatter.ofPattern("yyyy-MM")),
-			"/dxp-cloud/", String.valueOf(testrayBuild.getID()));
+			"/dxp-cloud/", String.valueOf(testrayBuild.getId()));
 
 		return _relativeURLPath;
 	}

@@ -14,10 +14,10 @@ import com.liferay.object.service.ObjectRelationshipLocalServiceUtil;
 import com.liferay.object.test.util.ObjectDefinitionTestUtil;
 import com.liferay.object.test.util.ObjectRelationshipTestUtil;
 import com.liferay.petra.function.UnsafeRunnable;
-import com.liferay.portal.db.migration.schema.exporter.internal.test.util.ConfigurationTestUtil;
+import com.liferay.portal.db.migration.schema.exporter.DBMigrationSchemaExporter;
 import com.liferay.portal.db.migration.schema.exporter.internal.test.util.DatabaseTestUtil;
-import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.util.FileUtil;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LogEntry;
@@ -26,18 +26,11 @@ import com.liferay.portal.test.rule.Inject;
 
 import java.io.File;
 
-import java.nio.file.Files;
-
 import java.util.List;
 
 import javax.sql.DataSource;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.felix.cm.PersistenceManager;
-
 import org.junit.Assert;
-
-import org.osgi.service.cm.ConfigurationAdmin;
 
 /**
  * @author Mariano Álvaro Sáiz
@@ -63,8 +56,6 @@ public abstract class BaseDBMigrationSchemaExportTestCase {
 	protected static void tearDownClassBaseDBMigrationSchemaExportTestCase()
 		throws Exception {
 
-		Files.deleteIfExists(ConfigurationTestUtil.getConfigurationPath(PID));
-
 		FileUtil.deltree(folder);
 
 		if (_objectRelationship != null) {
@@ -87,45 +78,22 @@ public abstract class BaseDBMigrationSchemaExportTestCase {
 			DataSource dataSource, DataSource copyDataSource)
 		throws Exception {
 
-		List<String> copyIndexColumnNames =
-			DatabaseTestUtil.getIndexColumnNames(copyDataSource);
-		List<String> indexColumnNames = DatabaseTestUtil.getIndexColumnNames(
-			dataSource);
-
-		Assert.assertEquals(
-			StringUtils.difference(
-				copyIndexColumnNames.toString(), indexColumnNames.toString()),
-			indexColumnNames.size(), copyIndexColumnNames.size());
-
-		for (int i = 0; i < indexColumnNames.size(); i++) {
-			Assert.assertEquals(
-				indexColumnNames.get(i), copyIndexColumnNames.get(i));
-		}
+		_assertColumnNamesMatch(
+			DatabaseTestUtil.getIndexColumnNames(dataSource),
+			DatabaseTestUtil.getIndexColumnNames(copyDataSource));
 	}
 
 	protected void assertTables(
 			DataSource dataSource, DataSource copyDataSource)
 		throws Exception {
 
-		List<String> copyTableColumnNames =
-			DatabaseTestUtil.getTableColumnNames(copyDataSource);
-		List<String> tableColumnNames = DatabaseTestUtil.getTableColumnNames(
-			dataSource);
-
-		Assert.assertEquals(
-			StringUtils.difference(
-				copyTableColumnNames.toString(), tableColumnNames.toString()),
-			tableColumnNames.size(), copyTableColumnNames.size());
-
-		for (int i = 0; i < tableColumnNames.size(); i++) {
-			Assert.assertEquals(
-				tableColumnNames.get(i), copyTableColumnNames.get(i));
-		}
+		_assertColumnNamesMatch(
+			DatabaseTestUtil.getTableColumnNames(dataSource),
+			DatabaseTestUtil.getTableColumnNames(copyDataSource));
 	}
 
 	protected String getReportContent() throws Exception {
-		ConfigurationTestUtil.deployConfiguration(
-			configurationAdmin, folder.getAbsolutePath(), PID);
+		dbMigrationSchemaExporter.export(folder.getAbsolutePath());
 
 		return FileUtil.read(
 			new File(folder, "db_migration_schema_export_report.txt"));
@@ -137,23 +105,12 @@ public abstract class BaseDBMigrationSchemaExportTestCase {
 
 		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
 				"com.liferay.portal.db.migration.schema.exporter.internal." +
-					"exporter.DBMigrationSchemaExport",
+					"exporter.DBMigrationSchemaExporterImpl",
 				LoggerTestUtil.INFO)) {
 
-			ConfigurationTestUtil.deployConfiguration(
-				configurationAdmin, folder.getAbsolutePath(), PID);
+			dbMigrationSchemaExporter.export(folder.getAbsolutePath());
 
 			runnable.run();
-
-			Assert.assertFalse(
-				Files.exists(ConfigurationTestUtil.getConfigurationPath(PID)));
-			Assert.assertNull(
-				configurationAdmin.listConfigurations(
-					"(service.pid=" + PID + ")"));
-			Assert.assertNull(
-				ReflectionTestUtil.invoke(
-					_persistenceManager, "_getDictionary",
-					new Class<?>[] {String.class}, PID));
 
 			List<LogEntry> logEntries = logCapture.getLogEntries();
 
@@ -172,14 +129,27 @@ public abstract class BaseDBMigrationSchemaExportTestCase {
 
 	protected static final String COPY_DB_SCHEMA_NAME = "testschema";
 
-	protected static final String PID =
-		"com.liferay.portal.db.migration.schema.exporter.internal." +
-			"configuration.DBMigrationSchemaExportConfiguration";
-
 	protected static File folder;
 
 	@Inject
-	protected ConfigurationAdmin configurationAdmin;
+	protected DBMigrationSchemaExporter dbMigrationSchemaExporter;
+
+	private void _assertColumnNamesMatch(
+		List<String> columnNames, List<String> copyColumnNames) {
+
+		List<String> missingColumnNames = ListUtil.remove(
+			columnNames, copyColumnNames);
+
+		Assert.assertTrue(
+			missingColumnNames.toString(),
+			ListUtil.isEmpty(missingColumnNames));
+
+		List<String> addedColumnNames = ListUtil.remove(
+			copyColumnNames, columnNames);
+
+		Assert.assertTrue(
+			addedColumnNames.toString(), ListUtil.isEmpty(addedColumnNames));
+	}
 
 	private static ObjectDefinition _objectDefinition1;
 	private static ObjectDefinition _objectDefinition2;
@@ -188,8 +158,5 @@ public abstract class BaseDBMigrationSchemaExportTestCase {
 	@Inject
 	private static ObjectRelationshipLocalService
 		_objectRelationshipLocalService;
-
-	@Inject
-	private PersistenceManager _persistenceManager;
 
 }

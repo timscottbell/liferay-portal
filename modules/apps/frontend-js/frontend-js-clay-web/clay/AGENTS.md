@@ -56,8 +56,13 @@ yarn run build
 ```bash
 yarn build
 yarn buildTypes
-yarn test
 ```
+
+> **Do not run `yarn test` from a package root.** Jest depends on `node_modules`
+> hoisted at `modules/`, so package-level test runs fail with `Cannot find
+> module 'browserslist-config-clay'` and similar resolution errors. Always run
+> tests from the module root (`frontend-js-clay-web/`) — see
+> [Testing Expectations](#testing-expectations).
 
 ### Clay CSS (`clay/clay-css/`)
 
@@ -98,6 +103,12 @@ yarn run lint
     - internal `@clayui/*` dependency updates
     - package build/type generation (when applicable)
     - npm publish flow
+- The unified changelog boundary is derived from the most recent commit whose subject matches a recognized release phrasing. Recognized phrasings are:
+    - `Bump Clay versions to X.Y.Z` (also matches `Bump Clay version to X.Y.Z`)
+    - `Publish vX.Y.Z`
+    - `Release Clay vX.Y.Z`
+    - `Update Clay to X.Y.Z`
+- Release commits must use one of these phrasings (case insensitive) or changelog boundary detection will pick the wrong commit, causing stale commits to leak into the rendered changelog.
 
 ## DXP vs npm Consumption
 
@@ -111,7 +122,7 @@ yarn run lint
 
 ## Releasing Clay (Examples)
 
-Run from `modules/apps/frontend-js/frontend-js-clay-web`:
+* Run from `modules/apps/frontend-js/frontend-js-clay-web`:
 
 ```bash
 # Preview version and dependency changes only
@@ -129,6 +140,14 @@ NPM_TAG=next node clay/publish-clay-packages.mjs --target-version=3.160.0
 # Optional: skip version bump (advanced)
 SKIP_VERSION_BUMP=true node clay/publish-clay-packages.mjs --target-version=3.160.0
 ```
+
+* Review `package.json` version updates in `modules/apps/frontend-js/frontend-js-clay-web`
+
+* Go to `/portal-impl` and run `ant format-source-all -Dsource.check.names=JSONPackageJSONDependencyVersionCheck -Dsource.file.extensions=json`. It should update all `clayui` package references across `liferay-portal`.
+
+* Go to `/modules` and run `yarn && npx yarn-deduplicate yarn.lock && yarn`. Verify the yarn.lock diff to check if it makes sense. If its numbers are considerably off (more + than - or vice versa), review the contents to find an explanation.
+
+* Review and commit changes
 
 Release notes:
 
@@ -155,6 +174,7 @@ Release notes:
 - Keep public API changes intentional and typed; match existing prop/type naming patterns in the package.
 - Never import across package source paths (for example, `../../clay-button/src`). Always import from package entry points (`@clayui/...`).
 - If a cross-package import is needed and the dependency is missing, add that package as an explicit dependency in the consuming package.
+- Reexport a package's public symbols from its entry point (`src/index.tsx`) using the specifier form — `export {Foo, Bar};` — rather than inline `export const`/`function`/`class`. DXP consumes Clay from source, and the DXP export bridge (`modules/frontend-sdk/node-scripts/util/esbuild/util/getExportedSymbols.mjs`) infers a package's exports by AST-parsing the entry module. It only recognizes export specifiers; inline `export const Foo = ...` declarations are silently dropped, so DXP modules that `import {Foo}` fail to build with `No matching export ... for import "Foo"`. Sibling packages such as `clay-drop-down` and `clay-button` follow the specifier form.
 - For CSS/Sass work, follow `clay/clay-css/CONTRIBUTING.md`:
     - hard tabs
     - alphabetical property ordering
@@ -189,6 +209,11 @@ Release notes:
 - Prefer explicit, behavior-focused assertions for specific cases.
 - Avoid snapshot testing for new coverage unless there is a clear reason and strong review value.
 - Update stories when component behavior, props, or visuals change.
+- **Running tests**: **Always run from the `frontend-js-clay-web` module root, never from a package root** (`clay/clay-*/`). Package-level runs fail because `node_modules` is hoisted to `modules/`.
+    - Running `yarn test` with no arguments will run tests for all packages.
+    - To run tests for a specific package, specify it as the first positional argument. Use the `-t` flag to isolate specific tests.
+    - Example: `yarn test clay/clay-drop-down`
+    - Example (filtered): `yarn test clay/clay-drop-down -t "navigates forwards when clicking through menus"`
 - Run relevant package tests before submitting changes; run broader root tests for cross-cutting changes.
 
 ## Test Coverage Strategy

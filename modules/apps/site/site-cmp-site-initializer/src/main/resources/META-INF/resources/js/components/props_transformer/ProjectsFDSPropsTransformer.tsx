@@ -10,12 +10,12 @@ import {
 	SimpleActionLinkRenderer,
 	addOnClickToCreationMenuItems,
 	deleteItemAction,
-	manageMembersAction,
 } from '@liferay/site-cms-site-initializer';
 import {fetch, sub} from 'frontend-js-web';
 
 import StateLabel from '../StateLabel';
 import ACTIONS from './actions/creationMenuActions';
+import manageMembersAction from './actions/manageMembersAction';
 import AssigneeRenderer from './cell_renderers/AssigneeRenderer';
 
 type Action = {
@@ -117,7 +117,6 @@ export default function ProjectsFDSPropsTransformer({
 				} as IInternalRenderer,
 			],
 		},
-		hideManagementBarInEmptyState: true,
 		itemsActions: itemsActions.map((action) => {
 			if (action?.data?.id === 'delete') {
 				return {
@@ -166,6 +165,7 @@ export default function ProjectsFDSPropsTransformer({
 				manageMembersAction({
 					assetLibraryCreatorUserId: creatorUserId,
 					externalReferenceCode: scopeExternalReferenceCode,
+					filter: additionalProps?.filter,
 					hasAssignMembersPermission: 'assign-members' in actions,
 					title: Liferay.Language.get('all-members'),
 				});

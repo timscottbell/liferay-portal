@@ -5,6 +5,8 @@
 
 import {FrameLocator, Locator, Page, expect} from '@playwright/test';
 
+import {clickAndExpectToBeHidden} from '../../utils/clickAndExpectToBeHidden';
+import {clickAndExpectToBeVisible} from '../../utils/clickAndExpectToBeVisible';
 import {waitForAlert} from '../../utils/waitForAlert';
 
 export class AssetPublisherPage {
@@ -44,6 +46,8 @@ export class AssetPublisherPage {
 	}
 
 	async changeAssetSelection(type: 'Collection' | 'Dynamic' | 'Manual') {
+		await this.openAssetSelectionTab();
+
 		await this.configurationIframe.getByLabel(type).click();
 
 		await waitForAlert(
@@ -109,6 +113,29 @@ export class AssetPublisherPage {
 			.waitFor();
 	}
 
+	async closeConfiguration() {
+		await this.page
+			.locator('.modal-header')
+			.getByLabel('Close', {exact: true})
+			.click();
+	}
+
+	async openAssetSelectionTab() {
+		const assetSelectionTab = this.configurationIframe.getByRole('tab', {
+			name: 'Asset Selection',
+		});
+
+		await assetSelectionTab.waitFor({state: 'visible'});
+
+		await assetSelectionTab.click();
+	}
+
+	async openDisplaySettingsTab() {
+		await this.configurationIframe
+			.getByRole('tab', {name: 'Display Settings'})
+			.click();
+	}
+
 	async saveConfiguration() {
 		await this.configurationIframe
 			.getByRole('button', {name: 'Save'})
@@ -118,5 +145,39 @@ export class AssetPublisherPage {
 			this.configurationIframe,
 			'Success:You have successfully updated the setup.'
 		);
+	}
+
+	async selectCollectionProvider(name: string) {
+		const collectionSelectorIframe = this.configurationIframe.frameLocator(
+			'iframe[title="Select Collection"]'
+		);
+
+		await clickAndExpectToBeVisible({
+			autoClick: true,
+			target: collectionSelectorIframe.getByRole('link', {
+				name: 'Collection Providers',
+			}),
+			timeout: 2000,
+			trigger: this.configurationIframe.getByRole('button', {
+				exact: true,
+				name: 'Select Collection',
+			}),
+		});
+
+		await clickAndExpectToBeHidden({
+			target: this.configurationIframe.locator('.modal-dialog'),
+			timeout: 2000,
+			trigger: collectionSelectorIframe.getByRole('button', {
+				name: `Select ${name}`,
+			}),
+		});
+	}
+
+	async selectDisplayTemplate(label: string) {
+		await this.configurationIframe.getByLabel('Display Template').click();
+
+		await this.configurationIframe
+			.getByRole('option', {name: label})
+			.click();
 	}
 }

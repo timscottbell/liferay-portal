@@ -7,7 +7,6 @@ import {expect, mergeTests} from '@playwright/test';
 import {createReadStream} from 'fs';
 import path from 'node:path';
 
-import {applicationsMenuPageTest} from '../../../fixtures/applicationsMenuPageTest';
 import {contactsCenterPagesTest} from '../../../fixtures/contactsCenterPagesTest';
 import {dataApiHelpersTest} from '../../../fixtures/dataApiHelpersTest';
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
@@ -21,11 +20,7 @@ import {siteStagingPageTest} from '../../../fixtures/siteStagingPageTest';
 import {usersAndOrganizationsPagesTest} from '../../../fixtures/usersAndOrganizationsPagesTest';
 import {getRandomInt} from '../../../utils/getRandomInt';
 import getRandomString from '../../../utils/getRandomString';
-import {
-	performLoginViaApi,
-	performLogout,
-	userData,
-} from '../../../utils/performLogin';
+import {performUserSwitch, userData} from '../../../utils/performLogin';
 import {PORTLET_URLS} from '../../../utils/portletUrls';
 import getBasicWebContentStructureId from '../../../utils/structured-content/getBasicWebContentStructureId';
 import {waitForAlert} from '../../../utils/waitForAlert';
@@ -44,11 +39,11 @@ export const test = mergeTests(
 );
 
 export const testAdmin = mergeTests(
-	applicationsMenuPageTest,
 	blogsPagesTest,
 	contactsCenterPagesTest,
 	dataApiHelpersTest,
 	featureFlagsTest({
+		'LPD-11235': {enabled: true},
 		'LPD-35013': {enabled: true},
 		'LPS-178052': {enabled: true},
 	}),
@@ -63,7 +58,7 @@ export const testAdmin = mergeTests(
 	usersAndOrganizationsPagesTest
 );
 
-test(
+testAdmin(
 	'Can export multiple entries',
 	{tag: '@LPD-25858'},
 	async ({
@@ -73,13 +68,30 @@ test(
 		page,
 		usersAndOrganizationsPage,
 	}) => {
-		test.setTimeout(120000);
+		testAdmin.setTimeout(120000);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const contentUser =
+			await apiHelpers.headlessAdminUser.postUserAccount();
+
+		const adminRole =
+			await apiHelpers.headlessAdminUser.getRoleByName('Administrator');
+
+		await apiHelpers.headlessAdminUser.postRoleByExternalReferenceCodeUserAccountAssociation(
+			adminRole.externalReferenceCode,
+			contentUser.id
+		);
+
+		userData[contentUser.alternateName] = {
+			name: contentUser.givenName,
+			password: userData['test'].password,
+			surname: contentUser.familyName,
+		};
+
+		await performUserSwitch(page, contentUser.alternateName);
+
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		await contactsCenterPage.createPage(apiHelpers, site.id, {
 			title: 'contact',
@@ -138,8 +150,7 @@ test(
 			)
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await page.goto(`/web/${site.name}`);
 
@@ -147,7 +158,7 @@ test(
 
 		await (
 			await usersAndOrganizationsPage.usersTableRowActions(
-				'demo.company.admin'
+				contentUser.alternateName
 			)
 		).click();
 		await usersAndOrganizationsPage.exportPersonalDataItem.click();
@@ -215,11 +226,9 @@ testAdmin(
 			surname: userAccount.familyName,
 		};
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: 'Site' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.headlessDelivery.createSitePage({
 			siteId: site.id,
@@ -234,8 +243,7 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
 		const blog1Name = 'Blog1';
 		const blog2Name = 'Blog2';
@@ -262,8 +270,7 @@ testAdmin(
 
 		await waitForAlert(page, 'Local staging is successfully enabled.');
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -340,14 +347,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const folder = await apiHelpers.headlessDelivery.postDocumentFolder(
 			site.id
@@ -374,8 +378,7 @@ testAdmin(
 			)
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -450,11 +453,9 @@ testAdmin(
 			surname: userAccount.familyName,
 		};
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: 'Site' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const role =
 			await apiHelpers.headlessAdminUser.getRoleByName('Administrator');
@@ -464,8 +465,7 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
 		await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: getRandomString(),
@@ -483,8 +483,7 @@ testAdmin(
 			groupId: site.id,
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 
@@ -567,14 +566,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: 'Site' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const folder = await apiHelpers.headlessDelivery.postDocumentFolder(
 			site.id
@@ -592,8 +588,7 @@ testAdmin(
 			}
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 
@@ -684,10 +679,9 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
 
@@ -695,8 +689,6 @@ testAdmin(
 			siteId: site.id,
 			title: 'Page' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const attachment1 = await apiHelpers.headlessDelivery.postDocument(
 			site.id,
@@ -730,8 +722,7 @@ testAdmin(
 
 		await waitForAlert(page, 'Local staging is successfully enabled.');
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -865,14 +856,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const blog = await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: 'Blog' + getRandomInt(),
@@ -902,55 +890,14 @@ testAdmin(
 			userAssociatedDataEditMessageBoardThreadPage.relatedAssetsButton
 		).toBeVisible();
 
-		await userAssociatedDataEditMessageBoardThreadPage.relatedAssetsButton.click();
+		await userAssociatedDataEditMessageBoardThreadPage.selectRelatedAssets([
+			blog.headline,
+			document.title,
+		]);
 
-		await expect(async () => {
-			await userAssociatedDataEditMessageBoardThreadPage.selectButton.click();
-			await expect(
-				userAssociatedDataEditMessageBoardThreadPage.blogEntryMenuItem
-			).toBeVisible();
-		}).toPass();
-
-		await userAssociatedDataEditMessageBoardThreadPage.blogEntryMenuItem.click();
-
-		await expect(
-			await userAssociatedDataEditMessageBoardThreadPage.tableRowCheckBox(
-				blog.headline
-			)
-		).toBeVisible();
-
-		await (
-			await userAssociatedDataEditMessageBoardThreadPage.tableRowCheckBox(
-				blog.headline
-			)
-		).check();
-		await userAssociatedDataEditMessageBoardThreadPage.doneButton.click();
-
-		await expect(async () => {
-			await userAssociatedDataEditMessageBoardThreadPage.selectButton.click();
-			await expect(
-				userAssociatedDataEditMessageBoardThreadPage.basicDocumentMenuItem
-			).toBeVisible();
-		}).toPass();
-
-		await userAssociatedDataEditMessageBoardThreadPage.basicDocumentMenuItem.click();
-
-		await expect(
-			await userAssociatedDataEditMessageBoardThreadPage.tableRowCheckBox(
-				document.title
-			)
-		).toBeVisible();
-
-		await (
-			await userAssociatedDataEditMessageBoardThreadPage.tableRowCheckBox(
-				document.title
-			)
-		).check();
-		await userAssociatedDataEditMessageBoardThreadPage.doneButton.click();
 		await userAssociatedDataEditMessageBoardThreadPage.publishButton.click();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1017,19 +964,16 @@ testAdmin(
 			userAccount.id
 		);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: 'Site' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const layout = await apiHelpers.headlessDelivery.createSitePage({
 			siteId: site.id,
 			title: 'Page' + getRandomInt(),
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
 		const blog = await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: getRandomString(),
@@ -1046,8 +990,7 @@ testAdmin(
 
 		await waitForAlert(page, 'Local staging is successfully enabled.');
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1125,14 +1068,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const formTitle = 'Form' + getRandomInt();
 		const textFieldLabel = 'Text Field';
@@ -1197,8 +1137,7 @@ testAdmin(
 				groupId: site.id,
 			});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1262,14 +1201,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const folder = await apiHelpers.headlessDelivery.postDocumentFolder(
 			site.id
@@ -1286,8 +1222,7 @@ testAdmin(
 			headline: getRandomString(),
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1410,14 +1345,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: 'Site' + getRandomInt(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: getRandomString(),
@@ -1435,8 +1367,7 @@ testAdmin(
 			groupId: site.id,
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1474,7 +1405,7 @@ testAdmin(
 			await expect(
 				exportUserDataPage.blogsStatusSuccessful
 			).not.toBeVisible();
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(async () => {
 			await (
@@ -1488,7 +1419,7 @@ testAdmin(
 			await expect(
 				exportUserDataPage.messageBoardsStatusSuccessful
 			).not.toBeVisible();
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(async () => {
 			await (
@@ -1502,7 +1433,7 @@ testAdmin(
 			await expect(
 				exportUserDataPage.webContentStatusSuccessful
 			).not.toBeVisible();
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			exportUserDataPage.emptyExportProcessesMessage
@@ -1540,14 +1471,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const documentA = await apiHelpers.headlessDelivery.postDocument(
 			site.id,
@@ -1580,8 +1508,7 @@ testAdmin(
 			}
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1607,7 +1534,7 @@ testAdmin(
 			await personalDataErasurePage
 				.orderMenuItem('Description')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(async () => {
 			await personalDataErasurePage.orderButton.click();
@@ -1615,7 +1542,7 @@ testAdmin(
 			await personalDataErasurePage
 				.orderMenuItem('Descending')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			personalDataErasurePage.optionalColumnRow(3, 2)
@@ -1633,7 +1560,7 @@ testAdmin(
 			await personalDataErasurePage
 				.orderMenuItem('Ascending')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			personalDataErasurePage.optionalColumnRow(3, 2)
@@ -1651,7 +1578,7 @@ testAdmin(
 			await personalDataErasurePage
 				.orderMenuItem('Name')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			personalDataErasurePage.optionalColumnRow(1, 2)
@@ -1669,7 +1596,7 @@ testAdmin(
 			await personalDataErasurePage
 				.orderMenuItem('Descending')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			personalDataErasurePage.optionalColumnRow(1, 2)
@@ -1714,14 +1641,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const announcementsPage =
 			await userAssociatedDataAnnouncementPage.createAnnouncementPage(
@@ -1746,8 +1670,7 @@ testAdmin(
 
 		await expect(page.getByText(announcement.title)).toBeVisible();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1816,14 +1739,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const document = await apiHelpers.headlessDelivery.postDocument(
 			site.id,
@@ -1836,8 +1756,7 @@ testAdmin(
 			}
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -1865,7 +1784,7 @@ testAdmin(
 			await personalDataErasurePage.editMenuItem.click({
 				timeout: 1000,
 			});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			userAssociatedDataEditDocumentPage.selectFileButton
@@ -1928,8 +1847,7 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
 		// My profile
 
@@ -1967,7 +1885,7 @@ testAdmin(
 			await productMenuPage.goToMessageBoards();
 
 			await userAssociatedDataMessageBoardPage.newButton.click();
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await userAssociatedDataMessageBoardPage.threadMenuItem.click();
 		await userAssociatedDataEditMessageBoardThreadPage.subjectInput.fill(
@@ -1979,8 +1897,7 @@ testAdmin(
 		);
 		await userAssociatedDataEditMessageBoardThreadPage.publishButton.click();
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -2043,14 +1960,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: 'Blog' + getRandomInt(),
@@ -2071,8 +1985,7 @@ testAdmin(
 			subject: 'Message' + getRandomInt(),
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -2095,7 +2008,7 @@ testAdmin(
 			await exportUserDataPage
 				.filterMenuItem('Successful')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(exportUserDataPage.blogsStatusSuccessful).toBeVisible();
 		await expect(
@@ -2111,17 +2024,13 @@ testAdmin(
 
 		await expect(async () => {
 			await exportUserDataPage.orderButton.click();
-			await exportUserDataPage
-				.orderMenuItem('Name')
-				.click({timeout: 1000});
-		}).toPass();
+			await exportUserDataPage.clickOrderMenuItem('Name');
+		}).toPass({timeout: 5000});
 
 		await expect(async () => {
 			await exportUserDataPage.orderButton.click();
-			await exportUserDataPage
-				.orderMenuItem('Descending')
-				.click({timeout: 1000});
-		}).toPass();
+			await exportUserDataPage.clickOrderMenuItem('Descending');
+		}).toPass({timeout: 5000});
 
 		await expect(exportUserDataPage.optionalColumnRow(0, 1)).toContainText(
 			'Message Boards'
@@ -2138,7 +2047,7 @@ testAdmin(
 			await exportUserDataPage
 				.filterMenuItem('Failed')
 				.click({timeout: 1000});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(
 			exportUserDataPage.emptyExportProcessesMessage
@@ -2177,14 +2086,11 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const blog1 = await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: 'Blog' + getRandomInt(),
@@ -2193,8 +2099,7 @@ testAdmin(
 			headline: 'Blog' + getRandomInt(),
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -2259,21 +2164,17 @@ testAdmin(
 			userAccount.id
 		);
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: userAccount.alternateName});
+		await performUserSwitch(page, userAccount.alternateName);
 
-		const site = await apiHelpers.headlessSite.createSite({
+		const site = await apiHelpers.headlessAdminSite.postSite({
 			name: getRandomString(),
 		});
-
-		apiHelpers.data.push({id: site.id, type: 'site'});
 
 		const blog = await apiHelpers.headlessDelivery.postBlog(site.id, {
 			headline: 'Blog' + getRandomInt(),
 		});
 
-		await performLogout(page);
-		await performLoginViaApi({page, screenName: 'test'});
+		await performUserSwitch(page, 'test');
 
 		await usersAndOrganizationsPage.goToUsers(false);
 		await (
@@ -2306,7 +2207,7 @@ testAdmin(
 			await personalDataErasurePage.deleteLink.click({
 				timeout: 1000,
 			});
-		}).toPass();
+		}).toPass({timeout: 5000});
 
 		await expect(personalDataErasurePage.anonymizeButton).toBeVisible();
 

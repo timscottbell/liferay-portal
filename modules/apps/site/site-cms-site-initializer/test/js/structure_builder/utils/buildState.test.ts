@@ -94,6 +94,8 @@ describe('buildState', () => {
 			erc: 'structureERC',
 			label: {en_US: 'Structure'},
 			name: 'myStructure',
+			path: '',
+			settings: {},
 			spaces: [],
 			status: 'draft',
 			system: false,
@@ -103,6 +105,7 @@ describe('buildState', () => {
 		};
 
 		const initialState: State = {
+			clipboard: null,
 			history: {
 				deletedChildren: [],
 				deletedGroupERCs: [],
@@ -150,6 +153,8 @@ describe('buildState', () => {
 			erc: 'structureERC',
 			label: {en_US: 'Structure'},
 			name: 'myStructure',
+			path: '',
+			settings: {},
 			spaces: [],
 			status: 'published',
 			system: false,
@@ -159,6 +164,7 @@ describe('buildState', () => {
 		};
 
 		const initialState: State = {
+			clipboard: null,
 			history: {
 				deletedChildren: [],
 				deletedGroupERCs: [],
@@ -214,6 +220,8 @@ describe('buildState', () => {
 			erc: 'structureERC',
 			label: {en_US: 'Structure'},
 			name: 'myStructure',
+			path: '',
+			settings: {},
 			spaces: ['space-1-erc', 'space-2-erc'],
 			status: 'published',
 			system: false,
@@ -226,6 +234,7 @@ describe('buildState', () => {
 		};
 
 		const initialState: State = {
+			clipboard: null,
 			history: {
 				deletedChildren: [],
 				deletedGroupERCs: [],

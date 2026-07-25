@@ -56,8 +56,13 @@ public class PatcherFixValidator {
 	}
 
 	public void validateAdd() throws Exception {
-		validateCommittish();
-		validateGitRemoteURL();
+		boolean autoFix = ParamUtil.getBoolean(_httpServletRequest, "autoFix");
+
+		if (!autoFix) {
+			validateCommittish();
+			validateGitRemoteURL();
+		}
+
 		validateProductVersion();
 		validatePatcherProjectVersionId();
 
@@ -368,16 +373,13 @@ public class PatcherFixValidator {
 				PatcherFixPackLocalServiceUtil.getPatcherFixPack(
 					patcherFixPackId);
 
-			if (patcherFixComponentIds.contains(
+			if (!patcherFixComponentIds.add(
 					patcherFixPack.getPatcherFixComponentId())) {
 
 				throw new PortalException(
 					"the-fix-cannot-be-in-multiple-fix-packs-with-the-same-" +
 						"component");
 			}
-
-			patcherFixComponentIds.add(
-				patcherFixPack.getPatcherFixComponentId());
 
 			PatcherFixComponent patcherFixComponent =
 				PatcherFixComponentLocalServiceUtil.getPatcherFixComponent(
@@ -391,25 +393,13 @@ public class PatcherFixValidator {
 				continue;
 			}
 
-			Set<String> patcherFixComponentNameDependencies = new HashSet<>();
+			Set<String> patcherFixComponentNameDependencies =
+				patcherFixComponentDependencies.getOrDefault(
+					patcherFixComponent.getName(), Collections.emptySet());
 
-			if (patcherFixComponentDependencies.containsKey(
-					patcherFixComponent.getName())) {
-
-				patcherFixComponentNameDependencies =
-					patcherFixComponentDependencies.get(
-						patcherFixComponent.getName());
-			}
-
-			Set<String> requestComponentNameDependencies = new HashSet<>();
-
-			if (requestComponentDependencies.containsKey(
-					patcherFixComponent.getName())) {
-
-				requestComponentNameDependencies =
-					requestComponentDependencies.get(
-						patcherFixComponent.getName());
-			}
+			Set<String> requestComponentNameDependencies =
+				requestComponentDependencies.getOrDefault(
+					patcherFixComponent.getName(), Collections.emptySet());
 
 			if (!requestComponentNameDependencies.equals(
 					patcherFixComponentNameDependencies)) {
@@ -580,7 +570,17 @@ public class PatcherFixValidator {
 	public void validateUpdate(PatcherFix patcherFix) throws Exception {
 		validatePatcherFix(patcherFix);
 
-		if ((patcherFix.getType() != PatcherFixConstants.TYPE_REBASE) ||
+		boolean autoFix = ParamUtil.getBoolean(_httpServletRequest, "autoFix");
+
+		if (autoFix &&
+			(patcherFix.getType() == PatcherFixConstants.TYPE_REBASE)) {
+
+			throw new PortalException(
+				"the-auto-fix-option-is-not-supported-for-rebase-type-fixes");
+		}
+
+		if (((patcherFix.getType() != PatcherFixConstants.TYPE_REBASE) &&
+			 !autoFix) ||
 			(patcherFix.getStatus() ==
 				WorkflowConstants.STATUS_FIX_REBASE_CONFLICT)) {
 

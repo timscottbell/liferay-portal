@@ -25,6 +25,20 @@ import com.liferay.portal.configuration.metatype.annotations.ExtendedObjectClass
 public interface CTSettingsConfiguration {
 
 	@Meta.AD(
+		deflt = "false",
+		description = "automatic-friendly-url-conflict-resolution-enabled-description",
+		name = "automatic-friendly-url-conflict-resolution-enabled",
+		required = false
+	)
+	public boolean automaticFriendlyURLConflictResolutionEnabled();
+
+	@Meta.AD(
+		deflt = "false", description = "clean-up-cts-content-data-description",
+		name = "clean-up-cts-content-data", required = false
+	)
+	public boolean cleanUpCTSContentData();
+
+	@Meta.AD(
 		deflt = "0", name = "default-ct-collection-template-id",
 		required = false
 	)
@@ -54,7 +68,10 @@ public interface CTSettingsConfiguration {
 	public String remoteClientId();
 
 	@ExtendedAttributeDefinition(featureFlagKey = "LPS-186360")
-	@Meta.AD(name = "remote-client-secret", required = false)
+	@Meta.AD(
+		name = "remote-client-secret", required = false,
+		type = Meta.Type.Password
+	)
 	public String remoteClientSecret();
 
 	@ExtendedAttributeDefinition(featureFlagKey = "LPS-186360")

@@ -31,6 +31,8 @@ spec:
                                 requests:
                                     cpu: 23m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-family-aws
     serviceAccountTemplate:
         metadata:
@@ -67,6 +69,8 @@ spec:
                                 requests:
                                     cpu: 15m
                                     memory: 256Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-kubernetes
     serviceAccountTemplate:
         metadata:
@@ -105,6 +109,8 @@ spec:
                                 requests:
                                     cpu: 23m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-backup
     serviceAccountTemplate:
         metadata:
@@ -143,6 +149,8 @@ spec:
                                 requests:
                                     cpu: 25m
                                     memory: 512Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-cloudwatchlogs
     serviceAccountTemplate:
         metadata:
@@ -181,6 +189,8 @@ spec:
                                 requests:
                                     cpu: 49m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-ec2
     serviceAccountTemplate:
         metadata:
@@ -219,12 +229,54 @@ spec:
                                 requests:
                                     cpu: 35m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-iam
     serviceAccountTemplate:
         metadata:
             annotations:
                 eks.amazonaws.com/role-arn: arn:aws:iam::{{ $accountId }}:role/{{ $cluster }}-provider-aws-iam-role
             name: provider-aws-iam
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+    annotations:
+        argocd.argoproj.io/sync-wave: "-90"
+    name: aws-kms-config
+spec:
+    deploymentTemplate:
+        spec:
+            selector:
+                matchLabels:
+                    pkg.crossplane.io/provider: provider-aws-kms
+            template:
+                metadata:
+                    annotations:
+                        instrumentation.opentelemetry.io/inject-dotnet: "false"
+                        instrumentation.opentelemetry.io/inject-java: "false"
+                        instrumentation.opentelemetry.io/inject-nodejs: "false"
+                        instrumentation.opentelemetry.io/inject-python: "false"
+                        sidecar.opentelemetry.io/inject: "false"
+                    labels:
+                        pkg.crossplane.io/provider: provider-aws-kms
+                spec:
+                    containers:
+                        -   name: package-runtime
+                            resources:
+                                limits:
+                                    memory: 1Gi
+                                requests:
+                                    cpu: 23m
+                                    memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
+                    serviceAccountName: provider-aws-kms
+    serviceAccountTemplate:
+        metadata:
+            annotations:
+                eks.amazonaws.com/role-arn: arn:aws:iam::{{ $accountId }}:role/{{ $cluster }}-provider-aws-kms-role
+            name: provider-aws-kms
 ---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: DeploymentRuntimeConfig
@@ -257,6 +309,8 @@ spec:
                                 requests:
                                     cpu: 23m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-opensearch
     serviceAccountTemplate:
         metadata:
@@ -295,6 +349,8 @@ spec:
                                 requests:
                                     cpu: 49m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-rds
     serviceAccountTemplate:
         metadata:
@@ -333,6 +389,8 @@ spec:
                                 requests:
                                     cpu: 126m
                                     memory: 768Mi
+                            {{- include "crossplane-runtime-configs.containerSecurityContext" . | nindent 28 }}
+                    {{- include "crossplane-runtime-configs.podSecurityContext" . | nindent 20 }}
                     serviceAccountName: provider-aws-s3
     serviceAccountTemplate:
         metadata:

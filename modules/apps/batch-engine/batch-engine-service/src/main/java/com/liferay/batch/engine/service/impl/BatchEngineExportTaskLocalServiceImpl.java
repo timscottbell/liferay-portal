@@ -34,7 +34,7 @@ public class BatchEngineExportTaskLocalServiceImpl
 	extends BatchEngineExportTaskLocalServiceBaseImpl {
 
 	@Override
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Transactional(propagation = Propagation.NESTED)
 	public BatchEngineExportTask addBatchEngineExportTask(
 		String externalReferenceCode, long companyId, long userId,
 		String callbackURL, String className, String contentType,
@@ -106,6 +106,14 @@ public class BatchEngineExportTaskLocalServiceImpl
 	@Override
 	public int getBatchEngineExportTasksCount(long companyId) {
 		return batchEngineExportTaskPersistence.countByCompanyId(companyId);
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.NESTED)
+	public BatchEngineExportTask updateBatchEngineExportTask(
+		BatchEngineExportTask batchEngineExportTask) {
+
+		return super.updateBatchEngineExportTask(batchEngineExportTask);
 	}
 
 }

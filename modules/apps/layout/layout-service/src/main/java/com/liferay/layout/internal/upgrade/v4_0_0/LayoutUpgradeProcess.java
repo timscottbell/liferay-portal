@@ -30,7 +30,9 @@ public class LayoutUpgradeProcess extends UpgradeProcess {
 					"LayoutPageTemplateEntry.ctCollectionId = Layout.",
 					"ctCollectionId or LayoutPageTemplateEntry.ctCollectionId ",
 					"= 0) where Layout.masterLayoutPlid > 0"));
+
 			ResultSet resultSet = preparedStatement1.executeQuery();
+
 			PreparedStatement preparedStatement2 =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,

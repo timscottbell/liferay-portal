@@ -26,6 +26,7 @@ import com.liferay.headless.admin.site.client.dto.v1_0.SelectFragmentConfigurati
 import com.liferay.headless.admin.site.client.dto.v1_0.SiteMenuNavigationMenuValue;
 import com.liferay.headless.admin.site.client.dto.v1_0.SitePageURLValue;
 import com.liferay.headless.admin.site.client.dto.v1_0.SitePagesNavigationMenuValue;
+import com.liferay.headless.admin.site.client.dto.v1_0.TargetCollectionDisplayFragmentConfigurationFieldValue;
 import com.liferay.headless.admin.site.client.dto.v1_0.TemplateReference;
 import com.liferay.headless.admin.site.client.dto.v1_0.TextFragmentConfigurationFieldValue;
 import com.liferay.headless.admin.site.client.dto.v1_0.URLFragmentConfigurationFieldValue;
@@ -285,6 +286,11 @@ public class FragmentConfigurationFieldValueTestUtil {
 				fragmentConfigurationField.isLocalizable(), value);
 		}
 
+		if (Objects.equals(type, "targetCollectionDisplay")) {
+			return _getTargetCollectionDisplayFragmentConfigurationFieldValue(
+				value);
+		}
+
 		if (Objects.equals(type, "text")) {
 			return _getTextFragmentConfigurationFieldValue(
 				fragmentConfigurationField.isLocalizable(), value);
@@ -341,12 +347,11 @@ public class FragmentConfigurationFieldValueTestUtil {
 				map.get("item"), scopeGroupId));
 		itemValue.setTemplateReference(
 			() -> {
-				if (!map.containsKey("template")) {
+				if (!(map.get("template") instanceof Map<?, ?> template)) {
 					return null;
 				}
 
-				Map<String, String> templateMap = (Map<String, String>)map.get(
-					"template");
+				Map<String, String> templateMap = (Map<String, String>)template;
 
 				return new TemplateReference() {
 					{
@@ -423,7 +428,10 @@ public class FragmentConfigurationFieldValueTestUtil {
 			return null;
 		}
 
-		if (map.containsKey("contextualMenu")) {
+		if (map.get("contextualMenu") instanceof
+				ContextualMenuNavigationMenuValue.ContextualMenuType
+					contextualMenuType) {
+
 			ContextualMenuNavigationMenuValue
 				contextualMenuNavigationMenuValue =
 					new ContextualMenuNavigationMenuValue() {
@@ -434,14 +442,14 @@ public class FragmentConfigurationFieldValueTestUtil {
 					};
 
 			contextualMenuNavigationMenuValue.setContextualMenuType(
-				() ->
-					(ContextualMenuNavigationMenuValue.ContextualMenuType)
-						map.get("contextualMenu"));
+				() -> contextualMenuType);
 
 			return contextualMenuNavigationMenuValue;
 		}
 
-		if (map.containsKey("siteNavigationMenu")) {
+		Object siteNavigationMenu = map.get("siteNavigationMenu");
+
+		if (siteNavigationMenu != null) {
 			SiteMenuNavigationMenuValue siteMenuNavigationMenuValue =
 				new SiteMenuNavigationMenuValue() {
 					{
@@ -452,7 +460,7 @@ public class FragmentConfigurationFieldValueTestUtil {
 
 			siteMenuNavigationMenuValue.setNavigationMenuItemExternalReference(
 				() -> ReferencesTestUtil.getItemExternalReference(
-					map.get("siteNavigationMenu"), scopeGroupId));
+					siteNavigationMenu, scopeGroupId));
 
 			siteMenuNavigationMenuValue.setParentMenuItemExternalReferenceCode(
 				() -> GetterUtil.getString(
@@ -514,6 +522,18 @@ public class FragmentConfigurationFieldValueTestUtil {
 	}
 
 	private static FragmentConfigurationFieldValue
+		_getTargetCollectionDisplayFragmentConfigurationFieldValue(
+			Object object) {
+
+		return new TargetCollectionDisplayFragmentConfigurationFieldValue() {
+			{
+				setType(() -> Type.TARGET_COLLECTION_DISPLAY);
+				setValue(() -> (String[])object);
+			}
+		};
+	}
+
+	private static FragmentConfigurationFieldValue
 		_getTextFragmentConfigurationFieldValue(
 			boolean localizable, Object object) {
 
@@ -569,10 +589,12 @@ public class FragmentConfigurationFieldValueTestUtil {
 	private static URLValue _getURLValue(
 		Map<String, Object> map, long scopeGroupId) {
 
-		if (map.containsKey("href")) {
+		String href = GetterUtil.getString(map.get("href"), null);
+
+		if (href != null) {
 			return new HrefURLValue() {
 				{
-					setHref(() -> GetterUtil.getString(map.get("href")));
+					setHref(() -> href);
 					setUrlType(() -> UrlType.HREF);
 				}
 			};

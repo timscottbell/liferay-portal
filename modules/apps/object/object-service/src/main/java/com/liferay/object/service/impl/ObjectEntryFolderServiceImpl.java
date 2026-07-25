@@ -5,16 +5,12 @@
 
 package com.liferay.object.service.impl;
 
-import com.liferay.depot.constants.DepotConstants;
-import com.liferay.depot.model.DepotEntry;
-import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.object.constants.ObjectActionKeys;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
 import com.liferay.object.model.ObjectEntryFolder;
 import com.liferay.object.service.base.ObjectEntryFolderServiceBaseImpl;
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermissionUtil;
@@ -50,24 +46,10 @@ public class ObjectEntryFolderServiceImpl
 			ServiceContext serviceContext)
 		throws PortalException {
 
-		DepotEntry depotEntry = _depotEntryLocalService.fetchGroupDepotEntry(
-			groupId);
-
-		if ((depotEntry != null) &&
-			(depotEntry.getType() == DepotConstants.TYPE_SPACE) &&
-			FeatureFlagManagerUtil.isEnabled(
-				depotEntry.getCompanyId(), "LPD-17564")) {
-
-			ModelResourcePermissionUtil.check(
-				_modelResourcePermission, getPermissionChecker(), groupId,
-				parentObjectEntryFolderId, ActionKeys.ADD_ENTRY);
-		}
-		else {
-			ModelResourcePermissionUtil.check(
-				_modelResourcePermission, getPermissionChecker(), groupId,
-				parentObjectEntryFolderId,
-				ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER);
-		}
+		ModelResourcePermissionUtil.check(
+			_modelResourcePermission, getPermissionChecker(), groupId,
+			parentObjectEntryFolderId,
+			ObjectActionKeys.ADD_OBJECT_ENTRY_FOLDER);
 
 		return objectEntryFolderLocalService.addObjectEntryFolder(
 			externalReferenceCode, groupId, getUserId(),
@@ -126,8 +108,7 @@ public class ObjectEntryFolderServiceImpl
 		throws PortalException {
 
 		ObjectEntryFolder objectEntryFolder =
-			objectEntryFolderLocalService.fetchObjectEntryFolder(
-				objectEntryFolderId);
+			objectEntryFolderPersistence.fetchByPrimaryKey(objectEntryFolderId);
 
 		if (objectEntryFolder != null) {
 			_modelResourcePermission.check(
@@ -163,8 +144,7 @@ public class ObjectEntryFolderServiceImpl
 		throws PortalException {
 
 		ObjectEntryFolder objectEntryFolder =
-			objectEntryFolderLocalService.getObjectEntryFolder(
-				objectEntryFolderId);
+			objectEntryFolderPersistence.findByPrimaryKey(objectEntryFolderId);
 
 		_modelResourcePermission.check(
 			getPermissionChecker(), objectEntryFolder, ActionKeys.VIEW);
@@ -199,7 +179,7 @@ public class ObjectEntryFolderServiceImpl
 			_modelResourcePermission, getPermissionChecker(), groupId,
 			parentObjectEntryFolderId, ActionKeys.VIEW);
 
-		return objectEntryFolderLocalService.getObjectEntryFolders(
+		return objectEntryFolderPersistence.findByG_C_P(
 			groupId, companyId, parentObjectEntryFolderId, start, end);
 	}
 
@@ -212,7 +192,7 @@ public class ObjectEntryFolderServiceImpl
 			_modelResourcePermission, getPermissionChecker(), groupId,
 			parentObjectEntryFolderId, ActionKeys.VIEW);
 
-		return objectEntryFolderLocalService.getObjectEntryFoldersCount(
+		return objectEntryFolderPersistence.countByG_C_P(
 			groupId, companyId, parentObjectEntryFolderId);
 	}
 
@@ -323,9 +303,6 @@ public class ObjectEntryFolderServiceImpl
 			getUserId(), objectEntryFolderId, parentObjectEntryFolderId,
 			description, labelMap, name, serviceContext);
 	}
-
-	@Reference
-	private DepotEntryLocalService _depotEntryLocalService;
 
 	@Reference(
 		policy = ReferencePolicy.DYNAMIC,

@@ -36,6 +36,9 @@ import java.util.function.Supplier;
  */
 @Generated("")
 @GraphQLName(description = "Represents a user group.", value = "UserGroup")
+@io.swagger.v3.oas.annotations.media.Schema(
+	description = "Represents a user group."
+)
 @JsonFilter("Liferay.Vulcan")
 @XmlRootElement(name = "UserGroup")
 public class UserGroup implements Serializable {
@@ -525,3 +528,4 @@ public class UserGroup implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-556964777

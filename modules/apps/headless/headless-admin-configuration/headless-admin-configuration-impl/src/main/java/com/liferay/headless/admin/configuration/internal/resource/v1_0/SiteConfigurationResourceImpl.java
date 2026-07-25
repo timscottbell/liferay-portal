@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
@@ -30,11 +31,11 @@ import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.vulcan.pagination.Page;
+import com.liferay.portal.vulcan.pagination.Pagination;
 
 import jakarta.validation.ValidationException;
 
 import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.ServerErrorException;
 import jakarta.ws.rs.core.Response;
@@ -90,7 +91,7 @@ public class SiteConfigurationResourceImpl
 
 	@Override
 	public Page<SiteConfiguration> getSiteSiteConfigurationsPage(
-			String siteExternalReferenceCode)
+			String siteExternalReferenceCode, Pagination pagination)
 		throws Exception {
 
 		_checkFeatureFlag();
@@ -115,7 +116,10 @@ public class SiteConfigurationResourceImpl
 					ActionKeys.UPDATE, "postSiteSiteConfigurationBatch",
 					Group.class.getName(), group.getGroupId())
 			).build(),
-			siteConfigurations);
+			ListUtil.subList(
+				siteConfigurations, pagination.getStartPosition(),
+				pagination.getEndPosition()),
+			pagination, siteConfigurations.size());
 	}
 
 	@Override
@@ -239,7 +243,7 @@ public class SiteConfigurationResourceImpl
 		}
 	}
 
-	private void _checkPermission(long groupId) {
+	private void _checkPermission(long groupId) throws Exception {
 		PermissionChecker permissionChecker =
 			PermissionThreadLocal.getPermissionChecker();
 
@@ -247,7 +251,9 @@ public class SiteConfigurationResourceImpl
 			!permissionChecker.isGroupAdmin(groupId) &&
 			!permissionChecker.isOmniadmin()) {
 
-			throw new NotAuthorizedException(Response.Status.UNAUTHORIZED);
+			throw new PrincipalException.MustHavePermission(
+				permissionChecker, Group.class.getName(), groupId,
+				ActionKeys.UPDATE);
 		}
 	}
 

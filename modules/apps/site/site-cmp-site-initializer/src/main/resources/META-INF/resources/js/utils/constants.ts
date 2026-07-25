@@ -5,13 +5,15 @@
 
 import {IDisplayType} from './types';
 
+export const DEFAULT_TASK_STATE_KEY = 'notStarted';
+
 export const DISPLAY_TYPES = [
-	'info',
-	'warning',
-	'success',
-	'secondary',
 	'danger',
+	'info',
+	'secondary',
+	'success',
 	'unstyled',
+	'warning',
 ] as const;
 
 export const KANBAN_COLUMN_ORDER = [
@@ -20,6 +22,13 @@ export const KANBAN_COLUMN_ORDER = [
 	'blocked',
 	'done',
 ] as const;
+
+// Added to the body while a task is dragged so styles can switch to the
+// grabbing cursor.
+
+export const TASK_DRAGGING_CLASS_NAME = 'lfr__cmp-task-dragging';
+
+export const WORKFLOW_TASK_ACTION_LINK_ID = 'actionLinkWorkflowTask';
 
 export const mapStateKeyToLabel: {
 	[key: string]: string;

@@ -1,5 +1,5 @@
 $table-bg: $white !default;
-$table-border-color: $gray-300 !default;
+$table-border-color: $gray-400 !default;
 $table-font-size: 0.875rem !default;
 
 $table-accent-bg: $light-l1 !default;
@@ -99,8 +99,8 @@ $table-action-link: map-deep-merge(
 
 		focus: (
 			background-color: rgba(0, 0, 0, 0.02),
-			color: $gray-900,
 			box-shadow: $component-focus-box-shadow,
+			color: $gray-900,
 			outline: 0,
 		),
 
@@ -173,7 +173,7 @@ $c-tr-table-focus: map-deep-merge(
 
 // Table List
 
-$table-list-border-color: $gray-300 !default;
+$table-list-border-color: $gray-400 !default;
 $table-list-color: $body-color !default;
 
 $table-list-accent-bg: $gray-100 !default;
@@ -258,8 +258,8 @@ $table-list-action-link: map-deep-merge(
 
 		focus: (
 			background-color: rgba(0, 0, 0, 0.02),
-			color: $gray-900,
 			box-shadow: $component-focus-box-shadow,
+			color: $gray-900,
 			outline: 0,
 		),
 

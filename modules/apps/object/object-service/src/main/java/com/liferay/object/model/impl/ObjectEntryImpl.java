@@ -21,6 +21,7 @@ import com.liferay.object.service.ObjectEntryLocalServiceUtil;
 import com.liferay.object.service.ObjectFieldLocalServiceUtil;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Company;
@@ -34,6 +35,7 @@ import com.liferay.portal.kernel.util.Validator;
 import java.io.Serializable;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -136,6 +138,17 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 	}
 
 	@Override
+	public Date getPublishDate() {
+		if (!FeatureFlagManagerUtil.isEnabled(getCompanyId(), "LPD-17564") ||
+			!isApproved()) {
+
+			return null;
+		}
+
+		return getDisplayDate();
+	}
+
+	@Override
 	public StagedModelType getStagedModelType() {
 		return new StagedModelType(
 			PortalUtil.getClassNameId(getModelClassName()));
@@ -219,18 +232,20 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 					return String.valueOf(getObjectEntryId());
 				}
 
-				String title = String.valueOf(
-					ObjectEntryValuesUtil.getValue(
-						languageId, objectField, getIndexedValues()));
+				Object value = ObjectEntryValuesUtil.getValue(
+					languageId, objectField, getIndexedValues());
 
-				if (Validator.isNull(title) && useDefault) {
-					title = String.valueOf(
-						ObjectEntryValuesUtil.getValue(
-							getDefaultLanguageId(), objectField,
-							getIndexedValues()));
+				if (Validator.isNull(value) && useDefault) {
+					value = ObjectEntryValuesUtil.getValue(
+						getDefaultLanguageId(), objectField,
+						getIndexedValues());
 				}
 
-				return title;
+				if (value == null) {
+					return null;
+				}
+
+				return String.valueOf(value);
 			}
 		}
 

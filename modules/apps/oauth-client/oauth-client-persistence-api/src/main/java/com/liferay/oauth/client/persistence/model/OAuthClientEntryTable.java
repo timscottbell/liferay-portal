@@ -27,6 +27,12 @@ public class OAuthClientEntryTable extends BaseTable<OAuthClientEntryTable> {
 
 	public final Column<OAuthClientEntryTable, Long> mvccVersion = createColumn(
 		"mvccVersion", Long.class, Types.BIGINT, Column.FLAG_NULLITY);
+	public final Column<OAuthClientEntryTable, String> uuid = createColumn(
+		"uuid_", String.class, Types.VARCHAR, Column.FLAG_DEFAULT);
+	public final Column<OAuthClientEntryTable, String> externalReferenceCode =
+		createColumn(
+			"externalReferenceCode", String.class, Types.VARCHAR,
+			Column.FLAG_DEFAULT);
 	public final Column<OAuthClientEntryTable, Long> oAuthClientEntryId =
 		createColumn(
 			"oAuthClientEntryId", Long.class, Types.BIGINT,
@@ -67,6 +73,10 @@ public class OAuthClientEntryTable extends BaseTable<OAuthClientEntryTable> {
 		createColumn(
 			"oidcUserInfoMapperJSON", String.class, Types.VARCHAR,
 			Column.FLAG_DEFAULT);
+	public final Column<OAuthClientEntryTable, Integer> tokenConnectionTimeout =
+		createColumn(
+			"tokenConnectionTimeout", Integer.class, Types.INTEGER,
+			Column.FLAG_DEFAULT);
 	public final Column<OAuthClientEntryTable, String>
 		tokenRequestParametersJSON = createColumn(
 			"tokenRequestParametersJSON", String.class, Types.VARCHAR,
@@ -77,3 +87,4 @@ public class OAuthClientEntryTable extends BaseTable<OAuthClientEntryTable> {
 	}
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:-972702295

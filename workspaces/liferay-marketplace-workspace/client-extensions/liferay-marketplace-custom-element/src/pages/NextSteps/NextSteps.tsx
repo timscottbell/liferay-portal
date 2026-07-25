@@ -6,7 +6,6 @@
 import ClayButton from '@clayui/button';
 import ClayIcon from '@clayui/icon';
 import ClayLoadingIndicator from '@clayui/loading-indicator';
-import {Fragment} from 'react';
 import useSWR from 'swr';
 
 import checkCircleIcon from '../../assets/icons/check_circle_icon.svg';
@@ -15,6 +14,7 @@ import timesCircleIcon from '../../assets/icons/times_circle_icon.svg';
 import {AccountAndAppCard} from '../../components/Card/AccountAndAppCard';
 import {Header} from '../../components/Header/Header';
 import {PageRenderer} from '../../components/Page';
+import {MarketplaceCategories} from '../../enums/Categories';
 import {OrderTypes, PaymentStatus} from '../../enums/Order';
 import {
 	ProductSpecificationKey,
@@ -26,17 +26,18 @@ import useGetProductByOrderId from '../../hooks/useGetProductByOrderId';
 import i18n from '../../i18n';
 import {Liferay} from '../../liferay/liferay';
 import HeadlessAdminUser from '../../services/rest/HeadlessAdminUser';
-import {getSiteURL} from '../../utils/site';
-import {getAccountImage} from '../../utils/util';
-import ProductPurchaseNextSteps from '../ProductPurchase/pages/NextSteps';
-
-import './NextSteps.scss';
-import {MarketplaceCategories} from '../../enums/Categories';
 import {
 	getProductCategoriesByVocabularyName,
 	getProductSpecification,
 } from '../../utils/productUtils';
-import LDPNextSteps from '../ProductPurchase/pages/LiferayProduct/LDPNextSteps';
+import {getSiteURL} from '../../utils/site';
+import {getAccountImage} from '../../utils/util';
+import AIHubNextSteps from '../ProductPurchase/pages/LiferayProduct/AIHub/AIHubNextSteps';
+import AIHubOpenBetaNextSteps from '../ProductPurchase/pages/LiferayProduct/AIHub/AIHubOpenBetaNextSteps';
+import LDPNextSteps from '../ProductPurchase/pages/LiferayProduct/LDP/LDPNextSteps';
+import ProductPurchaseNextSteps from '../ProductPurchase/pages/NextSteps';
+
+import './NextSteps.scss';
 
 type NextStepsBodyProps = ReturnType<typeof useGetProductByOrderId>['data'];
 
@@ -100,7 +101,6 @@ export function NextStepsBody(props: NextStepsBodyProps) {
 				}
 			/>
 		),
-
 		[PaymentStatus.PAID]: (
 			<Header
 				description={
@@ -283,12 +283,27 @@ export function NextSteps() {
 		productTypeCategory === ProductTypeVocabulary.LIFERAY_PRODUCT &&
 		solutionTypeSpecificationValue === SolutionTypes.LIFERAY_DATA_PLATFORM
 	) {
+		return <LDPNextSteps data={data} error={error} isLoading={isLoading} />;
+	}
+
+	if (
+		productTypeCategory === ProductTypeVocabulary.LIFERAY_PRODUCT &&
+		solutionTypeSpecificationValue === SolutionTypes.AI_HUB
+	) {
 		return (
-			<LDPNextSteps
-				description={i18n.translate(
-					'hold-tight-we-re-preparing-your-environment-so-you-can-start-using-your-liferay-data-platform-this-will-only-take-a-moment'
-				)}
-				title={i18n.translate('setting-up-your-free-version-ldp')}
+			<AIHubNextSteps data={data} error={error} isLoading={isLoading} />
+		);
+	}
+
+	if (
+		productTypeCategory === ProductTypeVocabulary.LIFERAY_PRODUCT &&
+		solutionTypeSpecificationValue === SolutionTypes.AI_HUB_OPEN_BETA
+	) {
+		return (
+			<AIHubOpenBetaNextSteps
+				data={data}
+				error={error}
+				isLoading={isLoading}
 			/>
 		);
 	}

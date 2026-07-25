@@ -5,33 +5,50 @@
 
 package com.liferay.commerce.product.service.test;
 
+import com.liferay.account.model.AccountEntry;
+import com.liferay.account.model.AccountGroup;
+import com.liferay.account.service.AccountGroupLocalService;
+import com.liferay.account.service.AccountGroupRelLocalService;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.commerce.account.test.util.CommerceAccountTestUtil;
 import com.liferay.commerce.price.list.model.CommercePriceEntry;
 import com.liferay.commerce.price.list.model.CommercePriceList;
 import com.liferay.commerce.price.list.service.CommercePriceEntryLocalService;
 import com.liferay.commerce.price.list.service.CommercePriceListLocalService;
 import com.liferay.commerce.product.configuration.CProductVersionConfiguration;
 import com.liferay.commerce.product.constants.CPInstanceConstants;
+import com.liferay.commerce.product.constants.CommerceChannelAccountEntryRelConstants;
 import com.liferay.commerce.product.model.CPConfigurationList;
 import com.liferay.commerce.product.model.CPDefinition;
 import com.liferay.commerce.product.model.CPDefinitionLocalization;
+import com.liferay.commerce.product.model.CPDefinitionOptionRel;
+import com.liferay.commerce.product.model.CPDefinitionOptionValueRel;
 import com.liferay.commerce.product.model.CPDefinitionSpecificationOptionValue;
 import com.liferay.commerce.product.model.CPInstance;
+import com.liferay.commerce.product.model.CPInstanceOptionValueRel;
 import com.liferay.commerce.product.model.CPOption;
 import com.liferay.commerce.product.model.CPSpecificationOption;
 import com.liferay.commerce.product.model.CProduct;
 import com.liferay.commerce.product.model.CommerceCatalog;
+import com.liferay.commerce.product.model.CommerceChannel;
 import com.liferay.commerce.product.service.CPConfigurationEntryLocalService;
 import com.liferay.commerce.product.service.CPConfigurationListLocalService;
+import com.liferay.commerce.product.service.CPDefinitionLinkLocalService;
 import com.liferay.commerce.product.service.CPDefinitionLocalService;
 import com.liferay.commerce.product.service.CPDefinitionOptionRelLocalService;
+import com.liferay.commerce.product.service.CPDefinitionOptionValueRelLocalService;
 import com.liferay.commerce.product.service.CPDefinitionSpecificationOptionValueLocalService;
 import com.liferay.commerce.product.service.CPInstanceLocalService;
+import com.liferay.commerce.product.service.CPInstanceOptionValueRelLocalService;
 import com.liferay.commerce.product.service.CPOptionLocalService;
 import com.liferay.commerce.product.service.CommerceCatalogLocalServiceUtil;
+import com.liferay.commerce.product.service.CommerceChannelAccountEntryRelLocalService;
+import com.liferay.commerce.product.service.CommerceChannelRelLocalService;
 import com.liferay.commerce.product.test.util.CPTestUtil;
 import com.liferay.commerce.product.type.simple.constants.SimpleCPTypeConstants;
+import com.liferay.commerce.product.util.comparator.CPDefinitionModifiedDateComparator;
 import com.liferay.commerce.service.CPDefinitionInventoryLocalService;
+import com.liferay.commerce.test.util.CommerceTestUtil;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.test.util.CompanyConfigurationTemporarySwapper;
@@ -47,6 +64,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.WorkflowDefinitionLinkLocalService;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
+import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
@@ -66,6 +84,7 @@ import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
 
 import java.math.BigDecimal;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -120,8 +139,6 @@ public class CPDefinitionLocalServiceTest {
 		for (CPDefinition cpDefinition : cpDefinitions) {
 			_cpDefinitionLocalService.deleteCPDefinition(cpDefinition);
 		}
-
-		_cpOptionLocalService.deleteCPOptions(TestPropsValues.getCompanyId());
 	}
 
 	@Test
@@ -213,6 +230,8 @@ public class CPDefinitionLocalServiceTest {
 			CPOption cpOption = CPTestUtil.addCPOption(
 				_commerceCatalog.getGroupId(), true);
 
+			_cpOptions.add(cpOption);
+
 			for (int j = 0; j < cpOptionValuesCount; j++) {
 				CPTestUtil.addCPOptionValue(cpOption);
 			}
@@ -277,6 +296,8 @@ public class CPDefinitionLocalServiceTest {
 		for (int i = 0; i < cpOptionsCount; i++) {
 			CPOption cpOption = CPTestUtil.addCPOption(
 				_commerceCatalog.getGroupId(), true);
+
+			_cpOptions.add(cpOption);
 
 			for (int j = 0; j < cpOptionValuesCount; j++) {
 				CPTestUtil.addCPOptionValue(cpOption);
@@ -549,105 +570,60 @@ public class CPDefinitionLocalServiceTest {
 
 	@Test
 	public void testCopyCPDefinition() throws Exception {
+		_testCopyCPDefinition();
+		_testCopyCPDefinitionDoesNotCopyDraftCPDefinition();
+		_testCopyCPDefinitionSetsExistingDraftToIncomplete();
+		_testCopyCPDefinitionWithSKUCombinations();
+	}
+
+	@Test
+	public void testDeleteCPDefinitionRemovesIncomingDefinitionLinks()
+		throws Exception {
+
 		frutillaRule.scenario(
-			"Copy a product"
+			"Delete product definition with incoming definition links"
 		).given(
-			"A product definition"
+			"A product definition with a definition link to another product " +
+				"definition"
 		).when(
-			"the copy method is run"
+			"the linked product definition is deleted"
 		).then(
-			"the copy is created without exception"
-		).and(
-			"ERCs of specification values are different"
+			"the definition link should be removed from the source product " +
+				"definition"
 		);
 
 		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
-			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, true,
-			true);
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
 
-		try {
-			_cpDefinitionLocalService.copyCPDefinition(
-				cpDefinition1.getCPDefinitionId());
+		Calendar displayCalendar = CalendarFactoryUtil.getCalendar();
 
-			Assert.fail();
-		}
-		catch (UnsupportedOperationException unsupportedOperationException) {
-			Assert.assertNotNull(unsupportedOperationException);
-		}
+		displayCalendar.setTime(cpDefinition1.getDisplayDate());
 
-		try (CompanyConfigurationTemporarySwapper
-				companyConfigurationTemporarySwapper =
-					new CompanyConfigurationTemporarySwapper(
-						TestPropsValues.getCompanyId(),
-						CProductVersionConfiguration.class.getName(),
-						HashMapDictionaryBuilder.<String, Object>put(
-							"enabled", true
-						).put(
-							"versionThreshold", 2
-						).build())) {
+		_cpDefinitionLinkLocalService.addCPDefinitionLinkByCProductId(
+			cpDefinition1.getCPDefinitionId(), cpDefinition2.getCProductId(),
+			displayCalendar.get(Calendar.MONTH),
+			displayCalendar.get(Calendar.DAY_OF_MONTH),
+			displayCalendar.get(Calendar.YEAR),
+			displayCalendar.get(Calendar.HOUR_OF_DAY),
+			displayCalendar.get(Calendar.MINUTE), 0, 0, 0, 0, 0, true, 0D,
+			"related", _serviceContext);
 
-			User user = UserTestUtil.addUser();
+		Assert.assertEquals(
+			1,
+			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
+				cpDefinition1.getCPDefinitionId()));
 
-			CPConfigurationList cpConfigurationList =
-				_cpConfigurationListLocalService.addCPConfigurationList(
-					RandomTestUtil.randomString(), user.getUserId(),
-					_commerceCatalog.getGroupId(), 0, false,
-					RandomTestUtil.randomString(), 2, 1, 1, 2024, 0, 0, 0, 0, 0,
-					0, 0, true, new ServiceContext());
+		_cpDefinitionLocalService.deleteCPDefinition(
+			cpDefinition2.getCPDefinitionId());
 
-			_cpConfigurationEntryLocalService.addCPConfigurationEntry(
-				RandomTestUtil.randomString(), user.getUserId(),
-				cpConfigurationList.getGroupId(),
-				_portal.getClassNameId(CPDefinition.class),
-				cpDefinition1.getCPDefinitionId(),
-				cpConfigurationList.getCPConfigurationListId(), 0, "123.00",
-				true, 0, "cpde", 1.0, true, true, true, 1.0, "lowstoc",
-				BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE,
-				true, true, 1.0, true, true, 1.0, 1.0);
-
-			CPSpecificationOption cpSpecificationOption =
-				CPTestUtil.addCPSpecificationOption(
-					_commerceCatalog.getGroupId(), false);
-
-			CPDefinitionSpecificationOptionValue
-				cpDefinitionSpecificationOptionValue1 =
-					_cpDefinitionSpecificationOptionValueLocalService.
-						addCPDefinitionSpecificationOptionValue(
-							RandomTestUtil.randomString(),
-							cpDefinition1.getCPDefinitionId(),
-							cpSpecificationOption.getCPSpecificationOptionId(),
-							cpSpecificationOption.getCPOptionCategoryId(),
-							RandomTestUtil.randomDouble(),
-							RandomTestUtil.randomLocaleStringMap(), true,
-							ServiceContextTestUtil.getServiceContext(
-								_commerceCatalog.getGroupId()));
-
-			CPDefinition cpDefinition2 =
-				_cpDefinitionLocalService.copyCPDefinition(
-					cpDefinitionSpecificationOptionValue1.getCPDefinitionId());
-
-			List<CPDefinitionSpecificationOptionValue>
-				cpDefinitionSpecificationOptionValues =
-					_cpDefinitionSpecificationOptionValueLocalService.
-						getCPDefinitionSpecificationOptionValues(
-							cpDefinition2.getCPDefinitionId(), null,
-							QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-
-			CPDefinitionSpecificationOptionValue
-				cpDefinitionSpecificationOptionValue2 =
-					cpDefinitionSpecificationOptionValues.get(0);
-
-			Assert.assertNotEquals(
-				cpDefinitionSpecificationOptionValue1.
-					getExternalReferenceCode(),
-				cpDefinitionSpecificationOptionValue2.
-					getExternalReferenceCode());
-
-			Assert.assertNotNull(
-				_cpDefinitionInventoryLocalService.
-					fetchCPDefinitionInventoryByCPDefinitionId(
-						cpDefinition2.getCPDefinitionId()));
-		}
+		Assert.assertEquals(
+			0,
+			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
+				cpDefinition1.getCPDefinitionId()));
 	}
 
 	@Test
@@ -769,6 +745,25 @@ public class CPDefinitionLocalServiceTest {
 		Assert.assertEquals(
 			cpDefinition1.getCPDefinitionId(),
 			cpDefinition2.getCPDefinitionId());
+	}
+
+	@Test
+	public void testGetCPDefinitions() throws Exception {
+		_testGetCPDefinitions();
+		_testGetCPDefinitionsOrderByComparator();
+		_testGetCPDefinitionsOrderByLocalizedName();
+		_testGetCPDefinitionsWithAccountGroupFilterEnabledAndNoRel();
+		_testGetCPDefinitionsWithBothFiltersEnabledAndAllRels();
+		_testGetCPDefinitionsWithBothFiltersEnabledAndOnlyAccountGroupRel();
+		_testGetCPDefinitionsWithBothFiltersEnabledAndOnlyChannelRel();
+		_testGetCPDefinitionsWithChannelFilterEnabledAndNoRel();
+		_testGetCPDefinitionsWithDraftStatus();
+		_testGetCPDefinitionsWithEmptyStatuses();
+		_testGetCPDefinitionsWithIneligibleAccountEntry();
+		_testGetCPDefinitionsWithInvalidCommerceChannelGroupId();
+		_testGetCPDefinitionsWithMultipleCommerceChannels();
+		_testGetCPDefinitionsWithPublishedFalse();
+		_testGetCPDefinitionsWithStatusAny();
 	}
 
 	@Test
@@ -1267,10 +1262,807 @@ public class CPDefinitionLocalServiceTest {
 	@Rule
 	public final FrutillaRule frutillaRule = new FrutillaRule();
 
+	private void _testCopyCPDefinition() throws Exception {
+		frutillaRule.scenario(
+			"Copy a product"
+		).given(
+			"A product definition"
+		).when(
+			"the copy method is run"
+		).then(
+			"the copy is created without exception"
+		).and(
+			"ERCs of specification values are different"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, true,
+			true);
+
+		CPDefinition cpDefinition2 = _cpDefinitionLocalService.copyCPDefinition(
+			cpDefinition1.getCPDefinitionId());
+
+		Assert.assertEquals(
+			cpDefinition1.getCPDefinitionId(),
+			cpDefinition2.getCPDefinitionId());
+
+		User user = UserTestUtil.addUser();
+
+		CPConfigurationList cpConfigurationList =
+			_cpConfigurationListLocalService.addCPConfigurationList(
+				RandomTestUtil.randomString(), user.getUserId(),
+				_commerceCatalog.getGroupId(), 0, false,
+				RandomTestUtil.randomString(), 2, 1, 1, 2024, 0, 0, 0, 0, 0, 0,
+				0, true, new ServiceContext());
+
+		_cpConfigurationEntryLocalService.addCPConfigurationEntry(
+			RandomTestUtil.randomString(), user.getUserId(),
+			cpConfigurationList.getGroupId(),
+			_portal.getClassNameId(CPDefinition.class),
+			cpDefinition1.getCPDefinitionId(),
+			cpConfigurationList.getCPConfigurationListId(), 0, "123.00", true,
+			0, "cpde", 1.0, true, true, true, 1.0, "lowstoc", BigDecimal.TEN,
+			BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE, true, true, 1.0,
+			true, true, 1.0, 1.0);
+
+		CPSpecificationOption cpSpecificationOption =
+			CPTestUtil.addCPSpecificationOption(
+				_commerceCatalog.getGroupId(), false);
+
+		CPDefinitionSpecificationOptionValue
+			cpDefinitionSpecificationOptionValue1 =
+				_cpDefinitionSpecificationOptionValueLocalService.
+					addCPDefinitionSpecificationOptionValue(
+						RandomTestUtil.randomString(),
+						cpDefinition1.getCPDefinitionId(),
+						cpSpecificationOption.getCPSpecificationOptionId(),
+						cpSpecificationOption.getCPOptionCategoryId(),
+						RandomTestUtil.randomDouble(),
+						RandomTestUtil.randomLocaleStringMap(), true,
+						ServiceContextTestUtil.getServiceContext(
+							_commerceCatalog.getGroupId()));
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 2
+						).build())) {
+
+			CPDefinition cpDefinition3 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinitionSpecificationOptionValue1.getCPDefinitionId());
+
+			Assert.assertNotEquals(
+				cpDefinition1.getCPDefinitionId(),
+				cpDefinition3.getCPDefinitionId());
+
+			List<CPDefinitionSpecificationOptionValue>
+				cpDefinitionSpecificationOptionValues =
+					_cpDefinitionSpecificationOptionValueLocalService.
+						getCPDefinitionSpecificationOptionValues(
+							cpDefinition3.getCPDefinitionId(), null,
+							QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+			CPDefinitionSpecificationOptionValue
+				cpDefinitionSpecificationOptionValue2 =
+					cpDefinitionSpecificationOptionValues.get(0);
+
+			Assert.assertNotEquals(
+				cpDefinitionSpecificationOptionValue1.
+					getExternalReferenceCode(),
+				cpDefinitionSpecificationOptionValue2.
+					getExternalReferenceCode());
+
+			Assert.assertNotNull(
+				_cpDefinitionInventoryLocalService.
+					fetchCPDefinitionInventoryByCPDefinitionId(
+						cpDefinition3.getCPDefinitionId()));
+		}
+	}
+
+	private void _testCopyCPDefinitionDoesNotCopyDraftCPDefinition()
+		throws Exception {
+
+		frutillaRule.scenario(
+			"Do not copy a draft product definition"
+		).given(
+			"A draft product definition"
+		).when(
+			"the copy method is run"
+		).then(
+			"the draft product definition is returned"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 2
+						).build())) {
+
+			CPDefinition cpDefinition2 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition1.getCPDefinitionId(),
+					cpDefinition1.getGroupId(), WorkflowConstants.STATUS_DRAFT);
+
+			Assert.assertEquals(
+				WorkflowConstants.STATUS_DRAFT, cpDefinition2.getStatus());
+
+			CPDefinition cpDefinition3 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition2.getCPDefinitionId(),
+					cpDefinition2.getGroupId(), WorkflowConstants.STATUS_DRAFT);
+
+			Assert.assertEquals(
+				cpDefinition2.getCPDefinitionId(),
+				cpDefinition3.getCPDefinitionId());
+		}
+	}
+
+	private void _testCopyCPDefinitionSetsExistingDraftToIncomplete()
+		throws Exception {
+
+		frutillaRule.scenario(
+			"Set existing draft to incomplete when a new draft is created"
+		).given(
+			"A published product definition with an existing draft"
+		).when(
+			"a new draft is created from the published product definition"
+		).then(
+			"the existing draft is set to incomplete"
+		).and(
+			"the new draft is created"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_APPROVED, cpDefinition1.getStatus());
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 2
+						).build())) {
+
+			CPDefinition cpDefinition2 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition1.getCPDefinitionId(),
+					cpDefinition1.getGroupId(), WorkflowConstants.STATUS_DRAFT);
+
+			Assert.assertEquals(
+				WorkflowConstants.STATUS_DRAFT, cpDefinition2.getStatus());
+
+			CPDefinition cpDefinition3 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition1.getCPDefinitionId(),
+					cpDefinition1.getGroupId(), WorkflowConstants.STATUS_DRAFT);
+
+			Assert.assertEquals(
+				WorkflowConstants.STATUS_DRAFT, cpDefinition3.getStatus());
+
+			cpDefinition2 = _cpDefinitionLocalService.getCPDefinition(
+				cpDefinition2.getCPDefinitionId());
+
+			Assert.assertEquals(
+				WorkflowConstants.STATUS_INCOMPLETE, cpDefinition2.getStatus());
+		}
+	}
+
+	private void _testCopyCPDefinitionWithSKUCombinations() throws Exception {
+		frutillaRule.scenario(
+			"Copy a product definition with SKU combinations"
+		).given(
+			"A product definition with SKU combinations"
+		).when(
+			"the copy method is run"
+		).then(
+			"the copied SKUs link to the copied option value rels"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPOption cpOption = CPTestUtil.addCPOption(
+			_commerceCatalog.getGroupId(), true);
+
+		_cpOptions.add(cpOption);
+
+		for (int i = 0; i < 3; i++) {
+			CPTestUtil.addCPOptionValue(cpOption);
+		}
+
+		CPTestUtil.addCPDefinitionOptionRel(
+			_commerceCatalog.getGroupId(), cpDefinition1.getCPDefinitionId(),
+			cpOption.getCPOptionId());
+
+		CPTestUtil.buildCPInstances(cpDefinition1);
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 5
+						).build())) {
+
+			CPDefinition cpDefinition2 =
+				_cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition1.getCPDefinitionId(),
+					cpDefinition1.getGroupId(), WorkflowConstants.STATUS_DRAFT);
+
+			List<CPInstance> cpInstances =
+				_cpInstanceLocalService.getCPDefinitionInstances(
+					cpDefinition2.getCPDefinitionId(),
+					WorkflowConstants.STATUS_ANY, QueryUtil.ALL_POS,
+					QueryUtil.ALL_POS, null);
+
+			Assert.assertFalse(cpInstances.isEmpty());
+
+			for (CPInstance cpInstance : cpInstances) {
+				List<CPInstanceOptionValueRel> cpInstanceOptionValueRels =
+					_cpInstanceOptionValueRelLocalService.
+						getCPInstanceCPInstanceOptionValueRels(
+							cpInstance.getCPInstanceId());
+
+				for (CPInstanceOptionValueRel cpInstanceOptionValueRel :
+						cpInstanceOptionValueRels) {
+
+					CPDefinitionOptionValueRel cpDefinitionOptionValueRel =
+						_cpDefinitionOptionValueRelLocalService.
+							getCPDefinitionOptionValueRel(
+								cpInstanceOptionValueRel.
+									getCPDefinitionOptionValueRelId());
+
+					CPDefinitionOptionRel cpDefinitionOptionRel =
+						cpDefinitionOptionValueRel.getCPDefinitionOptionRel();
+
+					Assert.assertEquals(
+						cpDefinition2.getCPDefinitionId(),
+						cpDefinitionOptionRel.getCPDefinitionId());
+				}
+			}
+		}
+	}
+
+	private void _testGetCPDefinitions() throws Exception {
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsOrderByComparator() throws Exception {
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+				CPDefinitionModifiedDateComparator.getInstance(true));
+
+		Assert.assertTrue(
+			cpDefinitions.indexOf(cpDefinition1) < cpDefinitions.indexOf(
+				cpDefinition2));
+	}
+
+	private void _testGetCPDefinitionsOrderByLocalizedName() throws Exception {
+		CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+		CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+		CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		for (int i = 1; i < cpDefinitions.size(); i++) {
+			CPDefinition currentCPDefinition = cpDefinitions.get(i);
+			CPDefinition previousCPDefinition = cpDefinitions.get(i - 1);
+
+			String currentName = currentCPDefinition.getName(
+				currentCPDefinition.getDefaultLanguageId());
+			String previousName = previousCPDefinition.getName(
+				previousCPDefinition.getDefaultLanguageId());
+
+			Assert.assertTrue(
+				previousName.compareToIgnoreCase(currentName) <= 0);
+		}
+	}
+
+	private void _testGetCPDefinitionsWithAccountGroupFilterEnabledAndNoRel()
+		throws Exception {
+
+		AccountEntry accountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		AccountGroup accountGroup = _accountGroupLocalService.addAccountGroup(
+			StringPool.BLANK, _serviceContext.getUserId(), null,
+			RandomTestUtil.randomString(), _serviceContext);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), AccountEntry.class.getName(),
+			accountEntry.getAccountEntryId());
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setAccountGroupFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(),
+				accountEntry.getAccountEntryId(),
+				_accountGroupLocalService.getAccountGroupIds(
+					accountEntry.getAccountEntryId()),
+				null, true, new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithBothFiltersEnabledAndAllRels()
+		throws Exception {
+
+		AccountEntry accountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		AccountGroup accountGroup = _accountGroupLocalService.addAccountGroup(
+			StringPool.BLANK, _serviceContext.getUserId(), null,
+			RandomTestUtil.randomString(), _serviceContext);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), AccountEntry.class.getName(),
+			accountEntry.getAccountEntryId());
+
+		CommerceChannel commerceChannel = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setAccountGroupFilterEnabled(true);
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), CPDefinition.class.getName(),
+			cpDefinition.getCPDefinitionId());
+
+		_commerceChannelRelLocalService.addCommerceChannelRel(
+			CPDefinition.class.getName(), cpDefinition.getCPDefinitionId(),
+			commerceChannel.getCommerceChannelId(), _serviceContext);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(),
+				accountEntry.getAccountEntryId(),
+				new long[] {accountGroup.getAccountGroupId()},
+				new long[] {commerceChannel.getGroupId()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithBothFiltersEnabledAndOnlyAccountGroupRel()
+		throws Exception {
+
+		AccountEntry accountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		AccountGroup accountGroup = _accountGroupLocalService.addAccountGroup(
+			StringPool.BLANK, _serviceContext.getUserId(), null,
+			RandomTestUtil.randomString(), _serviceContext);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), AccountEntry.class.getName(),
+			accountEntry.getAccountEntryId());
+
+		CommerceChannel commerceChannel = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setAccountGroupFilterEnabled(true);
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), CPDefinition.class.getName(),
+			cpDefinition.getCPDefinitionId());
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(),
+				accountEntry.getAccountEntryId(),
+				new long[] {accountGroup.getAccountGroupId()},
+				new long[] {commerceChannel.getGroupId()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithBothFiltersEnabledAndOnlyChannelRel()
+		throws Exception {
+
+		AccountEntry accountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		AccountGroup accountGroup = _accountGroupLocalService.addAccountGroup(
+			StringPool.BLANK, _serviceContext.getUserId(), null,
+			RandomTestUtil.randomString(), _serviceContext);
+
+		_accountGroupRelLocalService.addAccountGroupRel(
+			accountGroup.getAccountGroupId(), AccountEntry.class.getName(),
+			accountEntry.getAccountEntryId());
+
+		CommerceChannel commerceChannel = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setAccountGroupFilterEnabled(true);
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		_commerceChannelRelLocalService.addCommerceChannelRel(
+			CPDefinition.class.getName(), cpDefinition.getCPDefinitionId(),
+			commerceChannel.getCommerceChannelId(), _serviceContext);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(),
+				accountEntry.getAccountEntryId(),
+				new long[] {accountGroup.getAccountGroupId()},
+				new long[] {commerceChannel.getGroupId()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithChannelFilterEnabledAndNoRel()
+		throws Exception {
+
+		CommerceChannel commerceChannel = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null,
+				new long[] {commerceChannel.getGroupId()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithDraftStatus() throws Exception {
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setStatus(WorkflowConstants.STATUS_DRAFT);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[] {WorkflowConstants.STATUS_DRAFT}, QueryUtil.ALL_POS,
+				QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition));
+
+		cpDefinitions = _cpDefinitionLocalService.getCPDefinitions(
+			TestPropsValues.getCompanyId(), 0L, null, null, true,
+			new int[] {WorkflowConstants.STATUS_APPROVED}, QueryUtil.ALL_POS,
+			QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithEmptyStatuses() throws Exception {
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition2.setStatus(WorkflowConstants.STATUS_DRAFT);
+
+		cpDefinition2 = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition2);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[0], QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition1));
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition2));
+	}
+
+	private void _testGetCPDefinitionsWithIneligibleAccountEntry()
+		throws Exception {
+
+		AccountEntry eligibleAccountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		AccountEntry ineligibleAccountEntry =
+			CommerceAccountTestUtil.addBusinessAccountEntry(
+				TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString() + "@liferay.com",
+				RandomTestUtil.randomString(),
+				new long[] {TestPropsValues.getUserId()}, null,
+				_serviceContext);
+
+		CommerceChannel commerceChannel = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		_commerceChannelAccountEntryRelLocalService.
+			addCommerceChannelAccountEntryRel(
+				TestPropsValues.getUserId(),
+				eligibleAccountEntry.getAccountEntryId(),
+				AccountEntry.class.getName(),
+				eligibleAccountEntry.getAccountEntryId(),
+				commerceChannel.getCommerceChannelId(), true, 0,
+				CommerceChannelAccountEntryRelConstants.TYPE_ELIGIBILITY);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		_commerceChannelRelLocalService.addCommerceChannelRel(
+			CPDefinition.class.getName(), cpDefinition.getCPDefinitionId(),
+			commerceChannel.getCommerceChannelId(), _serviceContext);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(),
+				ineligibleAccountEntry.getAccountEntryId(), null,
+				new long[] {commerceChannel.getGroupId()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithInvalidCommerceChannelGroupId()
+		throws Exception {
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition2.setChannelFilterEnabled(true);
+
+		cpDefinition2 = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition2);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null,
+				new long[] {RandomTestUtil.randomLong()}, true,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition1));
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition2));
+	}
+
+	private void _testGetCPDefinitionsWithMultipleCommerceChannels()
+		throws Exception {
+
+		CommerceChannel commerceChannel1 = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+		CommerceChannel commerceChannel2 = CommerceTestUtil.addCommerceChannel(
+			_commerceCatalog.getGroupId(), null);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition.setChannelFilterEnabled(true);
+
+		cpDefinition = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition);
+
+		_commerceChannelRelLocalService.addCommerceChannelRel(
+			CPDefinition.class.getName(), cpDefinition.getCPDefinitionId(),
+			commerceChannel1.getCommerceChannelId(), _serviceContext);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null,
+				new long[] {
+					commerceChannel1.getGroupId(), commerceChannel2.getGroupId()
+				},
+				true, new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition));
+	}
+
+	private void _testGetCPDefinitionsWithPublishedFalse() throws Exception {
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition2.setPublished(false);
+
+		cpDefinition2 = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition2);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, false,
+				new int[] {WorkflowConstants.STATUS_APPROVED},
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition1));
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition2));
+
+		cpDefinitions = _cpDefinitionLocalService.getCPDefinitions(
+			TestPropsValues.getCompanyId(), 0L, null, null, true,
+			new int[] {WorkflowConstants.STATUS_APPROVED}, QueryUtil.ALL_POS,
+			QueryUtil.ALL_POS, null);
+
+		Assert.assertFalse(cpDefinitions.contains(cpDefinition2));
+	}
+
+	private void _testGetCPDefinitionsWithStatusAny() throws Exception {
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		cpDefinition2.setStatus(WorkflowConstants.STATUS_DRAFT);
+
+		cpDefinition2 = _cpDefinitionLocalService.updateCPDefinition(
+			cpDefinition2);
+
+		List<CPDefinition> cpDefinitions =
+			_cpDefinitionLocalService.getCPDefinitions(
+				TestPropsValues.getCompanyId(), 0L, null, null, true,
+				new int[] {WorkflowConstants.STATUS_ANY}, QueryUtil.ALL_POS,
+				QueryUtil.ALL_POS, null);
+
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition1));
+		Assert.assertTrue(cpDefinitions.contains(cpDefinition2));
+	}
+
+	@Inject
+	private AccountGroupLocalService _accountGroupLocalService;
+
+	@Inject
+	private AccountGroupRelLocalService _accountGroupRelLocalService;
+
 	@Inject
 	private ClassNameLocalService _classNameLocalService;
 
 	private CommerceCatalog _commerceCatalog;
+
+	@Inject
+	private CommerceChannelAccountEntryRelLocalService
+		_commerceChannelAccountEntryRelLocalService;
+
+	@Inject
+	private CommerceChannelRelLocalService _commerceChannelRelLocalService;
 
 	@Inject
 	private CommercePriceEntryLocalService _commercePriceEntryLocalService;
@@ -1292,11 +2084,18 @@ public class CPDefinitionLocalServiceTest {
 		_cpDefinitionInventoryLocalService;
 
 	@Inject
+	private CPDefinitionLinkLocalService _cpDefinitionLinkLocalService;
+
+	@Inject
 	private CPDefinitionLocalService _cpDefinitionLocalService;
 
 	@Inject
 	private CPDefinitionOptionRelLocalService
 		_cpDefinitionOptionRelLocalService;
+
+	@Inject
+	private CPDefinitionOptionValueRelLocalService
+		_cpDefinitionOptionValueRelLocalService;
 
 	@Inject
 	private CPDefinitionSpecificationOptionValueLocalService
@@ -1306,7 +2105,14 @@ public class CPDefinitionLocalServiceTest {
 	private CPInstanceLocalService _cpInstanceLocalService;
 
 	@Inject
+	private CPInstanceOptionValueRelLocalService
+		_cpInstanceOptionValueRelLocalService;
+
+	@Inject
 	private CPOptionLocalService _cpOptionLocalService;
+
+	@DeleteAfterTestRun
+	private final List<CPOption> _cpOptions = new ArrayList<>();
 
 	@Inject
 	private FriendlyURLEntryLocalService _friendlyURLEntryLocalService;

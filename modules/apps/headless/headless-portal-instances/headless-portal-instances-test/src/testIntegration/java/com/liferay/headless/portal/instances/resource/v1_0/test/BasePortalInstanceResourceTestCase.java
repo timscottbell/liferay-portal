@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 
 import com.liferay.headless.portal.instances.client.dto.v1_0.PortalInstance;
+import com.liferay.headless.portal.instances.client.dto.v1_0.PortalInstanceExport;
 import com.liferay.headless.portal.instances.client.http.HttpInvoker;
 import com.liferay.headless.portal.instances.client.pagination.Page;
 import com.liferay.headless.portal.instances.client.resource.v1_0.PortalInstanceResource;
@@ -32,6 +33,7 @@ import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.odata.entity.EntityField;
@@ -103,7 +105,8 @@ public abstract class BasePortalInstanceResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -328,6 +331,26 @@ public abstract class BasePortalInstanceResourceTestCase {
 	}
 
 	@Test
+	public void testPostPortalInstanceImport() throws Exception {
+		PortalInstance randomPortalInstance = randomPortalInstance();
+
+		PortalInstance postPortalInstance =
+			testPostPortalInstanceImport_addPortalInstance(
+				randomPortalInstance);
+
+		assertEquals(randomPortalInstance, postPortalInstance);
+		assertValid(postPortalInstance);
+	}
+
+	protected PortalInstance testPostPortalInstanceImport_addPortalInstance(
+			PortalInstance portalInstance)
+		throws Exception {
+
+		throw new UnsupportedOperationException(
+			"This method needs to be implemented");
+	}
+
+	@Test
 	public void testPutPortalInstanceActivate() throws Exception {
 		@SuppressWarnings("PMD.UnusedLocalVariable")
 		PortalInstance portalInstance =
@@ -372,6 +395,11 @@ public abstract class BasePortalInstanceResourceTestCase {
 
 		throw new UnsupportedOperationException(
 			"This method needs to be implemented");
+	}
+
+	@Test
+	public void testPostPortalInstanceExport() throws Exception {
+		Assert.assertTrue(true);
 	}
 
 	protected void assertContains(
@@ -419,6 +447,15 @@ public abstract class BasePortalInstanceResourceTestCase {
 
 			assertEquals(portalInstance1, portalInstance2);
 		}
+	}
+
+	protected void assertEquals(
+		PortalInstanceExport portalInstanceExport1,
+		PortalInstanceExport portalInstanceExport2) {
+
+		Assert.assertTrue(
+			portalInstanceExport1 + " does not equal " + portalInstanceExport2,
+			equals(portalInstanceExport1, portalInstanceExport2));
 	}
 
 	protected void assertEqualsIgnoringOrder(
@@ -563,7 +600,43 @@ public abstract class BasePortalInstanceResourceTestCase {
 		}
 	}
 
+	protected void assertValid(PortalInstanceExport portalInstanceExport) {
+		boolean valid = true;
+
+		for (String additionalAssertFieldName :
+				getAdditionalPortalInstanceExportAssertFieldNames()) {
+
+			if (Objects.equals(
+					"exportedPartitionName", additionalAssertFieldName)) {
+
+				if (portalInstanceExport.getExportedPartitionName() == null) {
+					valid = false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals("sourceCompanyId", additionalAssertFieldName)) {
+				if (portalInstanceExport.getSourceCompanyId() == null) {
+					valid = false;
+				}
+
+				continue;
+			}
+
+			throw new IllegalArgumentException(
+				"Invalid additional assert field name " +
+					additionalAssertFieldName);
+		}
+
+		Assert.assertTrue(valid);
+	}
+
 	protected String[] getAdditionalAssertFieldNames() {
+		return new String[0];
+	}
+
+	protected String[] getAdditionalPortalInstanceExportAssertFieldNames() {
 		return new String[0];
 	}
 
@@ -744,6 +817,49 @@ public abstract class BasePortalInstanceResourceTestCase {
 		}
 
 		return false;
+	}
+
+	protected boolean equals(
+		PortalInstanceExport portalInstanceExport1,
+		PortalInstanceExport portalInstanceExport2) {
+
+		if (portalInstanceExport1 == portalInstanceExport2) {
+			return true;
+		}
+
+		for (String additionalAssertFieldName :
+				getAdditionalPortalInstanceExportAssertFieldNames()) {
+
+			if (Objects.equals(
+					"exportedPartitionName", additionalAssertFieldName)) {
+
+				if (!Objects.deepEquals(
+						portalInstanceExport1.getExportedPartitionName(),
+						portalInstanceExport2.getExportedPartitionName())) {
+
+					return false;
+				}
+
+				continue;
+			}
+
+			if (Objects.equals("sourceCompanyId", additionalAssertFieldName)) {
+				if (!Objects.deepEquals(
+						portalInstanceExport1.getSourceCompanyId(),
+						portalInstanceExport2.getSourceCompanyId())) {
+
+					return false;
+				}
+
+				continue;
+			}
+
+			throw new IllegalArgumentException(
+				"Invalid additional assert field name " +
+					additionalAssertFieldName);
+		}
+
+		return true;
 	}
 
 	protected java.lang.reflect.Field[] getDeclaredFields(Class clazz)
@@ -1032,7 +1148,9 @@ public abstract class BasePortalInstanceResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -1085,6 +1203,17 @@ public abstract class BasePortalInstanceResourceTestCase {
 
 	protected PortalInstance randomPatchPortalInstance() throws Exception {
 		return randomPortalInstance();
+	}
+
+	protected PortalInstanceExport randomPortalInstanceExport()
+		throws Exception {
+
+		return new PortalInstanceExport() {
+			{
+				exportedPartitionName = RandomTestUtil.randomString();
+				sourceCompanyId = RandomTestUtil.randomLong();
+			}
+		};
 	}
 
 	protected PortalInstanceResource portalInstanceResource;
@@ -1298,3 +1427,4 @@ public abstract class BasePortalInstanceResourceTestCase {
 			PortalInstanceResource _portalInstanceResource;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-2057292312

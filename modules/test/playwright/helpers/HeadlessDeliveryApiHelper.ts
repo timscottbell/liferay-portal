@@ -45,6 +45,15 @@ type TDocumentShortcut = {
 	viewableBy?: string;
 };
 
+type TStructuredContentFolder = {
+	description?: string;
+	externalReferenceCode?: string;
+	id?: number;
+	name?: string;
+	parentStructuredContentFolderId?: number;
+	viewableBy?: string;
+};
+
 type TWikiNode = {
 	description?: string;
 	externalReferenceCode?: string;
@@ -108,6 +117,12 @@ export class HeadlessDeliveryApiHelper {
 		);
 	}
 
+	async deleteMessageBoardSection(messageBoardSectionId: string) {
+		return this.apiHelpers.delete(
+			`${this.apiHelpers.baseUrl}${this.basePath}/message-board-sections/${messageBoardSectionId}`
+		);
+	}
+
 	async deleteSiteDocumentsFolderByExternalReferenceCode(
 		externalReferenceCode: string
 	) {
@@ -128,6 +143,14 @@ export class HeadlessDeliveryApiHelper {
 		);
 	}
 
+	async getMessageBoardThread(
+		messageBoardThreadId: string
+	): Promise<MessageBoardThread> {
+		return this.apiHelpers.get(
+			`${this.apiHelpers.baseUrl}${this.basePath}/message-board-threads/${messageBoardThreadId}`
+		);
+	}
+
 	async getSiteDocumentsPage(siteId: string, sort: string = 'id') {
 		return this.apiHelpers.get(
 			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/documents?sort=${sort}`
@@ -137,6 +160,14 @@ export class HeadlessDeliveryApiHelper {
 	async getSitePage(friendlyUrlPath: string, siteId: string) {
 		return this.apiHelpers.get(
 			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/site-pages/${friendlyUrlPath}`
+		);
+	}
+
+	async getSiteMessageBoardSectionsPage(
+		siteId: string
+	): Promise<{items: MessageBoardSection[]}> {
+		return this.apiHelpers.get(
+			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/message-board-sections`
 		);
 	}
 
@@ -173,10 +204,12 @@ export class HeadlessDeliveryApiHelper {
 		articleBody,
 		siteId,
 		title,
+		viewableBy,
 	}: {
 		articleBody: string;
 		siteId: string;
 		title: string;
+		viewableBy?: string;
 	}): Promise<KnowledgeBaseArticle> {
 		return this.apiHelpers.post(
 			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/knowledge-base-articles`,
@@ -184,6 +217,31 @@ export class HeadlessDeliveryApiHelper {
 				data: {
 					articleBody,
 					title,
+					viewableBy,
+				},
+				failOnStatusCode: true,
+			}
+		);
+	}
+
+	async postMessageBoardSectionMessageBoardThread({
+		articleBody,
+		headline,
+		keywords,
+		messageBoardSectionId,
+	}: {
+		articleBody: string;
+		headline: string;
+		keywords?: string[];
+		messageBoardSectionId: string;
+	}): Promise<MessageBoardThread> {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/message-board-sections/${messageBoardSectionId}/message-board-threads`,
+			{
+				data: {
+					articleBody,
+					headline,
+					keywords,
 				},
 				failOnStatusCode: true,
 			}
@@ -194,10 +252,12 @@ export class HeadlessDeliveryApiHelper {
 		articleBody,
 		headline,
 		siteId,
+		taxonomyCategoryIds,
 	}: {
 		articleBody: string;
 		headline: string;
 		siteId: string;
+		taxonomyCategoryIds?: number[];
 	}): Promise<MessageBoardThread> {
 		return this.apiHelpers.post(
 			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/message-board-threads`,
@@ -205,6 +265,7 @@ export class HeadlessDeliveryApiHelper {
 				data: {
 					articleBody,
 					headline,
+					taxonomyCategoryIds,
 				},
 				failOnStatusCode: true,
 			}
@@ -229,8 +290,45 @@ export class HeadlessDeliveryApiHelper {
 		);
 	}
 
+	async postMessageBoardSectionMessageBoardSection({
+		parentMessageBoardSectionId,
+		title,
+	}: {
+		parentMessageBoardSectionId: string;
+		title: string;
+	}): Promise<MessageBoardSection> {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/message-board-sections/${parentMessageBoardSectionId}/message-board-sections`,
+			{
+				data: {
+					title,
+				},
+				failOnStatusCode: true,
+			}
+		);
+	}
+
+	async postSiteMessageBoardSection({
+		siteId,
+		title,
+	}: {
+		siteId: string;
+		title: string;
+	}): Promise<MessageBoardSection> {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/message-board-sections`,
+			{
+				data: {
+					title,
+				},
+				failOnStatusCode: true,
+			}
+		);
+	}
+
 	async postStructuredContent({
 		categoryIds,
+		contentFields,
 		contentStructureId,
 		datePublished,
 		description = '',
@@ -241,6 +339,7 @@ export class HeadlessDeliveryApiHelper {
 		viewableBy = '',
 	}: {
 		categoryIds?: number[];
+		contentFields?: {contentFieldValue: {data: string}; name: string}[];
 		contentStructureId: number;
 		datePublished: string;
 		description?: string;
@@ -254,6 +353,7 @@ export class HeadlessDeliveryApiHelper {
 			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/structured-contents`,
 			{
 				data: {
+					contentFields,
 					contentStructureId,
 					datePublished,
 					description,
@@ -262,6 +362,54 @@ export class HeadlessDeliveryApiHelper {
 					taxonomyCategoryIds: categoryIds,
 					title,
 					viewableBy,
+				},
+				failOnStatusCode: true,
+			}
+		);
+	}
+
+	async postStructuredContentFolder(
+		siteId: number | string,
+		structuredContentFolder?: TStructuredContentFolder
+	) {
+		structuredContentFolder = {
+			description: getRandomString(),
+			externalReferenceCode: getRandomString(),
+			name: getRandomString(),
+			viewableBy: 'Anyone',
+			...(structuredContentFolder || {}),
+		};
+
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/sites/${siteId}/structured-content-folders`,
+			{
+				data: structuredContentFolder,
+				failOnStatusCode: true,
+				headers: {
+					...(await this.apiHelpers.getCSRFTokenHeader()),
+				},
+			}
+		);
+	}
+
+	async postStructuredContentFolderStructuredContent({
+		contentStructureId,
+		datePublished,
+		structuredContentFolderId,
+		title,
+	}: {
+		contentStructureId: number;
+		datePublished: string;
+		structuredContentFolderId: number;
+		title: string;
+	}): Promise<StructuredContent> {
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/structured-content-folders/${structuredContentFolderId}/structured-contents`,
+			{
+				data: {
+					contentStructureId,
+					datePublished,
+					title,
 				},
 				failOnStatusCode: true,
 			}
@@ -375,6 +523,35 @@ export class HeadlessDeliveryApiHelper {
 		);
 	}
 
+	async postDocumentFolderDocument(
+		documentFolderId: number | string,
+		file: fs.ReadStream,
+		document?: TDocument
+	) {
+		document = {
+			description: getRandomString(),
+			externalReferenceCode: getRandomString(),
+			fileName: getRandomString(),
+			title: getRandomString(),
+			viewableBy: 'Anyone',
+			...(document || {}),
+		};
+
+		return this.apiHelpers.post(
+			`${this.apiHelpers.baseUrl}${this.basePath}/document-folders/${documentFolderId}/documents`,
+			{
+				failOnStatusCode: true,
+				headers: {
+					...(await this.apiHelpers.getCSRFTokenHeader()),
+				},
+				multipart: {
+					document: JSON.stringify(document),
+					file,
+				},
+			}
+		);
+	}
+
 	async postDocumentShortcut(
 		siteId: number | string,
 		documentShortcut?: TDocumentShortcut
@@ -406,6 +583,14 @@ export class HeadlessDeliveryApiHelper {
 		documentId: number;
 		file?: fs.ReadStream;
 	}) {
+		const multipart: {document: string; file?: fs.ReadStream} = {
+			document: JSON.stringify(document),
+		};
+
+		if (file) {
+			multipart.file = file;
+		}
+
 		return this.apiHelpers.patchRequestOptions(
 			`${this.apiHelpers.baseUrl}${this.basePath}/documents/${documentId}`,
 			{
@@ -413,10 +598,25 @@ export class HeadlessDeliveryApiHelper {
 				headers: {
 					...(await this.apiHelpers.getCSRFTokenHeader()),
 				},
-				multipart: {
-					document: JSON.stringify(document),
-					file,
+				multipart,
+			}
+		);
+	}
+
+	async patchMessageBoardSection({
+		messageBoardSectionId,
+		title,
+	}: {
+		messageBoardSectionId: string;
+		title: string;
+	}): Promise<MessageBoardSection> {
+		return this.apiHelpers.patchRequestOptions(
+			`${this.apiHelpers.baseUrl}${this.basePath}/message-board-sections/${messageBoardSectionId}`,
+			{
+				data: {
+					title,
 				},
+				failOnStatusCode: true,
 			}
 		);
 	}

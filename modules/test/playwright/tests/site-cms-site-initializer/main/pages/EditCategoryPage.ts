@@ -8,13 +8,13 @@ import {Locator, Page, expect} from '@playwright/test';
 import {PORTLET_URLS} from '../../../../utils/portletUrls';
 
 export class EditCategoryPage {
+	readonly descriptionInput: Locator;
+	readonly nameInput: Locator;
 	readonly page: Page;
 	readonly saveButton: Locator;
 	readonly saveAndAddAnotherButton: Locator;
 
-	private readonly descriptionInput: Locator;
 	private readonly editConfirmationModal: Locator;
-	private readonly nameInput: Locator;
 	private readonly permissionsFormGroup: Locator;
 	private readonly permissionsTable: Locator;
 	private readonly permissionsTableViewableByDropdown: Locator;
@@ -221,6 +221,10 @@ export class EditCategoryPage {
 
 	async handleEditConfirmationModal(clickSave: boolean) {
 		await expect(this.editConfirmationModal).toBeVisible();
+
+		await expect(
+			this.page.locator('.liferay-modal .modal-dialog')
+		).toHaveClass(/modal-dialog-centered/);
 
 		clickSave
 			? await this.editConfirmationModal

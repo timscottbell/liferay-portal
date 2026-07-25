@@ -9,11 +9,10 @@ import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagListener;
+import com.liferay.portal.kernel.license.util.App;
 import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.model.Group;
-import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.site.cmp.site.initializer.internal.util.SiteInitializerUtil;
 import com.liferay.site.initializer.SiteInitializer;
@@ -36,15 +35,8 @@ public class CMPFeatureFlagListener implements FeatureFlagListener {
 		long companyId, String featureFlagKey, boolean enabled) {
 
 		if (!enabled || !Objects.equals(featureFlagKey, "LPD-58677") ||
-			!LicenseManagerUtil.isCMPEnabled()) {
+			!LicenseManagerUtil.isAppEnabled(App.CMP)) {
 
-			return;
-		}
-
-		Group group = _groupLocalService.fetchGroup(
-			companyId, GroupConstants.CMS);
-
-		if (group == null) {
 			return;
 		}
 
@@ -53,7 +45,8 @@ public class CMPFeatureFlagListener implements FeatureFlagListener {
 
 			_groupLocalService.checkSystemGroups(companyId);
 
-			SiteInitializerUtil.initialize(companyId, _siteInitializer);
+			SiteInitializerUtil.initialize(
+				_cmpSiteInitializer, _cmsSiteInitializer, companyId);
 		}
 		catch (PortalException portalException) {
 			_log.error(portalException);
@@ -63,12 +56,17 @@ public class CMPFeatureFlagListener implements FeatureFlagListener {
 	private static final Log _log = LogFactoryUtil.getLog(
 		CMPFeatureFlagListener.class);
 
-	@Reference
-	private GroupLocalService _groupLocalService;
-
 	@Reference(
 		target = "(site.initializer.key=com.liferay.site.initializer.cmp)"
 	)
-	private SiteInitializer _siteInitializer;
+	private SiteInitializer _cmpSiteInitializer;
+
+	@Reference(
+		target = "(site.initializer.key=com.liferay.site.initializer.cms)"
+	)
+	private SiteInitializer _cmsSiteInitializer;
+
+	@Reference
+	private GroupLocalService _groupLocalService;
 
 }

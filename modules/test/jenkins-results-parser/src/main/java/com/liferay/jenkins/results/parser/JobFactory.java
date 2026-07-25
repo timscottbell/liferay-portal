@@ -199,10 +199,18 @@ public class JobFactory {
 			portalUpstreamBranchName = topLevelBuild.getBranchName();
 		}
 
+		PortalGitWorkingDirectory portalGitWorkingDirectory = null;
+
+		if (JenkinsResultsParserUtil.isCINode()) {
+			portalGitWorkingDirectory =
+				GitWorkingDirectoryFactory.newPortalGitWorkingDirectory(
+					portalUpstreamBranchName);
+		}
+
 		return _newJob(
 			topLevelBuild.getBuildProfile(), topLevelBuild.getJobName(), null,
-			null, portalHotfixRelease, portalUpstreamBranchName,
-			topLevelBuild.getProjectNames(),
+			portalGitWorkingDirectory, portalHotfixRelease,
+			portalUpstreamBranchName, topLevelBuild.getProjectNames(),
 			topLevelBuild.getBaseGitRepositoryName(),
 			topLevelBuild.getTestSuiteName(), topLevelBuild.getBranchName());
 	}
@@ -256,6 +264,14 @@ public class JobFactory {
 			testSuiteName, upstreamBranchName);
 	}
 
+	public static Job newJob(
+		Job.BuildProfile buildProfile, String jobName, String testSuiteName) {
+
+		return _newJob(
+			buildProfile, jobName, null, null, null, null, null, null,
+			testSuiteName, null);
+	}
+
 	public static Job newJob(JSONObject jsonObject) {
 		return _newJob(
 			null, null, jsonObject, null, null, null, null, null, null, null);
@@ -275,6 +291,14 @@ public class JobFactory {
 		String upstreamBranchName) {
 
 		String key = null;
+
+		if ((jsonObject == null) &&
+			JenkinsResultsParserUtil.isBuildCachingEnabled(
+				jobName, testSuiteName)) {
+
+			jsonObject = JobCacheUtil.getCachedJobJSONObject(
+				jobName, portalGitWorkingDirectory, testSuiteName);
+		}
 
 		if (jsonObject != null) {
 			jobName = jsonObject.getString("job_name");
@@ -379,6 +403,16 @@ public class JobFactory {
 				}
 			}
 
+			if (jobName.equals("test-jenkins-acceptance-pullrequest")) {
+				if (jsonObject != null) {
+					job = new JenkinsGitRepositoryJob(jsonObject);
+				}
+				else {
+					job = new JenkinsGitRepositoryJob(
+						buildProfile, jobName, testSuiteName);
+				}
+			}
+
 			if (jobName.startsWith("test-plugins-acceptance-pullrequest(")) {
 				if (jsonObject != null) {
 					job = new PluginsAcceptancePullRequestJob(jsonObject);
@@ -437,7 +471,7 @@ public class JobFactory {
 				}
 				else {
 					if (upstreamBranchName.contains("release")) {
-						String githubUpstreamBranchName = System.getenv(
+						String githubUpstreamBranchName = Environment.get(
 							"GITHUB_UPSTREAM_BRANCH_NAME");
 
 						if (!JenkinsResultsParserUtil.isNullOrEmpty(
@@ -470,46 +504,6 @@ public class JobFactory {
 				}
 				else {
 					job = new PortalAppReleaseJob(
-						buildProfile, jobName, upstreamBranchName);
-				}
-			}
-
-			if (jobName.startsWith("test-portal-aws(")) {
-				if (jsonObject != null) {
-					job = new PortalAWSJob(jsonObject);
-				}
-				else {
-					job = new PortalAWSJob(
-						buildProfile, jobName, upstreamBranchName);
-				}
-			}
-
-			if (jobName.startsWith("test-portal-environment(")) {
-				if (jsonObject != null) {
-					job = new PortalEnvironmentJob(jsonObject);
-				}
-				else {
-					job = new PortalEnvironmentJob(
-						buildProfile, jobName, upstreamBranchName);
-				}
-			}
-
-			if (jobName.startsWith("test-portal-environment-release(")) {
-				if (jsonObject != null) {
-					job = new PortalReleaseEnvironmentJob(jsonObject);
-				}
-				else {
-					job = new PortalReleaseEnvironmentJob(
-						buildProfile, jobName, upstreamBranchName);
-				}
-			}
-
-			if (jobName.startsWith("test-portal-fixpack-environment(")) {
-				if (jsonObject != null) {
-					job = new PortalFixpackEnvironmentJob(jsonObject);
-				}
-				else {
-					job = new PortalFixpackEnvironmentJob(
 						buildProfile, jobName, upstreamBranchName);
 				}
 			}
@@ -585,7 +579,6 @@ public class JobFactory {
 					"test-portal-testsuite-upstream-controller(") ||
 				jobName.startsWith("test-portal-upstream-controller(") ||
 				jobName.equals("test-poshi-release") ||
-				jobName.equals("test-results-consistency-report-controller") ||
 				jobName.startsWith(
 					"test-qa-websites-functional-daily-controller(") ||
 				jobName.startsWith(

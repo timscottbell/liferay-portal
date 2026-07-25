@@ -29,15 +29,21 @@ import './../AssigneeTrigger.scss';
 
 type CreateTaskModalProps = {
 	closeModal: () => void;
+	dueDate?: string;
 	loadData: Function;
+	onItemsChange?: Function;
 	projectId?: string;
+	projectObjectDefinitionId: number;
 	state: string;
 };
 
 export default function CreateTaskModal({
 	closeModal,
+	dueDate = '',
 	loadData,
+	onItemsChange,
 	projectId,
+	projectObjectDefinitionId,
 	state,
 }: CreateTaskModalProps) {
 	const [states, setStates] = useState([]);
@@ -61,13 +67,13 @@ export default function CreateTaskModal({
 	} = useFormik({
 		initialValues: {
 			assignTo: {},
-			dueDate: '',
+			dueDate,
 			r_cmpProjectToCMPTasks_c_cmpProjectId: Number(projectId) ?? 0,
 			state,
 			title: '',
 		},
 		onSubmit: async (values) => {
-			const {error} = await postTaskByScope({
+			const {data, error} = await postTaskByScope({
 				body: {
 					...values,
 					keywords: [
@@ -81,7 +87,15 @@ export default function CreateTaskModal({
 			if (!error) {
 				closeModal();
 
-				loadData();
+				if (onItemsChange && data) {
+					onItemsChange({
+						itemKey: 'embedded.id',
+						items: [{embedded: data}],
+					});
+				}
+				else {
+					loadData();
+				}
 
 				displayCreateSuccessToast(values.title);
 			}
@@ -111,7 +125,7 @@ export default function CreateTaskModal({
 
 			const {
 				data: {items},
-			} = (await getAllProjects()) as {
+			} = (await getAllProjects(projectObjectDefinitionId)) as {
 				data: {
 					items: {
 						embedded: IProjectObjectEntry;
@@ -141,7 +155,7 @@ export default function CreateTaskModal({
 		};
 
 		makeFetch();
-	}, [projectId]);
+	}, [projectId, projectObjectDefinitionId]);
 
 	return (
 		<ClayForm
@@ -228,6 +242,7 @@ export default function CreateTaskModal({
 						setFieldValue('dueDate', value);
 					}}
 					type="Date"
+					value={values.dueDate}
 				/>
 			</ClayModal.Body>
 

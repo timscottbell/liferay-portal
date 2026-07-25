@@ -5,6 +5,7 @@
 
 package com.liferay.portal.db.partition.util;
 
+import com.liferay.counter.kernel.service.CounterLocalServiceUtil;
 import com.liferay.petra.function.UnsafeConsumer;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.reflect.ReflectionUtil;
@@ -67,6 +68,9 @@ import javax.sql.DataSource;
  */
 public class DBPartitionUtil {
 
+	public static final String DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX =
+		"lexported_";
+
 	public static boolean addDBPartition(long companyId)
 		throws PortalException {
 
@@ -76,11 +80,23 @@ public class DBPartitionUtil {
 			return false;
 		}
 
+		DataSource dataSource = InfrastructureUtil.getDataSource();
+
 		try (SafeCloseable safeCloseable =
 				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
-					_defaultCompanyId)) {
+					_defaultCompanyId);
 
-			_addDBPartition(companyId);
+			Connection connection = dataSource.getConnection();
+
+			AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+
+			_addDBPartition(connection, companyId);
+		}
+		catch (PortalException portalException) {
+			throw portalException;
+		}
+		catch (Exception exception) {
+			throw new PortalException(exception);
 		}
 
 		return true;
@@ -108,11 +124,23 @@ public class DBPartitionUtil {
 			return false;
 		}
 
+		DataSource dataSource = InfrastructureUtil.getDataSource();
+
 		try (SafeCloseable safeCloseable =
 				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
-					_defaultCompanyId)) {
+					_defaultCompanyId);
 
-			_copyDBPartition(fromCompanyId, toCompanyId);
+			Connection connection = dataSource.getConnection();
+
+			AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+
+			_copyDBPartition(connection, fromCompanyId, toCompanyId);
+		}
+		catch (PortalException portalException) {
+			throw portalException;
+		}
+		catch (Exception exception) {
+			throw new PortalException(exception);
 		}
 
 		return true;
@@ -169,11 +197,23 @@ public class DBPartitionUtil {
 			return false;
 		}
 
+		DataSource dataSource = InfrastructureUtil.getDataSource();
+
 		try (SafeCloseable safeCloseable =
 				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
-					_defaultCompanyId)) {
+					_defaultCompanyId);
 
-			_exportDBPartition(companyId);
+			Connection connection = dataSource.getConnection();
+
+			AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+
+			_exportDBPartition(connection, companyId);
+		}
+		catch (PortalException portalException) {
+			throw portalException;
+		}
+		catch (Exception exception) {
+			throw new PortalException(exception);
 		}
 
 		return true;
@@ -240,10 +280,11 @@ public class DBPartitionUtil {
 					"select configurationId from ", getPartitionName(companyId),
 					".Configuration_ where dictionary like ",
 					"'%org.apache.felix.configadmin.revision%'"));
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			while (resultSet.next()) {
-				pids.add(resultSet.getString(1));
+				pids.add(resultSet.getString("configurationId"));
 			}
 		}
 
@@ -265,13 +306,15 @@ public class DBPartitionUtil {
 				StringBundler.concat(
 					"select configurationId, dictionary from ",
 					getPartitionName(companyId), ".Configuration_"));
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			Map<String, String> configurations = new HashMap<>();
 
 			while (resultSet.next()) {
 				configurations.put(
-					resultSet.getString(1), resultSet.getString(2));
+					resultSet.getString("configurationId"),
+					resultSet.getString("dictionary"));
 			}
 
 			return configurations;
@@ -313,14 +356,42 @@ public class DBPartitionUtil {
 			return false;
 		}
 
+		DataSource dataSource = InfrastructureUtil.getDataSource();
+
 		try (SafeCloseable safeCloseable =
 				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
-					_defaultCompanyId)) {
+					_defaultCompanyId);
 
-			_importDBPartition(companyId);
+			Connection connection = dataSource.getConnection();
+
+			AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+
+			_importDBPartition(connection, companyId);
+		}
+		catch (PortalException portalException) {
+			throw portalException;
+		}
+		catch (RuntimeException runtimeException) {
+			throw runtimeException;
+		}
+		catch (Exception exception) {
+			throw new PortalException(exception);
 		}
 
 		return true;
+	}
+
+	public static long incrementCounter() {
+		if (!PropsValues.DATABASE_PARTITION_ENABLED) {
+			return CounterLocalServiceUtil.increment();
+		}
+
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					CompanyConstants.SYSTEM)) {
+
+			return CounterLocalServiceUtil.increment();
+		}
 	}
 
 	public static boolean removeDBPartition(long companyId)
@@ -386,7 +457,7 @@ public class DBPartitionUtil {
 
 				try (ResultSet resultSet = preparedStatement.executeQuery()) {
 					if (resultSet.next()) {
-						_defaultCompanyId = resultSet.getLong(1);
+						_defaultCompanyId = resultSet.getLong("companyId");
 					}
 				}
 			}
@@ -429,14 +500,12 @@ public class DBPartitionUtil {
 		};
 	}
 
-	private static void _addDBPartition(long companyId) throws PortalException {
-		Connection connection = CurrentConnectionUtil.getConnection(
-			InfrastructureUtil.getDataSource());
+	private static void _addDBPartition(Connection connection, long companyId)
+		throws PortalException {
 
 		String partitionName = getPartitionName(companyId);
 
-		try (AutoCloseable autoCloseable = _disableAutoCommit(connection);
-			PreparedStatement preparedStatement = connection.prepareStatement(
+		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				_dbPartitionDB.getCreatePartitionSQL(
 					connection, partitionName))) {
 
@@ -497,6 +566,13 @@ public class DBPartitionUtil {
 			connection.commit();
 		}
 		catch (Exception exception) {
+			try {
+				connection.rollback();
+			}
+			catch (SQLException sqlException) {
+				exception.addSuppressed(sqlException);
+			}
+
 			if (!_dbPartitionDB.isDDLTransactional()) {
 				try (Statement statement = connection.createStatement()) {
 					statement.executeUpdate(
@@ -512,16 +588,15 @@ public class DBPartitionUtil {
 		}
 	}
 
-	private static void _copyDBPartition(long fromCompanyId, long toCompanyId)
+	private static void _copyDBPartition(
+			Connection connection, long fromCompanyId, long toCompanyId)
 		throws PortalException {
 
-		Connection connection = CurrentConnectionUtil.getConnection(
-			InfrastructureUtil.getDataSource());
 		List<String> quartzTableNames = new ArrayList<>();
 		String sourcePartitionName = getPartitionName(fromCompanyId);
 		String targetPartitionName = getPartitionName(toCompanyId);
 
-		try (AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+		try {
 			_copySchema(connection, sourcePartitionName, targetPartitionName);
 
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
@@ -653,6 +728,13 @@ public class DBPartitionUtil {
 			_reloadQuartzJobs(fromCompanyId, toCompanyId);
 		}
 		catch (Exception exception1) {
+			try {
+				connection.rollback();
+			}
+			catch (SQLException sqlException) {
+				exception1.addSuppressed(sqlException);
+			}
+
 			if (!_dbPartitionDB.isDDLTransactional() ||
 				(exception1 instanceof SchedulerException)) {
 
@@ -666,6 +748,8 @@ public class DBPartitionUtil {
 					statement.executeUpdate(
 						_dbPartitionDB.getDropPartitionSQL(
 							targetPartitionName));
+
+					connection.commit();
 				}
 				catch (Exception exception2) {
 					throw new PortalException(
@@ -942,17 +1026,15 @@ public class DBPartitionUtil {
 		}
 	}
 
-	private static void _exportDBPartition(long companyId)
+	private static void _exportDBPartition(
+			Connection connection, long companyId)
 		throws PortalException {
-
-		Connection connection = CurrentConnectionUtil.getConnection(
-			InfrastructureUtil.getDataSource());
-
-		DBInspector dbInspector = new DBInspector(connection);
 
 		String exportedPartitionName = _getExportedPartitionName(companyId);
 
-		try (AutoCloseable autoCloseable = _disableAutoCommit(connection)) {
+		DBInspector dbInspector = new DBInspector(connection);
+
+		try {
 			_copySchema(
 				connection, getPartitionName(companyId), exportedPartitionName);
 
@@ -994,6 +1076,13 @@ public class DBPartitionUtil {
 			connection.commit();
 		}
 		catch (Exception exception) {
+			try {
+				connection.rollback();
+			}
+			catch (SQLException sqlException) {
+				exception.addSuppressed(sqlException);
+			}
+
 			if (!_dbPartitionDB.isDDLTransactional()) {
 				try (Statement statement = connection.createStatement()) {
 					statement.executeUpdate(
@@ -1289,7 +1378,7 @@ public class DBPartitionUtil {
 	}
 
 	private static String _getExportedPartitionName(long companyId) {
-		return _DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX + companyId;
+		return DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX + companyId;
 	}
 
 	private static String _getQuartzWhereClauseSQL(
@@ -1302,14 +1391,12 @@ public class DBPartitionUtil {
 		return " where trigger_name like '%@" + companyId + "'";
 	}
 
-	private static void _importDBPartition(long companyId)
+	private static void _importDBPartition(
+			Connection connection, long companyId)
 		throws PortalException {
 
 		String sourcePartitionName = _getExportedPartitionName(companyId);
 		String targetPartitionName = getPartitionName(companyId);
-
-		Connection connection = CurrentConnectionUtil.getConnection(
-			InfrastructureUtil.getDataSource());
 
 		try {
 			if (_dbPartitionDB.existsPartition(
@@ -1333,7 +1420,6 @@ public class DBPartitionUtil {
 			throw new PortalException(sqlException);
 		}
 
-		AutoCloseable autoCloseable = null;
 		List<String> copiedTableNames = new ArrayList<>();
 
 		try (Statement statement = connection.createStatement()) {
@@ -1343,8 +1429,6 @@ public class DBPartitionUtil {
 
 				statement.executeUpdate(renamePartitionSQL);
 			}
-
-			autoCloseable = _disableAutoCommit(connection);
 
 			DBInspector dbInspector = new DBInspector(connection);
 
@@ -1401,6 +1485,13 @@ public class DBPartitionUtil {
 			}
 		}
 		catch (Exception exception1) {
+			try {
+				connection.rollback();
+			}
+			catch (SQLException sqlException) {
+				exception1.addSuppressed(sqlException);
+			}
+
 			if (_dbPartitionDB.isDDLTransactional()) {
 				throw new PortalException(exception1);
 			}
@@ -1434,16 +1525,6 @@ public class DBPartitionUtil {
 			}
 
 			throw new PortalException(exception1);
-		}
-		finally {
-			if (autoCloseable != null) {
-				try {
-					autoCloseable.close();
-				}
-				catch (Exception exception) {
-					throw new PortalException(exception);
-				}
-			}
 		}
 	}
 
@@ -1618,7 +1699,7 @@ public class DBPartitionUtil {
 					if (count == 0) {
 						count = StringUtil.count(
 							lowerCaseSQL,
-							_DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX);
+							DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX);
 					}
 
 					if (count > 0) {
@@ -1703,9 +1784,6 @@ public class DBPartitionUtil {
 
 		};
 	}
-
-	private static final String
-		_DATABASE_EXPORTED_PARTITION_SCHEMA_NAME_PREFIX = "lexported_";
 
 	private static final String _QUARTZ_TABLE_NAME_PREFIX = GetterUtil.get(
 		PropsUtil.get("persisted.scheduler.org.quartz.jobStore.tablePrefix"),

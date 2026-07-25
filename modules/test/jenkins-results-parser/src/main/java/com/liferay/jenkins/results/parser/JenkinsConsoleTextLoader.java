@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 /**
  * @author Peter Yoo
@@ -45,8 +45,11 @@ public class JenkinsConsoleTextLoader {
 				".liferay.com/job/", jobName, "/",
 				matcher.group("buildNumber"));
 
-			if (_jenkinsConsoleTextLoaders.containsKey(buildURL)) {
-				return _jenkinsConsoleTextLoaders.get(buildURL);
+			JenkinsConsoleTextLoader jenkinsConsoleTextLoader =
+				_jenkinsConsoleTextLoaders.get(buildURL);
+
+			if (jenkinsConsoleTextLoader != null) {
+				return jenkinsConsoleTextLoader;
 			}
 
 			if (jobName.contains("-batch") || jobName.contains("-downstream") ||
@@ -251,7 +254,7 @@ public class JenkinsConsoleTextLoader {
 
 						line = matcher.replaceAll("$1") + "\n";
 
-						line = StringEscapeUtils.unescapeHtml(line);
+						line = StringEscapeUtils.unescapeHtml4(line);
 
 						JenkinsResultsParserUtil.appendToCacheFile(
 							consoleLogFileKey, line);

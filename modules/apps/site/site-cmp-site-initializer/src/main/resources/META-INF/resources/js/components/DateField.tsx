@@ -8,9 +8,13 @@ import {datetimeUtils} from '@liferay/object-js-components-web';
 import {dateUtils} from 'frontend-js-web';
 import React, {useCallback, useState} from 'react';
 
+import type {FirstDayOfWeekLocale} from 'frontend-js-web';
+
 interface IDateField {
 	id: string;
-	onChange: (value: string) => Promise<void>;
+	initialValue?: string;
+	onChange: (value: string) => Promise<void> | void;
+	required?: boolean;
 }
 
 export const dateConfig = datetimeUtils.generateDateConfigurations({
@@ -19,20 +23,28 @@ export const dateConfig = datetimeUtils.generateDateConfigurations({
 	type: 'Date',
 });
 
-export default function DateField({id, onChange}: IDateField) {
+export default function DateField({
+	id,
+	initialValue = '',
+	onChange,
+	required = true,
+}: IDateField) {
 	const [error, setError] = useState<string>('');
-	const [value, setValue] = useState<string>('');
+	const [value, setValue] = useState<string>(initialValue);
 
 	const locale = Liferay.ThemeDisplay.getBCP47LanguageId();
 
-	const handleError = useCallback((value: string) => {
-		if (!value) {
-			setError(Liferay.Language.get('this-field-is-required'));
-		}
-		else {
-			setError('');
-		}
-	}, []);
+	const handleError = useCallback(
+		(value: string) => {
+			if (required && !value) {
+				setError(Liferay.Language.get('this-field-is-required'));
+			}
+			else {
+				setError('');
+			}
+		},
+		[required]
+	);
 
 	const handleChange = async (value: string) => {
 		setError('');
@@ -45,7 +57,9 @@ export default function DateField({id, onChange}: IDateField) {
 		<ClayDatePicker
 			aria-describedby={error}
 			dateFormat={dateConfig.clayFormat}
-			firstDayOfWeek={dateUtils.getFirstDayOfWeek(locale)}
+			firstDayOfWeek={dateUtils.getFirstDayOfWeek(
+				locale as FirstDayOfWeekLocale
+			)}
 			id={id}
 			months={dateUtils.getMonthsLong(locale)}
 			onBlur={({target: {value}}) => handleError(value)}

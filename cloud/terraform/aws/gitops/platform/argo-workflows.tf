@@ -11,6 +11,7 @@ resource "helm_release" "argo_workflows" {
 		yamlencode(
 			{
 				controller={
+					podAnnotations=local.karpenter_pod_annotations
 					resources={
 						limits={
 							memory="512Mi"
@@ -22,6 +23,7 @@ resource "helm_release" "argo_workflows" {
 					}
 				}
 				server={
+					podAnnotations=local.karpenter_pod_annotations
 					resources={
 						limits={
 							memory="256Mi"
@@ -34,7 +36,7 @@ resource "helm_release" "argo_workflows" {
 				}
 			}),
 	]
-	version="0.47.3"
+	version=var.argo_workflows_helm_chart_version
 }
 resource "kubernetes_namespace" "argo_workflows" {
 	metadata {

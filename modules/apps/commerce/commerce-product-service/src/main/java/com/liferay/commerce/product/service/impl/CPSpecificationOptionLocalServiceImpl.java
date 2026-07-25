@@ -43,7 +43,7 @@ import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
+import com.liferay.portal.kernel.transaction.TransactionCallbackUtil;
 import com.liferay.portal.kernel.util.FriendlyURLNormalizer;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
@@ -52,6 +52,7 @@ import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 import java.io.Serializable;
 
@@ -108,6 +109,7 @@ public class CPSpecificationOptionLocalServiceImpl
 		cpSpecificationOption.setKey(key);
 		cpSpecificationOption.setPriority(priority);
 		cpSpecificationOption.setVisible(visible);
+		cpSpecificationOption.setStatus(WorkflowConstants.STATUS_APPROVED);
 		cpSpecificationOption.setExpandoBridgeAttributes(serviceContext);
 
 		cpSpecificationOption = cpSpecificationOptionPersistence.update(
@@ -391,7 +393,7 @@ public class CPSpecificationOptionLocalServiceImpl
 	private void _reindexCPDefinitions1(
 		long companyId, long cpSpecificationOptionId) {
 
-		TransactionCommitCallbackUtil.registerCallback(
+		TransactionCallbackUtil.registerCommitCallback(
 			() -> {
 				_reindexCPDefinitions2(companyId, cpSpecificationOptionId);
 

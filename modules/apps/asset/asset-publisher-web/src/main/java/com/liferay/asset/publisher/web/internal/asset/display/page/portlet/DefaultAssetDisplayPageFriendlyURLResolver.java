@@ -10,12 +10,14 @@ import com.liferay.asset.display.page.portlet.BaseAssetDisplayPageFriendlyURLRes
 import com.liferay.asset.display.page.util.AssetDisplayPageUtil;
 import com.liferay.asset.kernel.AssetRendererFactoryRegistryUtil;
 import com.liferay.asset.kernel.model.AssetEntry;
+import com.liferay.asset.kernel.model.AssetRenderer;
 import com.liferay.asset.kernel.model.AssetRendererFactory;
 import com.liferay.asset.kernel.service.AssetEntryLocalService;
 import com.liferay.asset.publisher.constants.AssetPublisherPortletKeys;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalService;
+import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
 import com.liferay.friendly.url.model.FriendlyURLEntryLocalization;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
 import com.liferay.info.item.ClassPKInfoItemIdentifier;
@@ -31,6 +33,8 @@ import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.petra.string.StringUtil;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutFriendlyURLComposite;
 import com.liferay.portal.kernel.model.LayoutTypePortletConstants;
@@ -50,14 +54,17 @@ import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.FriendlyURLNormalizer;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.workflow.permission.WorkflowPermissionUtil;
 
@@ -287,6 +294,13 @@ public class DefaultAssetDisplayPageFriendlyURLResolver
 			namespace + "assetEntryId",
 			new String[] {String.valueOf(assetEntry.getEntryId())});
 
+		String layoutMode = ParamUtil.getString(httpServletRequest, "p_l_mode");
+
+		if (Objects.equals(layoutMode, Constants.PREVIEW)) {
+			_markWorkflowAssetPreview(
+				assetEntry, assetRendererFactory, httpServletRequest);
+		}
+
 		String ddmTemplateKey = _getDDMTemplateKey(groupId, friendlyURL);
 
 		if (Validator.isNotNull(ddmTemplateKey)) {
@@ -298,6 +312,8 @@ public class DefaultAssetDisplayPageFriendlyURLResolver
 			_friendlyURLEntryLocalService.fetchFriendlyURLEntryLocalization(
 				groupId,
 				_classNameLocalService.getClassNameId(JournalArticle.class),
+				FriendlyURLEntryConstants.
+					FRIENDLY_URL_ENTRY_PARENT_CLASS_PK_DEFAULT,
 				urlTitle);
 
 		if (friendlyURLEntryLocalization != null) {
@@ -586,6 +602,31 @@ public class DefaultAssetDisplayPageFriendlyURLResolver
 
 		return false;
 	}
+
+	private void _markWorkflowAssetPreview(
+		AssetEntry assetEntry, AssetRendererFactory<?> assetRendererFactory,
+		HttpServletRequest httpServletRequest) {
+
+		try {
+			AssetRenderer<?> assetRenderer =
+				assetRendererFactory.getAssetRenderer(assetEntry.getClassPK());
+
+			if (assetRenderer.hasEditPermission(
+					PermissionThreadLocal.getPermissionChecker())) {
+
+				httpServletRequest.setAttribute(
+					WebKeys.WORKFLOW_ASSET_PREVIEW, Boolean.TRUE);
+			}
+		}
+		catch (Exception exception) {
+			if (_log.isDebugEnabled()) {
+				_log.debug(exception);
+			}
+		}
+	}
+
+	private static final Log _log = LogFactoryUtil.getLog(
+		DefaultAssetDisplayPageFriendlyURLResolver.class);
 
 	@Reference
 	private AssetDisplayPageFriendlyURLProvider

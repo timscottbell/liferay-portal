@@ -7,13 +7,17 @@ package com.liferay.frontend.js.importmaps.extender.internal.servlet.taglib.test
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.frontend.js.importmaps.extender.JSImportMapsContributor;
+import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.model.Company;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.servlet.taglib.DynamicInclude;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.CompanyTestUtil;
+import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.HashMapDictionary;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.WebKeys;
@@ -138,18 +142,29 @@ public class JSImportMapsExtenderTopHeadDynamicIncludeTest {
 	}
 
 	private String _include(long companyId) throws Exception {
-		MockHttpServletRequest mockHttpServletRequest =
-			new MockHttpServletRequest();
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(companyId)) {
 
-		mockHttpServletRequest.setAttribute(WebKeys.COMPANY_ID, companyId);
+			MockHttpServletRequest mockHttpServletRequest =
+				new MockHttpServletRequest();
 
-		MockHttpServletResponse mockHttpServletResponse =
-			new MockHttpServletResponse();
+			mockHttpServletRequest.setAttribute(WebKeys.COMPANY_ID, companyId);
 
-		_dynamicInclude.include(
-			mockHttpServletRequest, mockHttpServletResponse, null);
+			ThemeDisplay themeDisplay = new ThemeDisplay();
 
-		return mockHttpServletResponse.getContentAsString();
+			themeDisplay.setCompany(_companyLocalService.getCompany(companyId));
+
+			mockHttpServletRequest.setAttribute(
+				WebKeys.THEME_DISPLAY, themeDisplay);
+
+			MockHttpServletResponse mockHttpServletResponse =
+				new MockHttpServletResponse();
+
+			_dynamicInclude.include(
+				mockHttpServletRequest, mockHttpServletResponse, null);
+
+			return mockHttpServletResponse.getContentAsString();
+		}
 	}
 
 	private void _registerJSImportMapsContributor(Company company) {
@@ -181,6 +196,9 @@ public class JSImportMapsExtenderTopHeadDynamicIncludeTest {
 
 	@DeleteAfterTestRun
 	private Company _company2;
+
+	@Inject
+	private CompanyLocalService _companyLocalService;
 
 	@Inject(
 		filter = "component.name=com.liferay.frontend.js.importmaps.extender.internal.servlet.taglib.JSImportMapsExtenderTopHeadDynamicInclude"

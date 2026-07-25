@@ -326,6 +326,10 @@ public class PropsValues {
 	public static final boolean CLUSTER_LINK_ENABLED = GetterUtil.getBoolean(
 		PropsUtil.get(PropsKeys.CLUSTER_LINK_ENABLED));
 
+	public static final boolean CLUSTER_LINK_JMX_ENABLED =
+		GetterUtil.getBoolean(
+			PropsUtil.get(PropsKeys.CLUSTER_LINK_JMX_ENABLED));
+
 	public static final boolean CMS_BROKEN_LINKS_CHECKER_ENABLED =
 		GetterUtil.getBoolean(
 			PropsUtil.get(PropsKeys.CMS_BROKEN_LINKS_CHECKER_ENABLED));
@@ -376,6 +380,10 @@ public class PropsValues {
 
 	public static String COMPANY_DEFAULT_WEB_ID = PropsUtil.get(
 		PropsKeys.COMPANY_DEFAULT_WEB_ID);
+
+	public static final long COMPANY_DELETE_IN_PROCESS_MAX_TIME =
+		GetterUtil.getLong(
+			PropsUtil.get(PropsKeys.COMPANY_DELETE_IN_PROCESS_MAX_TIME));
 
 	public static final boolean COMPANY_LOGIN_PREPOPULATE_DOMAIN =
 		GetterUtil.getBoolean(
@@ -876,6 +884,9 @@ public class PropsValues {
 					PropsKeys.
 						FIELD_ENABLE_COM_LIFERAY_PORTAL_KERNEL_MODEL_ORGANIZATION_STATUS));
 
+	public static final boolean FIPS_ENABLED = GetterUtil.getBoolean(
+		PropsUtil.get(PropsKeys.FIPS_ENABLED));
+
 	public static final String[] GLOBAL_SHUTDOWN_EVENTS = PropsUtil.getArray(
 		PropsKeys.GLOBAL_SHUTDOWN_EVENTS);
 
@@ -1085,6 +1096,11 @@ public class PropsValues {
 	public static final String LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING =
 		PropsUtil.get(PropsKeys.LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING);
 
+	public static boolean LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING_ENABLED =
+		GetterUtil.getBoolean(
+			PropsUtil.get(
+				PropsKeys.LAYOUT_FRIENDLY_URL_PUBLIC_SERVLET_MAPPING_ENABLED));
+
 	public static final boolean LAYOUT_GUEST_SHOW_MAX_ICON =
 		GetterUtil.getBoolean(
 			PropsUtil.get(PropsKeys.LAYOUT_GUEST_SHOW_MAX_ICON));
@@ -1121,6 +1137,13 @@ public class PropsValues {
 	public static final int LAYOUT_SCOPE_GROUP_FINDER_THRESHOLD =
 		GetterUtil.getInteger(
 			PropsUtil.get(PropsKeys.LAYOUT_SCOPE_GROUP_FINDER_THRESHOLD));
+
+	public static final boolean
+		LAYOUT_SET_PROTOTYPE_MERGE_DELETE_CACHE_FILE_ENABLED =
+			GetterUtil.getBoolean(
+				PropsUtil.get(
+					PropsKeys.
+						LAYOUT_SET_PROTOTYPE_MERGE_DELETE_CACHE_FILE_ENABLED));
 
 	public static final int LAYOUT_SET_PROTOTYPE_MERGE_FAIL_THRESHOLD =
 		GetterUtil.getInteger(
@@ -2124,6 +2147,9 @@ public class PropsValues {
 		GetterUtil.getBoolean(
 			PropsUtil.get(PropsKeys.SITES_CONTROL_PANEL_MEMBERS_VISIBLE));
 
+	public static final String[] SITES_FRIENDLY_URL_KEYWORDS =
+		PropsUtil.getArray(PropsKeys.SITES_FRIENDLY_URL_KEYWORDS);
+
 	public static final String SITES_FRIENDLY_URL_PAGE_NOT_FOUND =
 		PropsUtil.get(PropsKeys.SITES_FRIENDLY_URL_PAGE_NOT_FOUND);
 
@@ -2375,6 +2401,28 @@ public class PropsValues {
 	public static final boolean UPGRADE_LOG_CONTEXT_ENABLED =
 		GetterUtil.getBoolean(
 			PropsUtil.get(PropsKeys.UPGRADE_LOG_CONTEXT_ENABLED));
+
+	public static final boolean UPGRADE_LOG_PROGRESS_ENABLED =
+		GetterUtil.getBoolean(
+			PropsUtil.get(PropsKeys.UPGRADE_LOG_PROGRESS_ENABLED));
+
+	public static final long UPGRADE_LOG_PROGRESS_INTERVAL = GetterUtil.getLong(
+		PropsUtil.get(PropsKeys.UPGRADE_LOG_PROGRESS_INTERVAL));
+
+	public static final boolean UPGRADE_QUERY_MONITOR_ENABLED =
+		GetterUtil.getBoolean(
+			PropsUtil.get(PropsKeys.UPGRADE_QUERY_MONITOR_ENABLED), true);
+
+	public static final long UPGRADE_QUERY_MONITOR_LOCK_THRESHOLD =
+		GetterUtil.getLong(
+			PropsUtil.get(PropsKeys.UPGRADE_QUERY_MONITOR_LOCK_THRESHOLD),
+			300000);
+
+	public static final long UPGRADE_QUERY_MONITOR_LONG_RUNNING_THRESHOLD =
+		GetterUtil.getLong(
+			PropsUtil.get(
+				PropsKeys.UPGRADE_QUERY_MONITOR_LONG_RUNNING_THRESHOLD),
+			600000);
 
 	public static final String UPGRADE_REPORT_DIR = GetterUtil.getString(
 		PropsUtil.get(PropsKeys.UPGRADE_REPORT_DIR));

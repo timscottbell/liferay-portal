@@ -401,11 +401,28 @@ public class CPDefinitionLocalServiceWrapper
 	}
 
 	@Override
+	public CPDefinition fetchCPDefinitionByCProductExternalReferenceCode(
+		String externalReferenceCode, long companyId, int status) {
+
+		return _cpDefinitionLocalService.
+			fetchCPDefinitionByCProductExternalReferenceCode(
+				externalReferenceCode, companyId, status);
+	}
+
+	@Override
 	public CPDefinition fetchCPDefinitionByCProductId(
 		long cProductId, boolean excludeDraft) {
 
 		return _cpDefinitionLocalService.fetchCPDefinitionByCProductId(
 			cProductId, excludeDraft);
+	}
+
+	@Override
+	public CPDefinition fetchCPDefinitionByCProductId(
+		long cProductId, int status) {
+
+		return _cpDefinitionLocalService.fetchCPDefinitionByCProductId(
+			cProductId, status);
 	}
 
 	@Override
@@ -602,6 +619,19 @@ public class CPDefinitionLocalServiceWrapper
 			groupId, status, start, end, orderByComparator);
 	}
 
+	@Override
+	public java.util.List<CPDefinition> getCPDefinitions(
+		long companyId, long accountEntryId, long[] accountGroupIds,
+		long[] commerceChannelGroupIds, boolean published, int[] statuses,
+		int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator<CPDefinition>
+			orderByComparator) {
+
+		return _cpDefinitionLocalService.getCPDefinitions(
+			companyId, accountEntryId, accountGroupIds, commerceChannelGroupIds,
+			published, statuses, start, end, orderByComparator);
+	}
+
 	/**
 	 * Returns all the cp definitions matching the UUID and company.
 	 *
@@ -692,6 +722,12 @@ public class CPDefinitionLocalServiceWrapper
 
 		return _cpDefinitionLocalService.getCProductCPDefinitions(
 			cProductId, status, start, end, orderByComparator);
+	}
+
+	@Override
+	public int getCProductCPDefinitionsCount(long cProductId, int status) {
+		return _cpDefinitionLocalService.getCProductCPDefinitionsCount(
+			cProductId, status);
 	}
 
 	@Override
@@ -1106,3 +1142,4 @@ public class CPDefinitionLocalServiceWrapper
 	private CPDefinitionLocalService _cpDefinitionLocalService;
 
 }
+// LIFERAY-SERVICE-BUILDER-HASH:463099188

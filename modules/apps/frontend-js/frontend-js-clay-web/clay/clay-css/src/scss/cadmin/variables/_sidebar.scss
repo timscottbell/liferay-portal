@@ -91,17 +91,20 @@ $cadmin-sidebar: map-deep-merge(
 			color: $cadmin-secondary,
 
 			hover: (
-				background-color: rgba($cadmin-gray-900, 0.03),
+				background-color:
+					unquote('hsl(from #{$cadmin-gray-900} h s l / 0.03)'),
 				color: $cadmin-gray-900,
 			),
 
 			focus: (
-				background-color: rgba($cadmin-gray-900, 0.03),
+				background-color:
+					unquote('hsl(from #{$cadmin-gray-900} h s l / 0.03)'),
 				color: $cadmin-gray-900,
 			),
 
 			active: (
-				background-color: rgba($cadmin-gray-900, 0.06),
+				background-color:
+					unquote('hsl(from #{$cadmin-gray-900} h s l / 0.06)'),
 				color: $cadmin-gray-900,
 			),
 
@@ -123,8 +126,9 @@ $cadmin-sidebar: map-deep-merge(
 			padding-left: $cadmin-sidebar-padding-left,
 			padding-right: 16px,
 			padding-top: $cadmin-sidebar-padding-top,
-			component-title: $cadmin-sidebar-header-component-title,
+
 			component-subtitle: $cadmin-sidebar-header-component-subtitle,
+			component-title: $cadmin-sidebar-header-component-title,
 
 			autofit-row: (
 				margin-left: -4px,
@@ -268,7 +272,8 @@ $cadmin-sidebar-light: map-deep-merge(
 		background-color: $cadmin-white,
 		border-color: $cadmin-gray-300,
 		border-left-width: 0px,
-		box-shadow: -4px 0 8px -4px rgba(0, 0, 0, 0.1),
+		box-shadow:
+			unquote('-4px 0 8px -4px hsl(from #{$cadmin-black} h s l / 0.1)'),
 		color: $cadmin-gray-900,
 
 		sidebar-header: (
@@ -282,7 +287,8 @@ $cadmin-sidebar-light: map-deep-merge(
 		),
 
 		sidenav-start: (
-			box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.1),
+			box-shadow:
+				unquote('4px 0 8px -4px hsl(from #{$cadmin-black} h s l / 0.1)'),
 		),
 
 		sidebar-dt: (
@@ -336,6 +342,7 @@ $cadmin-sidebar-dark: map-deep-merge(
 		sidebar-header: (
 			component-title: (
 				color: inherit,
+
 				href: (
 					color: inherit,
 				),
@@ -396,7 +403,10 @@ $cadmin-sidebar-c-slideout-start: () !default;
 $cadmin-sidebar-c-slideout-start: map-deep-merge(
 	(
 		'.sidebar-light': (
-			box-shadow: 0.25rem 0 0.5rem -0.25rem rgba(0, 0, 0, 0.1),
+			box-shadow:
+				unquote(
+					'0.25rem 0 0.5rem -0.25rem hsl(from #{$cadmin-black} h s l / 0.1)'
+				),
 		),
 	),
 	$cadmin-sidebar-c-slideout-start
@@ -420,6 +430,7 @@ $cadmin-sidebar-palette: map-deep-merge(
 			sidebar-header: (
 				component-title: (
 					color: inherit,
+
 					href: (
 						color: inherit,
 					),

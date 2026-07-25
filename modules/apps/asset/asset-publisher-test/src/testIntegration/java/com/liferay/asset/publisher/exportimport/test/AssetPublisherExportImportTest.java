@@ -46,6 +46,7 @@ import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.dao.search.SearchContainer;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.portlet.PortletIdCodec;
 import com.liferay.portal.kernel.portlet.PortletPreferencesFactory;
@@ -56,6 +57,7 @@ import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.portlet.MockPortletRequest;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
@@ -69,6 +71,7 @@ import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.search.test.rule.SearchTestRule;
@@ -83,7 +86,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1126,6 +1128,46 @@ public class AssetPublisherExportImportTest extends BaseExportImportTestCase {
 	}
 
 	@Test
+	@TestInfo("LPS-84201")
+	public void testSiblingGroupScopeIdWithRecreatedGroup() throws Exception {
+		Group siblingGroup = GroupTestUtil.addGroup();
+
+		String portletId = LayoutTestUtil.addPortletToLayout(
+			TestPropsValues.getUserId(), layout, getPortletId(), "column-1",
+			HashMapBuilder.put(
+				"scopeIds",
+				new String[] {
+					AssetPublisherHelper.SCOPE_ID_GROUP_PREFIX +
+						siblingGroup.getGroupId()
+				}
+			).build());
+
+		exportPortlet(portletId, layout);
+
+		String siblingGroupKey = siblingGroup.getGroupKey();
+
+		_groupLocalService.deleteGroup(siblingGroup);
+
+		siblingGroup = GroupTestUtil.addGroup(
+			TestPropsValues.getCompanyId(), TestPropsValues.getUserId(),
+			GroupConstants.DEFAULT_PARENT_GROUP_ID, siblingGroupKey);
+
+		importPortlet(portletId, layout);
+
+		PortletPreferences portletPreferences =
+			LayoutTestUtil.getPortletPreferences(importedLayout, portletId);
+
+		Assert.assertEquals(
+			AssetPublisherHelper.SCOPE_ID_GROUP_PREFIX +
+				siblingGroup.getGroupId(),
+			portletPreferences.getValue("scopeIds", null));
+
+		if (_groupLocalService.fetchGroup(siblingGroup.getGroupId()) != null) {
+			_groupLocalService.deleteGroup(siblingGroup);
+		}
+	}
+
+	@Test
 	public void testSortByAssetVocabulary() throws Exception {
 		testSortByAssetVocabulary(false);
 	}
@@ -1164,34 +1206,6 @@ public class AssetPublisherExportImportTest extends BaseExportImportTestCase {
 			Collections.singletonMap(LocaleUtil.US, StringUtil.randomString()),
 			DLFileEntryTypeConstants.FILE_ENTRY_TYPE_SCOPE_DEFAULT,
 			serviceContext);
-	}
-
-	protected void assertAssetEntries(
-		List<AssetEntry> expectedAssetEntries,
-		List<AssetEntry> actualAssetEntries) {
-
-		Assert.assertEquals(
-			actualAssetEntries.toString(), expectedAssetEntries.size(),
-			actualAssetEntries.size());
-
-		Iterator<AssetEntry> expectedAssetEntriesIterator =
-			expectedAssetEntries.iterator();
-		Iterator<AssetEntry> actualAssetEntriesIterator =
-			expectedAssetEntries.iterator();
-
-		while (expectedAssetEntriesIterator.hasNext() &&
-			   actualAssetEntriesIterator.hasNext()) {
-
-			AssetEntry expectedAssetEntry = expectedAssetEntriesIterator.next();
-			AssetEntry actualAssetEntry = actualAssetEntriesIterator.next();
-
-			Assert.assertEquals(
-				expectedAssetEntry.getClassName(),
-				actualAssetEntry.getClassName());
-			Assert.assertEquals(
-				expectedAssetEntry.getClassUuid(),
-				actualAssetEntry.getClassUuid());
-		}
 	}
 
 	protected String[] getAssetEntriesXmls(List<AssetEntry> assetEntries) {
@@ -1289,7 +1303,9 @@ public class AssetPublisherExportImportTest extends BaseExportImportTestCase {
 			actualAssetEntries.addAll(assetEntryResult.getAssetEntries());
 		}
 
-		assertAssetEntries(expectedAssetEntries, actualAssetEntries);
+		Assert.assertEquals(
+			SetUtil.fromList(expectedAssetEntries),
+			SetUtil.fromList(actualAssetEntries));
 	}
 
 	protected void testExportImportAssetEntries(Group scopeGroup)
@@ -1349,7 +1365,9 @@ public class AssetPublisherExportImportTest extends BaseExportImportTestCase {
 				new MockPortletRequest(), importedPortletPreferences,
 				_permissionChecker, selectedGroupIds, false, false);
 
-		assertAssetEntries(assetEntries, actualAssetEntries);
+		Assert.assertEquals(
+			SetUtil.fromList(assetEntries),
+			SetUtil.fromList(actualAssetEntries));
 	}
 
 	protected void testSortByAssetVocabulary(boolean globalVocabulary)

@@ -4,11 +4,12 @@
  */
 
 import classNames from 'classnames';
+import {ReactNode} from 'react';
 
 import './AccountAndAppCard.scss';
 
 interface AppCardProps {
-	category: string;
+	category: string | ReactNode;
 	className?: string;
 	logo: string;
 	title: string | JSX.Element;
@@ -32,9 +33,9 @@ export function AccountAndAppCard({
 			</div>
 
 			<div className="card-info">
-				<span className="card-info-description">{category}</span>
-
 				<span className="card-info-text">{title}</span>
+
+				<span className="card-info-description">{category}</span>
 			</div>
 		</div>
 	);

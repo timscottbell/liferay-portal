@@ -45,7 +45,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,7 +54,6 @@ import org.osgi.service.cm.ConfigurationAdmin;
 /**
  * @author João Victor Alves
  */
-@Ignore
 @RunWith(Arquillian.class)
 public class KaleoInstanceServiceTest {
 
@@ -194,16 +192,16 @@ public class KaleoInstanceServiceTest {
 	}
 
 	@Inject
-	private static ConfigurationAdmin _configurationAdmin;
-
-	@Inject
-	private static WorkflowDefinitionManager _workflowDefinitionManager;
-
-	@Inject
 	private AccountEntryLocalService _accountEntryLocalService;
+
+	@Inject
+	private ConfigurationAdmin _configurationAdmin;
 
 	private String _originalName;
 	private PermissionChecker _originalPermissionChecker;
+
+	@Inject
+	private WorkflowDefinitionManager _workflowDefinitionManager;
 
 	@Inject
 	private WorkflowInstanceManager _workflowInstanceManager;

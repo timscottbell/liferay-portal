@@ -7,6 +7,7 @@ package com.liferay.jenkins.results.parser.test.clazz.group;
 
 import com.google.common.collect.Lists;
 
+import com.liferay.jenkins.results.parser.Environment;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 import com.liferay.jenkins.results.parser.PortalAcceptancePullRequestJob;
 import com.liferay.jenkins.results.parser.PortalGitWorkingDirectory;
@@ -37,11 +38,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -67,6 +71,10 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 	}
 
 	public List<JobProperty> getExcludesJobProperties() {
+		if (isRootCauseAnalysis()) {
+			return new ArrayList<>();
+		}
+
 		if (_jUnitTestBatch != null) {
 			List<JobProperty> testBatchJobProperties =
 				getTestSelectorExcludesJobProperties();
@@ -114,6 +122,15 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 		recordJobProperties(filterJobProperties);
 
 		return filterJobProperties;
+	}
+
+	@Override
+	public Map<String, List<String>> getGlobTestClassMethodNamesMap() {
+		if (!isRootCauseAnalysis()) {
+			return super.getGlobTestClassMethodNamesMap();
+		}
+
+		return _globTestClassMethodNamesMap;
 	}
 
 	public List<JobProperty> getIncludesJobProperties() {
@@ -418,9 +435,7 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 			return getIncludePathMatchers(getIncludesJobProperties());
 		}
 
-		List<String> includeGlobs = new ArrayList<>();
-
-		String portalBatchTestSelector = System.getenv(
+		String portalBatchTestSelector = Environment.get(
 			"PORTAL_BATCH_TEST_SELECTOR");
 
 		if (JenkinsResultsParserUtil.isNullOrEmpty(portalBatchTestSelector)) {
@@ -428,11 +443,37 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 				"PORTAL_BATCH_TEST_SELECTOR");
 		}
 
-		if (!JenkinsResultsParserUtil.isNullOrEmpty(portalBatchTestSelector)) {
+		if (JenkinsResultsParserUtil.isNullOrEmpty(portalBatchTestSelector)) {
+			return getIncludePathMatchers(getIncludesJobProperties());
+		}
+
+		List<String> includeGlobs = new ArrayList<>();
+
+		for (String glob : portalBatchTestSelector.split(",(?![^{}]*})")) {
+			Matcher matcher = _globClassMethodPattern.matcher(glob);
+
+			if (!matcher.matches()) {
+				Collections.addAll(
+					includeGlobs,
+					JenkinsResultsParserUtil.getGlobsFromProperty(glob));
+
+				continue;
+			}
+
+			String testClassGlob = matcher.group("testClassGlob");
+
+			List<String> testClassMethodNames =
+				_globTestClassMethodNamesMap.getOrDefault(
+					testClassGlob, new ArrayList<>());
+
+			testClassMethodNames.add(matcher.group("testClassMethodName"));
+
+			_globTestClassMethodNamesMap.put(
+				testClassGlob, testClassMethodNames);
+
 			Collections.addAll(
 				includeGlobs,
-				JenkinsResultsParserUtil.getGlobsFromProperty(
-					portalBatchTestSelector));
+				JenkinsResultsParserUtil.getGlobsFromProperty(testClassGlob));
 		}
 
 		return JenkinsResultsParserUtil.toPathMatchers(
@@ -1094,6 +1135,8 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 		"/node_modules"
 	};
 
+	private static final Pattern _globClassMethodPattern = Pattern.compile(
+		"(?<testClassGlob>[^#]+)#(?<testClassMethodName>.+)");
 	private static final Set<String> _javaDirPathStrings =
 		ConcurrentHashMap.newKeySet();
 	private static final AtomicBoolean _javaFilesLoaded = new AtomicBoolean();
@@ -1102,6 +1145,8 @@ public class JUnitBatchTestClassGroup extends BatchTestClassGroup {
 	private static int _searchedFileCount;
 
 	private final List<File> _autoBalanceTestFiles = new ArrayList<>();
+	private final Map<String, List<String>> _globTestClassMethodNamesMap =
+		new HashMap<>();
 	private boolean _includeAutoBalanceTests;
 	private final boolean _includeUnstagedTestClassFiles;
 	private JUnitTestBatch _jUnitTestBatch;

@@ -96,12 +96,17 @@ public class BatchTestEntityResourceImpl
 
 			@Override
 			public String getKey() {
-				return BatchTestEntityResourceImpl.class.getName();
+				return "BatchTestEntityKey";
 			}
 
 			@Override
 			public String getLabelLanguageKey() {
 				return "batch-test-entity";
+			}
+
+			@Override
+			public Class getModelClass() {
+				return null;
 			}
 
 			@Override
@@ -124,17 +129,6 @@ public class BatchTestEntityResourceImpl
 			@Override
 			public Scope getScope() {
 				return Scope.COMPANY;
-			}
-
-			@Override
-			public boolean isApplicableExternalReferenceCode(
-				String externalReferenceCode) {
-
-				if (_fetchBatchTestEntity(externalReferenceCode) != null) {
-					return true;
-				}
-
-				return false;
 			}
 
 		};
@@ -317,8 +311,23 @@ public class BatchTestEntityResourceImpl
 	private BatchTestEntity _toBatchTestEntity(
 		BatchTestEntity originalBatchTestEntity) {
 
+		if (contextAcceptLanguage.isAcceptAllLanguages()) {
+			originalBatchTestEntity.setAcceptAllLanguages(true);
+		}
+
 		return new BatchTestEntity() {
 			{
+				setAcceptAllLanguages(
+					() -> {
+						Boolean originalAcceptAllLanguages =
+							originalBatchTestEntity.getAcceptAllLanguages();
+
+						if (originalAcceptAllLanguages != null) {
+							return originalAcceptAllLanguages;
+						}
+
+						return contextAcceptLanguage.isAcceptAllLanguages();
+					});
 				setCustomFields(
 					() -> transform(
 						originalBatchTestEntity.getCustomFields(),

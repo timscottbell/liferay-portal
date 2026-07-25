@@ -42,6 +42,7 @@ import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -116,7 +117,8 @@ public abstract class BaseOrganizationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -126,7 +128,8 @@ public abstract class BaseOrganizationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -269,6 +272,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteAccountByExternalReferenceCodeOrganization_addOrganization();
 
@@ -315,6 +319,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteAccountByExternalReferenceCodeOrganization_addOrganization();
 
@@ -422,6 +427,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteAccountOrganization_addOrganization();
 
@@ -463,6 +469,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteAccountOrganization_addOrganization();
 
@@ -552,6 +559,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteOrganization_addOrganization();
 
@@ -587,6 +595,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteOrganization_addOrganization();
 
@@ -748,6 +757,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteOrganizationByExternalReferenceCode_addOrganization();
 
@@ -788,6 +798,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteOrganizationByExternalReferenceCode_addOrganization();
 
@@ -877,6 +888,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteOrganizationByExternalReferenceCodeUserAccountByEmailAddress_addOrganization();
 
@@ -905,6 +917,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteOrganizationByExternalReferenceCodeUserAccountByEmailAddress_addOrganization();
 
@@ -979,6 +992,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteOrganizationByExternalReferenceCodeUserAccountsByEmailAddress_addOrganization();
 
@@ -1001,6 +1015,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteOrganizationByExternalReferenceCodeUserAccountsByEmailAddress_addOrganization();
 
@@ -1064,6 +1079,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteUserAccountByEmailAddress_addOrganization();
 
@@ -1089,6 +1105,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteUserAccountByEmailAddress_addOrganization();
 
@@ -1156,6 +1173,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization1 =
 			testGraphQLDeleteUserAccountsByEmailAddress_addOrganization();
 
@@ -1175,6 +1193,7 @@ public abstract class BaseOrganizationResourceTestCase {
 
 		// Using the namespace headlessAdminUser_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Organization organization2 =
 			testGraphQLDeleteUserAccountsByEmailAddress_addOrganization();
 
@@ -1846,20 +1865,9 @@ public abstract class BaseOrganizationResourceTestCase {
 		String externalReferenceCode =
 			testGetAccountByExternalReferenceCodeOrganizationsPage_getExternalReferenceCode();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountByExternalReferenceCodeOrganizations",
-			new HashMap<String, Object>() {
-				{
-					put(
-						"externalReferenceCode",
-						"\"" + externalReferenceCode + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountByExternalReferenceCodeOrganizationsPageAccountOrganization_getGraphQLField(
+				externalReferenceCode);
 
 		// No namespace
 
@@ -1929,6 +1937,27 @@ public abstract class BaseOrganizationResourceTestCase {
 				OrganizationSerDes.toDTOs(
 					accountByExternalReferenceCodeOrganizationsJSONObject.
 						getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountByExternalReferenceCodeOrganizationsPageAccountOrganization_getGraphQLField(
+				String externalReferenceCode)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountByExternalReferenceCodeOrganizations",
+			new HashMap<String, Object>() {
+				{
+					put(
+						"externalReferenceCode",
+						"\"" + externalReferenceCode + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected Organization
@@ -2518,18 +2547,9 @@ public abstract class BaseOrganizationResourceTestCase {
 	public void testGraphQLGetAccountOrganizationsPage() throws Exception {
 		Long accountId = testGetAccountOrganizationsPage_getAccountId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"accountOrganizations",
-			new HashMap<String, Object>() {
-				{
-					put("accountId", accountId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetAccountOrganizationsPageAccountOrganization_getGraphQLField(
+				accountId);
 
 		// No namespace
 
@@ -2589,6 +2609,25 @@ public abstract class BaseOrganizationResourceTestCase {
 			Arrays.asList(
 				OrganizationSerDes.toDTOs(
 					accountOrganizationsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetAccountOrganizationsPageAccountOrganization_getGraphQLField(
+				Long accountId)
+		throws Exception {
+
+		return new GraphQLField(
+			"accountOrganizations",
+			new HashMap<String, Object>() {
+				{
+					put("accountId", accountId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected Organization
@@ -3328,20 +3367,9 @@ public abstract class BaseOrganizationResourceTestCase {
 		String externalReferenceCode =
 			testGetOrganizationByExternalReferenceCodeChildOrganizationsPage_getExternalReferenceCode();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"organizationByExternalReferenceCodeChildOrganizations",
-			new HashMap<String, Object>() {
-				{
-					put(
-						"externalReferenceCode",
-						"\"" + externalReferenceCode + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetOrganizationByExternalReferenceCodeChildOrganizationsPageOrganization_getGraphQLField(
+				externalReferenceCode);
 
 		// No namespace
 
@@ -3412,6 +3440,27 @@ public abstract class BaseOrganizationResourceTestCase {
 				OrganizationSerDes.toDTOs(
 					organizationByExternalReferenceCodeChildOrganizationsJSONObject.
 						getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetOrganizationByExternalReferenceCodeChildOrganizationsPageOrganization_getGraphQLField(
+				String externalReferenceCode)
+		throws Exception {
+
+		return new GraphQLField(
+			"organizationByExternalReferenceCodeChildOrganizations",
+			new HashMap<String, Object>() {
+				{
+					put(
+						"externalReferenceCode",
+						"\"" + externalReferenceCode + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected Organization
@@ -3875,18 +3924,9 @@ public abstract class BaseOrganizationResourceTestCase {
 		String organizationId =
 			testGetOrganizationChildOrganizationsPage_getOrganizationId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"organizationChildOrganizations",
-			new HashMap<String, Object>() {
-				{
-					put("organizationId", "\"" + organizationId + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetOrganizationChildOrganizationsPageOrganization_getGraphQLField(
+				organizationId);
 
 		// No namespace
 
@@ -3953,6 +3993,25 @@ public abstract class BaseOrganizationResourceTestCase {
 				OrganizationSerDes.toDTOs(
 					organizationChildOrganizationsJSONObject.getString(
 						"items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetOrganizationChildOrganizationsPageOrganization_getGraphQLField(
+				String organizationId)
+		throws Exception {
+
+		return new GraphQLField(
+			"organizationChildOrganizations",
+			new HashMap<String, Object>() {
+				{
+					put("organizationId", "\"" + organizationId + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected Organization
@@ -4412,20 +4471,9 @@ public abstract class BaseOrganizationResourceTestCase {
 		String parentOrganizationId =
 			testGetOrganizationOrganizationsPage_getParentOrganizationId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"organizationOrganizations",
-			new HashMap<String, Object>() {
-				{
-					put(
-						"parentOrganizationId",
-						"\"" + parentOrganizationId + "\"");
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetOrganizationOrganizationsPageOrganization_getGraphQLField(
+				parentOrganizationId);
 
 		// No namespace
 
@@ -4486,6 +4534,27 @@ public abstract class BaseOrganizationResourceTestCase {
 			Arrays.asList(
 				OrganizationSerDes.toDTOs(
 					organizationOrganizationsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetOrganizationOrganizationsPageOrganization_getGraphQLField(
+				String parentOrganizationId)
+		throws Exception {
+
+		return new GraphQLField(
+			"organizationOrganizations",
+			new HashMap<String, Object>() {
+				{
+					put(
+						"parentOrganizationId",
+						"\"" + parentOrganizationId + "\"");
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	protected Organization
@@ -4856,17 +4925,8 @@ public abstract class BaseOrganizationResourceTestCase {
 
 	@Test
 	public void testGraphQLGetOrganizationsPage() throws Exception {
-		GraphQLField graphQLField = new GraphQLField(
-			"organizations",
-			new HashMap<String, Object>() {
-				{
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetOrganizationsPageOrganization_getGraphQLField();
 
 		// No namespace
 
@@ -4921,6 +4981,23 @@ public abstract class BaseOrganizationResourceTestCase {
 			Arrays.asList(
 				OrganizationSerDes.toDTOs(
 					organizationsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetOrganizationsPageOrganization_getGraphQLField()
+		throws Exception {
+
+		return new GraphQLField(
+			"organizations",
+			new HashMap<String, Object>() {
+				{
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -5251,7 +5328,8 @@ public abstract class BaseOrganizationResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -5353,16 +5431,22 @@ public abstract class BaseOrganizationResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -5375,7 +5459,9 @@ public abstract class BaseOrganizationResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -7689,7 +7775,9 @@ public abstract class BaseOrganizationResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -8019,3 +8107,4 @@ public abstract class BaseOrganizationResourceTestCase {
 		_organizationResource;
 
 }
+// LIFERAY-REST-BUILDER-HASH:1392319792

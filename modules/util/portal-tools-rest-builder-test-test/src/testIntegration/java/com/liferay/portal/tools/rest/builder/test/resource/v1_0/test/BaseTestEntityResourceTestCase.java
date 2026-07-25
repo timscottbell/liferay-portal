@@ -40,6 +40,7 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -141,7 +142,8 @@ public abstract class BaseTestEntityResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -151,7 +153,8 @@ public abstract class BaseTestEntityResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -257,6 +260,7 @@ public abstract class BaseTestEntityResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		TestEntity testEntity1 = testGraphQLDeleteTestEntity_addTestEntity();
 
 		Assert.assertTrue(
@@ -285,15 +289,16 @@ public abstract class BaseTestEntityResourceTestCase {
 
 		Assert.assertTrue(errorsJSONArray1.length() > 0);
 
-		// Using the namespace test_v1_0
+		// Using the namespace portalTools_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		TestEntity testEntity2 = testGraphQLDeleteTestEntity_addTestEntity();
 
 		Assert.assertTrue(
 			JSONUtil.getValueAsBoolean(
 				invokeGraphQLMutation(
 					new GraphQLField(
-						"test_v1_0",
+						"portalTools_v1_0",
 						new GraphQLField(
 							"deleteTestEntity",
 							new HashMap<String, Object>() {
@@ -301,13 +306,13 @@ public abstract class BaseTestEntityResourceTestCase {
 									put("testEntityId", testEntity2.getId());
 								}
 							}))),
-				"JSONObject/data", "JSONObject/test_v1_0",
+				"JSONObject/data", "JSONObject/portalTools_v1_0",
 				"Object/deleteTestEntity"));
 
 		JSONArray errorsJSONArray2 = JSONUtil.getValueAsJSONArray(
 			invokeGraphQLQuery(
 				new GraphQLField(
-					"test_v1_0",
+					"portalTools_v1_0",
 					new GraphQLField(
 						"testEntity",
 						new HashMap<String, Object>() {
@@ -491,14 +496,8 @@ public abstract class BaseTestEntityResourceTestCase {
 
 	@Test
 	public void testGraphQLGetTestEntitiesPage() throws Exception {
-		GraphQLField graphQLField = new GraphQLField(
-			"testEntities",
-			new HashMap<String, Object>() {
-				{
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetTestEntitiesPageTestEntity_getGraphQLField();
 
 		// No namespace
 
@@ -532,11 +531,12 @@ public abstract class BaseTestEntityResourceTestCase {
 				TestEntitySerDes.toDTOs(
 					testEntitiesJSONObject.getString("items"))));
 
-		// Using the namespace test_v1_0
+		// Using the namespace portalTools_v1_0
 
 		testEntitiesJSONObject = JSONUtil.getValueAsJSONObject(
-			invokeGraphQLQuery(new GraphQLField("test_v1_0", graphQLField)),
-			"JSONObject/data", "JSONObject/test_v1_0",
+			invokeGraphQLQuery(
+				new GraphQLField("portalTools_v1_0", graphQLField)),
+			"JSONObject/data", "JSONObject/portalTools_v1_0",
 			"JSONObject/testEntities");
 
 		Assert.assertEquals(
@@ -552,6 +552,20 @@ public abstract class BaseTestEntityResourceTestCase {
 			Arrays.asList(
 				TestEntitySerDes.toDTOs(
 					testEntitiesJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetTestEntitiesPageTestEntity_getGraphQLField()
+		throws Exception {
+
+		return new GraphQLField(
+			"testEntities",
+			new HashMap<String, Object>() {
+				{
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -629,8 +643,9 @@ public abstract class BaseTestEntityResourceTestCase {
 			public StringBuffer getRequestURL() {
 				return new StringBuffer(
 					StringBundler.concat(
-						"http://localhost:8080/o/v1.0/",
-						RandomTestUtil.randomString(), "/",
+						"http://localhost:",
+						String.valueOf(PortalUtil.getPortalServerPort(false)),
+						"/o/v1.0/", RandomTestUtil.randomString(), "/",
 						RandomTestUtil.randomString()));
 			}
 
@@ -666,8 +681,10 @@ public abstract class BaseTestEntityResourceTestCase {
 			@Override
 			public URI getRequestUri() {
 				return URI.create(
-					"http://localhost:8080/o/" + applicationPath +
-						resourcePath);
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath, resourcePath));
 			}
 
 			@Override
@@ -687,7 +704,11 @@ public abstract class BaseTestEntityResourceTestCase {
 
 			@Override
 			public URI getBaseUri() {
-				return URI.create("http://localhost:8080/o/" + applicationPath);
+				return URI.create(
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath));
 			}
 
 			@Override
@@ -780,7 +801,7 @@ public abstract class BaseTestEntityResourceTestCase {
 								getGraphQLFields())),
 						"JSONObject/data", "Object/testEntity"))));
 
-		// Using the namespace test_v1_0
+		// Using the namespace portalTools_v1_0
 
 		Assert.assertTrue(
 			equals(
@@ -789,7 +810,7 @@ public abstract class BaseTestEntityResourceTestCase {
 					JSONUtil.getValueAsString(
 						invokeGraphQLQuery(
 							new GraphQLField(
-								"test_v1_0",
+								"portalTools_v1_0",
 								new GraphQLField(
 									"testEntity",
 									new HashMap<String, Object>() {
@@ -800,7 +821,7 @@ public abstract class BaseTestEntityResourceTestCase {
 										}
 									},
 									getGraphQLFields()))),
-						"JSONObject/data", "JSONObject/test_v1_0",
+						"JSONObject/data", "JSONObject/portalTools_v1_0",
 						"Object/testEntity"))));
 	}
 
@@ -825,14 +846,14 @@ public abstract class BaseTestEntityResourceTestCase {
 				"JSONArray/errors", "Object/0", "JSONObject/extensions",
 				"Object/code"));
 
-		// Using the namespace test_v1_0
+		// Using the namespace portalTools_v1_0
 
 		Assert.assertEquals(
 			"Not Found",
 			JSONUtil.getValueAsString(
 				invokeGraphQLQuery(
 					new GraphQLField(
-						"test_v1_0",
+						"portalTools_v1_0",
 						new GraphQLField(
 							"testEntity",
 							new HashMap<String, Object>() {
@@ -1091,7 +1112,8 @@ public abstract class BaseTestEntityResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -1174,16 +1196,22 @@ public abstract class BaseTestEntityResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -1196,7 +1224,9 @@ public abstract class BaseTestEntityResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -2116,7 +2146,9 @@ public abstract class BaseTestEntityResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -2486,3 +2518,4 @@ public abstract class BaseTestEntityResourceTestCase {
 		_vulcanCRUDItemDelegateBuilderRegistry;
 
 }
+// LIFERAY-REST-BUILDER-HASH:-85513533

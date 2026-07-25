@@ -21,6 +21,7 @@ import {
 	RepeatableGroup,
 	Structure,
 	StructureChild,
+	StructureType,
 } from '../types/Structure';
 import {Uuid} from '../types/Uuid';
 import actionGeneratesChanges from '../utils/actionGeneratesChanges';
@@ -29,11 +30,11 @@ import findAvailableFieldName from '../utils/findAvailableFieldName';
 import findChild from '../utils/findChild';
 import {getChildrenUuids} from '../utils/getChildrenUuids';
 import getRandomId from '../utils/getRandomId';
-import getRandomName from '../utils/getRandomName';
 import getUuid from '../utils/getUuid';
 import normalizeString from '../utils/normalizeString';
 import addChild from '../utils/state/addChild';
 import addRepeatableGroup from '../utils/state/addRepeatableGroup';
+import cloneChild from '../utils/state/cloneChild';
 import deleteChildren from '../utils/state/deleteChildren';
 import moveChildren from '../utils/state/moveChildren';
 import refreshReferencedStructures from '../utils/state/refreshReferencedStructures';
@@ -61,7 +62,12 @@ type History = {
 	modifiedNames: Set<Uuid>;
 };
 
+export type Clipboard = {
+	items: StructureChild[];
+};
+
 export type State = {
+	clipboard: Clipboard | null;
 	history: History;
 	invalids: Map<Uuid, ErrorMap>;
 	publishedChildren: Set<Uuid>;
@@ -72,6 +78,7 @@ export type State = {
 };
 
 const INITIAL_STATE: State = {
+	clipboard: null,
 	history: {
 		deletedChildren: [],
 		deletedGroupERCs: [],
@@ -87,9 +94,12 @@ const INITIAL_STATE: State = {
 		erc: '',
 		label: {},
 		name: '',
+		path: '',
+		settings: {},
 		spaces: 'all',
 		status: 'new',
 		system: false,
+		type: 'L_CMS_CONTENT_STRUCTURES',
 		uuid: getUuid(),
 		workflows: {},
 	},
@@ -125,6 +135,8 @@ type ClearErrorsAction = {
 	type: 'clear-errors';
 };
 
+type CopyChildrenAction = {type: 'copy-children'; uuids: Uuid[]};
+
 type CreateStructureAction = {
 	id: number;
 	type: 'create-structure';
@@ -132,13 +144,15 @@ type CreateStructureAction = {
 
 type DeleteChildrenAction = {type: 'delete-children'; uuids: Uuid[]};
 
-type DuplicateChildAction = {type: 'duplicate-child'; uuid: Uuid};
+type DuplicateChildrenAction = {type: 'duplicate-children'; uuids: Uuid[]};
 
 type MoveChildrenAction = {
 	items: StructureChild[];
 	targetUuid: Uuid;
 	type: 'move-children';
 };
+
+type PasteAction = {targetUuid: Uuid; type: 'paste'};
 
 type PublishStructureAction = {id?: number; type: 'publish-structure'};
 
@@ -230,10 +244,12 @@ export type Action =
 	| AddRepeatableGroupAction
 	| AddErrorAction
 	| ClearErrorsAction
+	| CopyChildrenAction
 	| CreateStructureAction
 	| DeleteChildrenAction
-	| DuplicateChildAction
+	| DuplicateChildrenAction
 	| MoveChildrenAction
+	| PasteAction
 	| PublishStructureAction
 	| RefreshReferencedStructuresAction
 	| RenameItemAction
@@ -412,6 +428,20 @@ function reducer(state: State, action: Action): State {
 				invalids: new Map(),
 			};
 		}
+		case 'copy-children': {
+			const items = action.uuids
+				.map((uuid) => findChild({root: state.structure, uuid}))
+				.filter((item): item is StructureChild => Boolean(item));
+
+			if (!items.length) {
+				return state;
+			}
+
+			return {
+				...state,
+				clipboard: {items},
+			};
+		}
 		case 'create-structure': {
 			const {structure} = state;
 
@@ -458,60 +488,46 @@ function reducer(state: State, action: Action): State {
 				},
 			};
 		}
-		case 'duplicate-child': {
-			const {structure} = state;
+		case 'duplicate-children': {
+			const {uuids} = action;
 
-			const {uuid} = action;
+			let nextStructure = state.structure;
 
-			const child = findChild({root: structure, uuid});
+			const newSelection: Uuid[] = [];
 
-			if (!child) {
-				return state;
+			for (const uuid of uuids) {
+				const child = findChild({root: nextStructure, uuid});
+
+				if (!child) {
+					continue;
+				}
+
+				const parent = (findChild({
+					root: nextStructure,
+					uuid: child.parent,
+				}) || nextStructure) as Structure | RepeatableGroup;
+
+				const copy = cloneChild({
+					child,
+					deletedChildren: state.history.deletedChildren,
+					parent: parent.uuid,
+					siblings: parent.children,
+				});
+
+				const updatedChildren = addChild({
+					child: copy,
+					root: nextStructure,
+				});
+
+				nextStructure = {...nextStructure, children: updatedChildren};
+
+				newSelection.push(copy.uuid);
 			}
-
-			// Create copy of the given child
-
-			const parent = (findChild({
-				root: structure,
-				uuid: child.parent,
-			}) || structure) as Structure | RepeatableGroup;
-
-			const copyUuid = getUuid();
-
-			const copy = {...child, uuid: copyUuid};
-
-			if (copy.type === 'referenced-structure') {
-				copy.relationshipName = getRandomName();
-			}
-			else if (copy.type === 'repeatable-group') {
-				copy.erc = getRandomId();
-				copy.name = getRandomName({capitalize: true});
-				copy.relationshipERC = getRandomId();
-				copy.relationshipName = getRandomName();
-			}
-			else {
-				copy.erc = getRandomId();
-				copy.name = findAvailableFieldName(
-					parent.children,
-					state.history.deletedChildren,
-					child.name
-				);
-			}
-
-			// Insert the copy
-
-			const children = addChild({
-				child: copy,
-				root: structure,
-			});
 
 			return {
 				...state,
-				selection: [copyUuid],
-				structure: {
-					...structure,
-					children,
-				},
+				selection: newSelection.length ? newSelection : state.selection,
+				structure: nextStructure,
 			};
 		}
 		case 'move-children': {
@@ -547,6 +563,46 @@ function reducer(state: State, action: Action): State {
 					...structure,
 					children,
 				},
+			};
+		}
+		case 'paste': {
+			const {clipboard, history, structure} = state;
+
+			const {targetUuid} = action;
+
+			if (!clipboard?.items.length) {
+				return state;
+			}
+
+			let nextStructure = structure;
+
+			const newSelection: Uuid[] = [];
+
+			for (const item of clipboard.items) {
+				const clone = cloneChild({
+					child: item,
+					deletedChildren: history.deletedChildren,
+					parent: targetUuid,
+					siblings: getTargetChildren({
+						structure: nextStructure,
+						targetUuid,
+					}),
+				});
+
+				const updatedChildren = addChild({
+					child: clone,
+					root: nextStructure,
+				});
+
+				nextStructure = {...nextStructure, children: updatedChildren};
+
+				newSelection.push(clone.uuid);
+			}
+
+			return {
+				...state,
+				selection: newSelection,
+				structure: nextStructure,
 			};
 		}
 		case 'publish-structure': {
@@ -588,8 +644,7 @@ function reducer(state: State, action: Action): State {
 			const {name, uuid} = action;
 			const {structure} = state;
 
-			const defaultLanguageId =
-				Liferay.ThemeDisplay.getDefaultLanguageId();
+			const languageId = Liferay.ThemeDisplay.getLanguageId();
 
 			if (uuid === structure.uuid) {
 				return {
@@ -597,7 +652,7 @@ function reducer(state: State, action: Action): State {
 					renamingItemUuid: null,
 					structure: {
 						...structure,
-						label: {...structure.label, [defaultLanguageId]: name},
+						label: {...structure.label, [languageId]: name},
 					},
 				};
 			}
@@ -611,7 +666,7 @@ function reducer(state: State, action: Action): State {
 			const children = updateChild({
 				child: {
 					...child,
-					label: {...child.label, [defaultLanguageId]: name},
+					label: {...child.label, [languageId]: name},
 				},
 				root: structure,
 			});
@@ -999,6 +1054,7 @@ function initState(state: State): State {
 			...structure,
 			children: getDefaultChildren(structure.uuid),
 			erc: getRandomId(),
+			type: getType(),
 		},
 	};
 }
@@ -1042,14 +1098,12 @@ function useStateDispatch() {
 }
 
 function getDefaultChildren(structureUuid: Uuid) {
-	const url = new URL(window.location.href);
-
-	const type = url.searchParams.get('objectFolderExternalReferenceCode');
+	const type = getType();
 
 	const children = new Map();
 
 	const title = getDefaultField({
-		label: Liferay.Language.get('title'),
+		languageKey: 'title',
 		locked: true,
 		name: 'title',
 		parent: structureUuid,
@@ -1061,7 +1115,7 @@ function getDefaultChildren(structureUuid: Uuid) {
 
 	if (type === 'L_CMS_FILE_TYPES') {
 		const file = getDefaultField({
-			label: Liferay.Language.get('file'),
+			languageKey: 'file',
 			locked: true,
 			name: 'file',
 			parent: structureUuid,
@@ -1088,7 +1142,11 @@ function getNextName({
 		return action.name!;
 	}
 
-	if (!action.label || modifiedNames.has(item.uuid)) {
+	if (
+		!action.label ||
+		modifiedNames.has(item.uuid) ||
+		('locked' in item && item.locked)
+	) {
 		return item.name;
 	}
 
@@ -1097,6 +1155,38 @@ function getNextName({
 	return normalizeString(localizedLabel, {
 		style: 'status' in item ? 'pascal' : 'camel',
 	});
+}
+
+function getTargetChildren({
+	structure,
+	targetUuid,
+}: {
+	structure: Structure;
+	targetUuid: Uuid;
+}): Structure['children'] {
+	if (targetUuid === structure.uuid) {
+		return structure.children;
+	}
+
+	const target = findChild({root: structure, uuid: targetUuid});
+
+	if (
+		target &&
+		(target.type === 'repeatable-group' ||
+			target.type === 'referenced-structure')
+	) {
+		return target.children;
+	}
+
+	return new Map();
+}
+
+function getType() {
+	const url = new URL(window.location.href);
+
+	return url.searchParams.get(
+		'objectFolderExternalReferenceCode'
+	) as StructureType;
 }
 
 export {StateContext, StateContextProvider, useSelector, useStateDispatch};

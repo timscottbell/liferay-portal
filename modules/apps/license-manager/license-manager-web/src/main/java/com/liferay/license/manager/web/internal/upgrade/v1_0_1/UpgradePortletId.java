@@ -23,6 +23,7 @@ public class UpgradePortletId extends BasePortletIdUpgradeProcess {
 	protected void doUpgrade() throws Exception {
 		try (PreparedStatement preparedStatement = connection.prepareStatement(
 				"select id_ from Portlet where portletId = '176'");
+
 			ResultSet resultSet = preparedStatement.executeQuery()) {
 
 			if (resultSet.next()) {
@@ -49,7 +50,9 @@ public class UpgradePortletId extends BasePortletIdUpgradeProcess {
 		try (PreparedStatement preparedStatement1 = connection.prepareStatement(
 				"select ownerId, ownerType, plid from PortletPreferences " +
 					"where portletId = '176'");
+
 			ResultSet resultSet = preparedStatement1.executeQuery();
+
 			PreparedStatement preparedStatement2 =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,
@@ -74,12 +77,14 @@ public class UpgradePortletId extends BasePortletIdUpgradeProcess {
 		try (PreparedStatement preparedStatement1 = connection.prepareStatement(
 				"select companyId, scope, primKey, roleId from " +
 					"ResourcePermission where name = '176'");
+
 			ResultSet resultSet = preparedStatement1.executeQuery();
+
 			PreparedStatement preparedStatement2 =
 				AutoBatchPreparedStatementUtil.concurrentAutoBatch(
 					connection,
 					"delete from ResourcePermission where companyId = ? and " +
-						"name = ? and scope = ? and primkey = ? and roleId = " +
+						"name = ? and scope = ? and primKey = ? and roleId = " +
 							"?")) {
 
 			while (resultSet.next()) {

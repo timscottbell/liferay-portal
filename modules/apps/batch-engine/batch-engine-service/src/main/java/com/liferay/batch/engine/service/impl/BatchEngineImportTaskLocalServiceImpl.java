@@ -42,7 +42,7 @@ public class BatchEngineImportTaskLocalServiceImpl
 	extends BatchEngineImportTaskLocalServiceBaseImpl {
 
 	@Override
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Transactional(propagation = Propagation.NESTED)
 	public BatchEngineImportTask addBatchEngineImportTask(
 			String externalReferenceCode, long companyId, long userId,
 			long batchSize, String callbackURL, String className,
@@ -64,7 +64,7 @@ public class BatchEngineImportTaskLocalServiceImpl
 	}
 
 	@Override
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Transactional(propagation = Propagation.NESTED)
 	public BatchEngineImportTask addBatchEngineImportTask(
 			String externalReferenceCode, long companyId, long userId,
 			long batchSize, String callbackURL, String className,
@@ -154,6 +154,14 @@ public class BatchEngineImportTaskLocalServiceImpl
 	@Override
 	public int getBatchEngineImportTasksCount(long companyId) {
 		return batchEngineImportTaskPersistence.countByCompanyId(companyId);
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.NESTED)
+	public BatchEngineImportTask updateBatchEngineImportTask(
+		BatchEngineImportTask batchEngineImportTask) {
+
+		return super.updateBatchEngineImportTask(batchEngineImportTask);
 	}
 
 	private void _validateDelimiter(String delimiter)

@@ -157,7 +157,7 @@ public class CalendarBookingLocalServiceImpl
 		for (Map.Entry<Locale, String> entry : descriptionMap.entrySet()) {
 			String description = null;
 
-			if (!FeatureFlagManagerUtil.isEnabled(
+			if (FeatureFlagManagerUtil.isEnabled(
 					calendar.getCompanyId(), "LPD-11235") &&
 				!FeatureFlagManagerUtil.isEnabled(
 					calendar.getCompanyId(), "LPD-31212")) {
@@ -1211,7 +1211,7 @@ public class CalendarBookingLocalServiceImpl
 		for (Map.Entry<Locale, String> entry : descriptionMap.entrySet()) {
 			String description = null;
 
-			if (!FeatureFlagManagerUtil.isEnabled(
+			if (FeatureFlagManagerUtil.isEnabled(
 					calendar.getCompanyId(), "LPD-11235") &&
 				!FeatureFlagManagerUtil.isEnabled(
 					calendar.getCompanyId(), "LPD-31212")) {
@@ -1809,10 +1809,10 @@ public class CalendarBookingLocalServiceImpl
 			long secondReminder = calendarBooking.getSecondReminder();
 			String secondReminderType = calendarBooking.getSecondReminderType();
 
-			if (childCalendarBookingMap.containsKey(calendarId)) {
-				CalendarBooking oldChildCalendarBooking =
-					childCalendarBookingMap.get(calendarId);
+			CalendarBooking oldChildCalendarBooking =
+				childCalendarBookingMap.get(calendarId);
 
+			if (oldChildCalendarBooking != null) {
 				firstReminder = oldChildCalendarBooking.getFirstReminder();
 				firstReminderType =
 					oldChildCalendarBooking.getFirstReminderType();
@@ -1853,9 +1853,9 @@ public class CalendarBookingLocalServiceImpl
 
 			serviceContext.setAttribute("sendNotification", Boolean.TRUE);
 
-			if (childCalendarBookingMap.containsKey(calendarId)) {
-				CalendarBooking oldChildCalendarBooking =
-					childCalendarBookingMap.get(calendarId);
+			oldChildCalendarBooking = childCalendarBookingMap.get(calendarId);
+
+			if (oldChildCalendarBooking != null) {
 				int workflowAction = GetterUtil.getInteger(
 					serviceContext.getAttribute("workflowAction"));
 

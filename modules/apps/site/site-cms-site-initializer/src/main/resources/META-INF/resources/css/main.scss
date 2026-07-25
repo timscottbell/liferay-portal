@@ -1,5 +1,17 @@
 @import 'atlas-variables';
 
+.fds {
+	.data-set-wrapper {
+		.col-md-3:has(.hidden-item-selector-item) {
+			display: none;
+		}
+
+		tr.hidden-item-selector-item {
+			display: none;
+		}
+	}
+}
+
 .cms-fds-fluid {
 	.container-fluid {
 		padding: 0;
@@ -25,6 +37,50 @@
 	.visualization-mode-table {
 		border: 0 !important;
 		margin-inline: -1rem;
+	}
+
+	&.cms-space-summary .table-responsive {
+		border-bottom-left-radius: 10px;
+		border-bottom-right-radius: 10px;
+	}
+}
+
+.cms-find-and-replace {
+	.fds {
+		.management-bar-wrapper {
+			border-bottom: 0;
+		}
+
+		.list-item__success {
+			background-color: $success-l2;
+		}
+	}
+
+	&-preview {
+		gap: 200px;
+
+		&__footer {
+			border-top: 1px solid $primary-l1;
+		}
+
+		&__replacement {
+			background-color: $success-l2;
+		}
+
+		&__search {
+			background-color: $danger-l2;
+			text-decoration: line-through;
+		}
+	}
+}
+
+.cms-generate-content-with-ai {
+	color: $purple;
+
+	&:focus,
+	&:hover {
+		background-color: $purple-l5;
+		color: $purple;
 	}
 }
 

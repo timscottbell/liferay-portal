@@ -6,11 +6,16 @@
 package com.liferay.object.internal.field.business.type;
 
 import com.liferay.document.library.kernel.model.DLFileEntry;
+import com.liferay.document.library.kernel.model.DLFileEntryMetadata;
 import com.liferay.document.library.kernel.model.DLFolder;
 import com.liferay.document.library.kernel.processor.PDFProcessorUtil;
 import com.liferay.document.library.kernel.service.DLAppService;
 import com.liferay.document.library.kernel.service.DLFileEntryLocalService;
+import com.liferay.document.library.kernel.service.DLFileEntryMetadataLocalService;
 import com.liferay.document.library.util.DLURLHelper;
+import com.liferay.dynamic.data.mapping.model.DDMField;
+import com.liferay.dynamic.data.mapping.model.DDMFieldAttribute;
+import com.liferay.dynamic.data.mapping.service.DDMFieldLocalService;
 import com.liferay.exportimport.attachment.ExportImportAttachmentManager;
 import com.liferay.object.constants.ObjectDefinitionConstants;
 import com.liferay.object.constants.ObjectFieldConstants;
@@ -36,6 +41,7 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.Language;
+import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
@@ -47,6 +53,7 @@ import com.liferay.portal.kernel.util.Base64;
 import com.liferay.portal.kernel.util.File;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.SetUtil;
@@ -156,6 +163,7 @@ public class AttachmentObjectFieldBusinessType
 		return new FileEntry() {
 			{
 				setAlternativeText(fileVersion::getDescription);
+				setExtension(dlFileEntry::getExtension);
 				setExternalReferenceCode(dlFileEntry::getExternalReferenceCode);
 				setFileBase64(() -> _getFileBase64(dlFileEntry, objectField));
 				setFileURL(() -> _getFileURL(dlFileEntry, objectField));
@@ -168,7 +176,10 @@ public class AttachmentObjectFieldBusinessType
 						objectDefinition.getExternalReferenceCode(),
 						objectEntry, _objectEntryService, objectField,
 						GuestOrUserUtil.getPermissionChecker(), _portal));
-				setMetadata(() -> _getMetadata(fileVersion, objectField));
+				setMetadata(
+					() -> _getMetadata(
+						fileVersion, dtoConverterContext.getLocale(),
+						objectField));
 				setMimeType(dlFileEntry::getMimeType);
 				setName(dlFileEntry::getFileName);
 				setPreviewURL(
@@ -176,6 +187,10 @@ public class AttachmentObjectFieldBusinessType
 				setScope(
 					() -> _getScope(
 						dlFileEntry, objectDefinition, objectEntry));
+				setSize(
+					() -> LanguageUtil.formatStorageSize(
+						dlFileEntry.getSize(),
+						dtoConverterContext.getLocale()));
 				setThumbnailURL(
 					() -> _getThumbnailURL(dlFileEntry, objectField));
 			}
@@ -392,6 +407,68 @@ public class AttachmentObjectFieldBusinessType
 		}
 	}
 
+	private String _getAspectRatio(
+		long imageLength, long imageWidth, Locale locale) {
+
+		if ((imageLength <= 0) || (imageWidth <= 0)) {
+			return null;
+		}
+
+		if (imageLength > imageWidth) {
+			return _language.get(locale, "tall");
+		}
+		else if (imageLength < imageWidth) {
+			return _language.get(locale, "wide");
+		}
+
+		return _language.get(locale, "square");
+	}
+
+	private long _getDDMFormFieldsValueValue(
+		List<DLFileEntryMetadata> dlFileEntryMetadatas, String fieldName) {
+
+		if (ListUtil.isEmpty(dlFileEntryMetadatas)) {
+			return 0;
+		}
+
+		for (DLFileEntryMetadata dlFileEntryMetadata : dlFileEntryMetadatas) {
+			Long ddmFormFieldsValueValue = _getDDMFormFieldsValueValue(
+				dlFileEntryMetadata.getDDMStorageId(), fieldName);
+
+			if (ddmFormFieldsValueValue != null) {
+				return ddmFormFieldsValueValue;
+			}
+		}
+
+		return 0;
+	}
+
+	private Long _getDDMFormFieldsValueValue(
+		long ddmStorageId, String fieldName) {
+
+		List<DDMField> ddmFields = _ddmFieldLocalService.getDDMFields(
+			ddmStorageId, fieldName);
+
+		if (ListUtil.isEmpty(ddmFields)) {
+			return null;
+		}
+
+		DDMField ddmField = ddmFields.get(0);
+
+		DDMFieldAttribute ddmFieldAttribute =
+			_ddmFieldLocalService.fetchDDMFieldAttribute(
+				ddmField.getFieldId(), StringPool.BLANK, StringPool.BLANK);
+
+		if ((ddmFieldAttribute == null) ||
+			(ddmFieldAttribute.getAttributeValue() == null) ||
+			!Validator.isNumber(ddmFieldAttribute.getAttributeValue())) {
+
+			return null;
+		}
+
+		return Long.valueOf(ddmFieldAttribute.getAttributeValue());
+	}
+
 	private String _getFileBase64(
 			DLFileEntry dlFileEntry, ObjectField objectField)
 		throws Exception {
@@ -486,23 +563,44 @@ public class AttachmentObjectFieldBusinessType
 	}
 
 	private Map<String, Object> _getMetadata(
-			FileVersion fileVersion, ObjectField objectField)
+			FileVersion fileVersion, Locale locale, ObjectField objectField)
 		throws Exception {
+
+		List<DLFileEntryMetadata> dlFileEntryMetadatas =
+			_dlFileEntryMetadataLocalService.getFileVersionFileEntryMetadatas(
+				fileVersion.getFileVersionId());
+
+		long tiffImageLength = _getDDMFormFieldsValueValue(
+			dlFileEntryMetadatas, "TIFF_IMAGE_LENGTH");
+		long tiffImageWidth = _getDDMFormFieldsValueValue(
+			dlFileEntryMetadatas, "TIFF_IMAGE_WIDTH");
 
 		return NestedFieldsSupplier.supply(
 			objectField.getName() + ".metadata",
 			fieldName -> {
-				if ((fileVersion.getSize() == 0) ||
-					(!PDFProcessorUtil.hasImages(fileVersion) &&
-					 !PDFProcessorUtil.isDocumentSupported(
-						 fileVersion.getMimeType()))) {
-
+				if (fileVersion.getSize() == 0) {
 					return null;
 				}
 
 				return HashMapBuilder.<String, Object>put(
+					"aspectRatio",
+					_getAspectRatio(tiffImageLength, tiffImageWidth, locale)
+				).put(
 					"numberOfPages",
-					PDFProcessorUtil.getPreviewFileCount(fileVersion)
+					() -> {
+						if (!PDFProcessorUtil.hasImages(fileVersion) &&
+							!PDFProcessorUtil.isDocumentSupported(
+								fileVersion.getMimeType())) {
+
+							return null;
+						}
+
+						return PDFProcessorUtil.getPreviewFileCount(
+							fileVersion);
+					}
+				).put(
+					"resolution",
+					_getResolution(tiffImageLength, tiffImageWidth, locale)
 				).build();
 			});
 	}
@@ -536,6 +634,34 @@ public class AttachmentObjectFieldBusinessType
 
 				return previewURL;
 			});
+	}
+
+	private String _getResolution(
+		long imageLength, long imageWidth, Locale locale) {
+
+		if ((imageLength <= 0) || (imageWidth <= 0)) {
+			return null;
+		}
+
+		long max = Math.max(imageLength, imageWidth);
+		long min = Math.min(imageLength, imageWidth);
+
+		if ((min <= _RESOLUTION_SMALL_MIN) && (max <= _RESOLUTION_SMALL_MAX)) {
+			return _language.format(
+				locale, "resolution-small-up-to-x-x",
+				new Object[] {_RESOLUTION_SMALL_MAX, _RESOLUTION_SMALL_MIN});
+		}
+
+		if ((min <= _RESOLUTION_MEDIUM_MIN) &&
+			(max <= _RESOLUTION_MEDIUM_MAX)) {
+
+			return _language.format(
+				locale, "resolution-medium-up-to-x-x",
+				new Object[] {_RESOLUTION_MEDIUM_MAX, _RESOLUTION_MEDIUM_MIN});
+		}
+
+		return _language.format(
+			locale, "resolution-large-bigger-than-x", _RESOLUTION_MEDIUM_MAX);
 	}
 
 	private Scope _getScope(
@@ -580,14 +706,28 @@ public class AttachmentObjectFieldBusinessType
 			});
 	}
 
+	private static final long _RESOLUTION_MEDIUM_MAX = 1024;
+
+	private static final long _RESOLUTION_MEDIUM_MIN = 768;
+
+	private static final long _RESOLUTION_SMALL_MAX = 400;
+
+	private static final long _RESOLUTION_SMALL_MIN = 300;
+
 	private static final Log _log = LogFactoryUtil.getLog(
 		AttachmentObjectFieldBusinessType.class);
+
+	@Reference
+	private DDMFieldLocalService _ddmFieldLocalService;
 
 	@Reference
 	private DLAppService _dlAppService;
 
 	@Reference
 	private DLFileEntryLocalService _dLFileEntryLocalService;
+
+	@Reference
+	private DLFileEntryMetadataLocalService _dlFileEntryMetadataLocalService;
 
 	@Reference
 	private DLURLHelper _dlURLHelper;

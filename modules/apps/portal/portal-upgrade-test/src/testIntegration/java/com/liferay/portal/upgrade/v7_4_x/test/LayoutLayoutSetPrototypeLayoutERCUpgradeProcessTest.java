@@ -14,7 +14,6 @@ import com.liferay.portal.kernel.cache.MultiVMPool;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
-import com.liferay.portal.kernel.model.LayoutSet;
 import com.liferay.portal.kernel.model.LayoutSetPrototype;
 import com.liferay.portal.kernel.model.change.tracking.CTModel;
 import com.liferay.portal.kernel.service.LayoutLocalService;
@@ -163,12 +162,9 @@ public class LayoutLayoutSetPrototypeLayoutERCUpgradeProcessTest
 				_layoutSetPrototype);
 
 		MergeLayoutPrototypesThreadLocal.clearMergeComplete();
-		MergeLayoutPrototypesThreadLocal.setSkipMerge(false);
 
-		LayoutSet layoutSet = _layoutSetLocalService.getLayoutSet(
-			_group.getGroupId(), false);
-
-		_sites.mergeLayoutSetPrototypeLayouts(_group, layoutSet);
+		_sites.mergeLayoutSetPrototypeLayouts(
+			_layoutSetLocalService.getLayoutSet(_group.getGroupId(), false));
 	}
 
 	@Inject

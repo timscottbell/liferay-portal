@@ -43,6 +43,8 @@ import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectLayout;
 import com.liferay.object.model.ObjectLayoutTab;
+import com.liferay.object.rest.manager.v1_0.DefaultObjectEntryManager;
+import com.liferay.object.rest.manager.v1_0.DefaultObjectEntryManagerProvider;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManager;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManagerRegistry;
 import com.liferay.object.scope.ObjectScopeProvider;
@@ -60,20 +62,17 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.search.BooleanClause;
-import com.liferay.portal.kernel.search.BooleanClauseFactoryUtil;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
 import com.liferay.portal.kernel.search.BooleanQuery;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.Hits;
 import com.liferay.portal.kernel.search.Indexer;
 import com.liferay.portal.kernel.search.IndexerRegistryUtil;
+import com.liferay.portal.kernel.search.NestedQuery;
 import com.liferay.portal.kernel.search.QueryConfig;
 import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.search.Sort;
-import com.liferay.portal.kernel.search.SortFactoryUtil;
-import com.liferay.portal.kernel.search.generic.BooleanQueryImpl;
-import com.liferay.portal.kernel.search.generic.NestedQuery;
-import com.liferay.portal.kernel.search.generic.TermQueryImpl;
+import com.liferay.portal.kernel.search.TermQuery;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
@@ -139,6 +138,13 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 		CollectionQuery collectionQuery) {
 
 		try {
+			if (_objectDefinition.isDefaultStorageType() &&
+				_objectDefinition.isEnableObjectEntryVersioning()) {
+
+				return _getCollectionInfoPageByApprovedObjectEntries(
+					collectionQuery);
+			}
+
 			if (!_objectDefinition.isAccountEntryRestricted() &&
 				_objectDefinition.isDefaultStorageType() &&
 				_objectDefinition.isEnableIndexSearch()) {
@@ -320,9 +326,7 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 		com.liferay.info.sort.Sort sort = collectionQuery.getSort();
 
 		if (sort == null) {
-			searchContext.setSorts(
-				SortFactoryUtil.create(
-					Field.CREATE_DATE, Sort.LONG_TYPE, false));
+			searchContext.setSorts(_SORTS_DEFAULT_INDEXED);
 		}
 
 		searchContext.setStart(pagination.getStart());
@@ -362,7 +366,7 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 	private BooleanClause[] _getBooleanClauses(CollectionQuery collectionQuery)
 		throws Exception {
 
-		BooleanQuery booleanQuery = new BooleanQueryImpl();
+		BooleanQuery booleanQuery = new BooleanQuery();
 
 		List<ObjectField> objectFields =
 			_objectFieldLocalService.getObjectFields(
@@ -389,14 +393,13 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 				continue;
 			}
 
-			BooleanQuery nestedBooleanQuery = new BooleanQueryImpl();
+			BooleanQuery nestedBooleanQuery = new BooleanQuery();
 
 			nestedBooleanQuery.add(
-				new TermQueryImpl(
-					_getFieldName(objectField), entry.getValue()[0]),
+				new TermQuery(_getFieldName(objectField), entry.getValue()[0]),
 				BooleanClauseOccur.MUST);
 			nestedBooleanQuery.add(
-				new TermQueryImpl("nestedFieldArray.fieldName", entry.getKey()),
+				new TermQuery("nestedFieldArray.fieldName", entry.getKey()),
 				BooleanClauseOccur.MUST);
 
 			booleanQuery.add(
@@ -405,9 +408,48 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 		}
 
 		return new BooleanClause[] {
-			BooleanClauseFactoryUtil.create(
-				booleanQuery, BooleanClauseOccur.MUST.getName())
+			new BooleanClause<>(booleanQuery, BooleanClauseOccur.MUST)
 		};
+	}
+
+	private InfoPage<ObjectEntry> _getCollectionInfoPageByApprovedObjectEntries(
+			CollectionQuery collectionQuery)
+		throws Exception {
+
+		ServiceContext serviceContext =
+			ServiceContextThreadLocal.getServiceContext();
+
+		ThemeDisplay themeDisplay = serviceContext.getThemeDisplay();
+
+		Group scopeGroup = themeDisplay.getScopeGroup();
+
+		DefaultObjectEntryManager defaultObjectEntryManager =
+			DefaultObjectEntryManagerProvider.provide(
+				_objectEntryManagerRegistry.getObjectEntryManager(
+					_objectDefinition.getCompanyId(),
+					_objectDefinition.getStorageType()));
+
+		Page<com.liferay.object.rest.dto.v1_0.ObjectEntry> objectEntriesPage =
+			defaultObjectEntryManager.getApprovedObjectEntries(
+				themeDisplay.getCompanyId(), _objectDefinition,
+				scopeGroup.getGroupKey(), null,
+				new DefaultDTOConverterContext(
+					false, null, null, null, null, themeDisplay.getLocale(),
+					null, themeDisplay.getUser()),
+				_getFilterString(collectionQuery),
+				ObjectEntryInfoCollectionProviderUtil.getPagination(
+					collectionQuery.getPagination()),
+				ObjectEntryInfoCollectionProviderUtil.getSearch(
+					collectionQuery),
+				_SORTS_DEFAULT_OBJECT_ENTRY);
+
+		return InfoPage.of(
+			TransformUtil.transform(
+				new ArrayList<>(objectEntriesPage.getItems()),
+				objectEntry -> ObjectEntryUtil.toObjectEntry(
+					_objectDefinition, objectEntry)),
+			collectionQuery.getPagination(),
+			(int)objectEntriesPage.getTotalCount());
 	}
 
 	private InfoPage<ObjectEntry> _getCollectionInfoPageByIndexer(
@@ -459,7 +501,7 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 					collectionQuery.getPagination()),
 				ObjectEntryInfoCollectionProviderUtil.getSearch(
 					collectionQuery),
-				null);
+				_SORTS_DEFAULT_OBJECT_ENTRY);
 
 		return InfoPage.of(
 			TransformUtil.transform(
@@ -753,6 +795,16 @@ public class ObjectEntrySingleFormVariationInfoCollectionProvider
 
 		return false;
 	}
+
+	private static final Sort[] _SORTS_DEFAULT_INDEXED = {
+		new Sort(Field.CREATE_DATE, Sort.LONG_TYPE, false),
+		new Sort(Field.ENTRY_CLASS_PK, Sort.LONG_TYPE, false)
+	};
+
+	private static final Sort[] _SORTS_DEFAULT_OBJECT_ENTRY = {
+		new Sort(Field.CREATE_DATE, Sort.LONG_TYPE, false),
+		new Sort("id", Sort.LONG_TYPE, false)
+	};
 
 	private static final Log _log = LogFactoryUtil.getLog(
 		ObjectEntrySingleFormVariationInfoCollectionProvider.class);

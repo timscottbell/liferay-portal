@@ -12,6 +12,10 @@ import FooterButtons from '../../../../../../../components/FooterButtons';
 import {useMarketplaceContext} from '../../../../../../../context/MarketplaceContext';
 import {Analytics} from '../../../../../../../core/Analytics';
 import {MarketplaceDeliveryProduct} from '../../../../../../../entity/MarketplaceDeliveryProduct';
+import {
+	LIFERAY_PRODUCT_ORDER_TYPES,
+	OrderTypes,
+} from '../../../../../../../enums/Order';
 import useGetProductByOrderId from '../../../../../../../hooks/useGetProductByOrderId';
 import {Liferay} from '../../../../../../../liferay/liferay';
 import zodSchema from '../../../../../../../schema/zod';
@@ -84,6 +88,10 @@ const CreateLicense = () => {
 	const navigate = useNavigate();
 	const product = data?.product;
 
+	const isLiferayProductOrder = LIFERAY_PRODUCT_ORDER_TYPES.includes(
+		data?.placedOrder?.orderTypeExternalReferenceCode as OrderTypes
+	);
+
 	const productCreatorAccountName = product?.catalogName || '';
 
 	const {
@@ -140,8 +148,11 @@ const CreateLicense = () => {
 						licenseEntry: {
 							description: form.description,
 							hostName: form.hostname,
-							ipAddresses: form.ipAddress.replaceAll('\n', ','),
-							macAddresses: form.macAddress.replaceAll('\n', ','),
+							ipAddresses: form.ipAddress?.replaceAll('\n', ','),
+							macAddresses: form.macAddress?.replaceAll(
+								'\n',
+								','
+							),
 							orderId: orderId as string,
 							productId:
 								marketplaceProduct.specificationValues
@@ -170,7 +181,11 @@ const CreateLicense = () => {
 					type: form.subscription?.name,
 				});
 
-				navigate(`/order/${orderId}/licenses`);
+				navigate(
+					isLiferayProductOrder
+						? `/products/${orderId}`
+						: `/order/${orderId}/licenses`
+				);
 
 				await provisioningOAuth2.downloadAppLicenseKey(licenseKey.id);
 
@@ -188,14 +203,17 @@ const CreateLicense = () => {
 
 			setLoading(false);
 		},
-		[navigate, orderId, product]
+		[isLiferayProductOrder, navigate, orderId, product]
 	);
 
 	const buttonsInfo = useMemo(
 		() => ({
 			cancelButton: {
 				displayType: 'unstyled',
-				onClick: () => navigate('..'),
+				onClick: () =>
+					navigate(
+						isLiferayProductOrder ? `/products/${orderId}` : '..'
+					),
 				show: true,
 			},
 			customizedButton: {
@@ -228,8 +246,10 @@ const CreateLicense = () => {
 			disableContinueButton,
 			getValues,
 			handleNextButton,
+			isLiferayProductOrder,
 			loading,
 			navigate,
+			orderId,
 			step,
 			subscription,
 		]

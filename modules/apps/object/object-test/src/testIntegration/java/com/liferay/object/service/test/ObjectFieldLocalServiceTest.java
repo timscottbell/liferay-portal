@@ -11,6 +11,7 @@ import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.exception.NoSuchFileEntryException;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.document.library.test.util.DLTestUtil;
 import com.liferay.list.type.entry.util.ListTypeEntryUtil;
 import com.liferay.list.type.model.ListTypeDefinition;
 import com.liferay.list.type.service.ListTypeDefinitionLocalService;
@@ -43,12 +44,14 @@ import com.liferay.object.field.builder.AutoIncrementObjectFieldBuilder;
 import com.liferay.object.field.builder.BooleanObjectFieldBuilder;
 import com.liferay.object.field.builder.DateObjectFieldBuilder;
 import com.liferay.object.field.builder.DateTimeObjectFieldBuilder;
+import com.liferay.object.field.builder.EmailAddressObjectFieldBuilder;
 import com.liferay.object.field.builder.EncryptedObjectFieldBuilder;
 import com.liferay.object.field.builder.FormulaObjectFieldBuilder;
 import com.liferay.object.field.builder.IntegerObjectFieldBuilder;
 import com.liferay.object.field.builder.LongIntegerObjectFieldBuilder;
 import com.liferay.object.field.builder.MultiselectPicklistObjectFieldBuilder;
 import com.liferay.object.field.builder.ObjectFieldBuilder;
+import com.liferay.object.field.builder.PhoneNumberObjectFieldBuilder;
 import com.liferay.object.field.builder.PicklistObjectFieldBuilder;
 import com.liferay.object.field.builder.TextObjectFieldBuilder;
 import com.liferay.object.field.business.type.ObjectFieldBusinessType;
@@ -70,6 +73,7 @@ import com.liferay.object.service.ObjectFilterLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.object.service.test.util.ObjectFieldTestUtil;
 import com.liferay.object.test.util.ObjectDefinitionTestUtil;
+import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.dao.db.DBInspector;
@@ -137,7 +141,6 @@ import org.junit.runner.RunWith;
  * @author Marco Leo
  * @author Brian Wing Shun Chan
  */
-@FeatureFlag("LPD-34594")
 @RunWith(Arquillian.class)
 public class ObjectFieldLocalServiceTest {
 
@@ -302,8 +305,8 @@ public class ObjectFieldLocalServiceTest {
 			"Salesforce storage type does not support aggregation and " +
 				"attachment business types",
 			() -> _objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), 0, null, false, true, false,
-				true, false, false, false, false, null,
+				null, TestPropsValues.getUserId(), 0, null, false, false, true,
+				false, true, false, false, false, false, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				ObjectDefinitionTestUtil.getRandomName(), null, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
@@ -346,8 +349,8 @@ public class ObjectFieldLocalServiceTest {
 			"Salesforce storage type does not support aggregation and " +
 				"attachment business types",
 			() -> _objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), 0, null, false, true, false,
-				true, false, false, false, false, null,
+				null, TestPropsValues.getUserId(), 0, null, false, false, true,
+				false, true, false, false, false, false, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				ObjectDefinitionTestUtil.getRandomName(), null, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
@@ -1347,7 +1350,7 @@ public class ObjectFieldLocalServiceTest {
 
 		try {
 			_assertSystemObjectField(
-				"able_", true, true, LocalizedMapUtil.getLocalizedMap("Dog"),
+				"able_", true, false, LocalizedMapUtil.getLocalizedMap("Dog"),
 				true,
 				_addOrUpdateSystemObjectField(
 					systemObjectField.getExternalReferenceCode(),
@@ -1721,7 +1724,8 @@ public class ObjectFieldLocalServiceTest {
 						TestPropsValues.getUserId(), StringUtil.randomString(),
 						TempFileEntryUtil.getTempFileName(
 							StringUtil.randomString() + ".txt"),
-						FileUtil.createTempFile(RandomTestUtil.randomBytes()),
+						FileUtil.createTempFile(
+							DLTestUtil.randomTextFileBytes()),
 						ContentTypes.TEXT_PLAIN);
 
 					return fileEntry.getFileEntryId();
@@ -2516,6 +2520,76 @@ public class ObjectFieldLocalServiceTest {
 				"date", "2025-12-01"
 			).build());
 
+		// Business type email address
+
+		defaultValue = StringBundler.concat(
+			RandomTestUtil.randomString(), CharPool.AT,
+			RandomTestUtil.randomString(), ".com");
+
+		ObjectField emailAddressObjectField = _addCustomObjectField(
+			new EmailAddressObjectFieldBuilder(
+			).labelMap(
+				RandomTestUtil.randomLocaleStringMap()
+			).name(
+				"a" + RandomTestUtil.randomString()
+			).objectDefinitionId(
+				objectDefinition.getObjectDefinitionId()
+			).objectFieldSettings(
+				Arrays.asList(
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_DOMAINS
+					).value(
+						"@LIFERAY.COM,@Gmail.com"
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_ENABLED
+					).value(
+						StringPool.TRUE
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_BLOCKED_DOMAINS
+					).value(
+						"@example.com,@TEST.COM"
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_DEFAULT_VALUE
+					).value(
+						defaultValue
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE
+					).value(
+						ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+					).build())
+			).build());
+
+		_assertObjectEntryDefaultValue(
+			StringUtil.toLowerCase(defaultValue), emailAddressObjectField,
+			new HashMap<>());
+		_assertObjectFieldSettingsValues(
+			emailAddressObjectField.getObjectFieldId(),
+			HashMapBuilder.put(
+				ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_DOMAINS,
+				"@liferay.com,@gmail.com"
+			).put(
+				ObjectFieldSettingConstants.NAME_AUTOCOMPLETE_ENABLED,
+				StringPool.TRUE
+			).put(
+				ObjectFieldSettingConstants.NAME_BLOCKED_DOMAINS,
+				"@example.com,@test.com"
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE,
+				StringUtil.toLowerCase(defaultValue)
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE,
+				ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+			).build());
+
 		_objectDefinitionLocalService.deleteObjectDefinition(objectDefinition);
 
 		// Business type integer
@@ -2595,6 +2669,100 @@ public class ObjectFieldLocalServiceTest {
 					).value(
 						"true"
 					).build())));
+
+		// Business type phone number
+
+		defaultValue = "+1 (555) 123-4567";
+
+		ObjectField phoneNumberObjectField = _addCustomObjectField(
+			new PhoneNumberObjectFieldBuilder(
+			).labelMap(
+				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString())
+			).name(
+				"a" + RandomTestUtil.randomString()
+			).objectDefinitionId(
+				objectDefinition.getObjectDefinitionId()
+			).objectFieldSettings(
+				Arrays.asList(
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_COUNTRY_SOURCE
+					).value(
+						ObjectFieldSettingConstants.VALUE_DEFINED_BY_USER
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_DEFAULT_VALUE
+					).value(
+						defaultValue
+					).build(),
+					new ObjectFieldSettingBuilder(
+					).name(
+						ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE
+					).value(
+						ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+					).build())
+			).build());
+
+		_assertObjectFieldSettingsValues(
+			phoneNumberObjectField.getObjectFieldId(),
+			HashMapBuilder.put(
+				ObjectFieldSettingConstants.NAME_COUNTRY_SOURCE,
+				ObjectFieldSettingConstants.VALUE_DEFINED_BY_USER
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE, defaultValue
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE,
+				ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+			).build());
+
+		_assertObjectEntryDefaultValue(
+			"+15551234567", phoneNumberObjectField, new HashMap<>());
+
+		_addOrUpdateCustomObjectField(
+			phoneNumberObjectField,
+			Arrays.asList(
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_COUNTRY
+				).value(
+					"US"
+				).build(),
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_COUNTRY_SOURCE
+				).value(
+					ObjectFieldSettingConstants.VALUE_FIXED
+				).build(),
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_DEFAULT_VALUE
+				).value(
+					"5551234567"
+				).build(),
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE
+				).value(
+					ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+				).build()));
+
+		_assertObjectFieldSettingsValues(
+			phoneNumberObjectField.getObjectFieldId(),
+			HashMapBuilder.put(
+				ObjectFieldSettingConstants.NAME_COUNTRY, "US"
+			).put(
+				ObjectFieldSettingConstants.NAME_COUNTRY_SOURCE,
+				ObjectFieldSettingConstants.VALUE_FIXED
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE, "5551234567"
+			).put(
+				ObjectFieldSettingConstants.NAME_DEFAULT_VALUE_TYPE,
+				ObjectFieldSettingConstants.VALUE_INPUT_AS_VALUE
+			).build());
+
+		_assertObjectEntryDefaultValue(
+			"+15551234567", phoneNumberObjectField, new HashMap<>());
 
 		// Business type picklist
 
@@ -2910,23 +3078,37 @@ public class ObjectFieldLocalServiceTest {
 
 		ObjectFieldTestUtil.withEncryptedObjectFieldProperties(
 			algorithm, enabled, key,
-			() -> _objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), 0, null, false, true, false,
-				true, false, false, false, false, null,
-				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
-				ObjectDefinitionTestUtil.getRandomName(), null, null,
-				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
-				true, ObjectDefinitionConstants.SCOPE_COMPANY, storageType,
-				Collections.emptyList(),
-				Arrays.asList(
-					new EncryptedObjectFieldBuilder(
-					).labelMap(
-						LocalizedMapUtil.getLocalizedMap(
-							RandomTestUtil.randomString())
-					).name(
-						"a" + RandomTestUtil.randomString()
-					).build()),
-				Collections.emptyList(), new ServiceContext()));
+			() -> {
+				boolean enableCategorization = true;
+
+				if (!StringUtil.equals(
+						storageType,
+						ObjectDefinitionConstants.STORAGE_TYPE_DEFAULT)) {
+
+					enableCategorization = false;
+				}
+
+				_objectDefinitionLocalService.addCustomObjectDefinition(
+					null, TestPropsValues.getUserId(), 0, null,
+					enableCategorization, false, true, false, true, false,
+					false, false, false, null,
+					LocalizedMapUtil.getLocalizedMap(
+						RandomTestUtil.randomString()),
+					ObjectDefinitionTestUtil.getRandomName(), null, null,
+					LocalizedMapUtil.getLocalizedMap(
+						RandomTestUtil.randomString()),
+					true, ObjectDefinitionConstants.SCOPE_COMPANY, storageType,
+					Collections.emptyList(),
+					Arrays.asList(
+						new EncryptedObjectFieldBuilder(
+						).labelMap(
+							LocalizedMapUtil.getLocalizedMap(
+								RandomTestUtil.randomString())
+						).name(
+							"a" + RandomTestUtil.randomString()
+						).build()),
+					Collections.emptyList(), new ServiceContext());
+			});
 	}
 
 	private void _addCustomObjectDefinitionWithPicklistObjectField(
@@ -3617,8 +3799,8 @@ public class ObjectFieldLocalServiceTest {
 
 		objectDefinition1 =
 			_objectDefinitionLocalService.addCustomObjectDefinition(
-				null, TestPropsValues.getUserId(), 0, null, false, true, false,
-				true, false, false, false, false, null,
+				null, TestPropsValues.getUserId(), 0, null, false, false, true,
+				false, true, false, false, false, false, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				"Test", null, null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),

@@ -62,6 +62,7 @@ public class ObjectDefinitionUpgradeProcessTest {
 
 		_assertObjectDefinitionPKObjectFieldPrefix(objectDefinition2, "c_");
 
+		String name = "Test" + RandomTestUtil.randomString();
 		String pkObjectFieldDBColumnName = StringUtil.randomId();
 		String pkObjectFieldName = StringUtil.randomId();
 
@@ -69,7 +70,7 @@ public class ObjectDefinitionUpgradeProcessTest {
 			ObjectDefinitionTestUtil.addModifiableSystemObjectDefinition(
 				TestPropsValues.getUserId(), null,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
-				"FDSEntry", pkObjectFieldDBColumnName, pkObjectFieldName,
+				name, pkObjectFieldDBColumnName, pkObjectFieldName,
 				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
 				ObjectDefinitionConstants.SCOPE_COMPANY, null, 1,
 				List.of(
@@ -156,15 +157,15 @@ public class ObjectDefinitionUpgradeProcessTest {
 		"com.liferay.object.internal.upgrade.v10_0_0." +
 			"ObjectDefinitionUpgradeProcess";
 
-	@Inject(
-		filter = "component.name=com.liferay.object.internal.upgrade.registry.ObjectServiceUpgradeStepRegistrator"
-	)
-	private static UpgradeStepRegistrator _upgradeStepRegistrator;
-
 	@Inject
 	private MultiVMPool _multiVMPool;
 
 	@Inject
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;
+
+	@Inject(
+		filter = "component.name=com.liferay.object.internal.upgrade.registry.ObjectServiceUpgradeStepRegistrator"
+	)
+	private UpgradeStepRegistrator _upgradeStepRegistrator;
 
 }

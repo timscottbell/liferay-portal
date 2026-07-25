@@ -88,23 +88,13 @@ const ProjectRoutes = () => {
 		subscriptions === undefined;
 
 	const isProjectUsageEnabled =
-		((loggedUserAccount?.isLiferayStaff || loggedUserAccount?.isPartner) &&
-			(hasPlanSubscription || hasLegacySubscription)) ||
-		(featureFlags.includes('LRSD-12003') && hasExperienceSubscription);
-
-	const hasSaasSubscription = useMemo(
-		() => {
-			const allowedERCs = [
-				`${project?.externalReferenceCode}_liferay-cloud`,
-				`${project?.externalReferenceCode}_liferay-saas`
-			];
-
-			return subscriptionGroups?.some(({externalReferenceCode}) =>
-				allowedERCs.includes(externalReferenceCode)
-			);
-		},
-		[project?.externalReferenceCode, subscriptionGroups]
-	);
+		(hasPlanSubscription || hasLegacySubscription) &&
+		  (featureFlags.includes('LRSD-6322') ||
+		  	loggedUserAccount?.isLiferayStaff ||
+		  	loggedUserAccount?.isPartner) ||
+		hasExperienceSubscription &&
+		  (featureFlags.includes('LRSD-12003') ||
+			  loggedUserAccount?.isLiferayStaff);
 
 	const hasSLASubscription = useMemo(
 		() =>
@@ -168,17 +158,15 @@ const ProjectRoutes = () => {
 								path="new"
 							/>
 
-							{featureFlags.includes('LPS-186175') && (
-								<Route
-									element={
-										<DeactivateKeysTable
-											initialFilter="startswith(productName,'Portal')"
-											productName={PRODUCT_TYPES.portal}
-										/>
-									}
-									path="deactivate"
-								/>
-							)}
+							<Route
+								element={
+									<DeactivateKeysTable
+										initialFilter="startswith(productName,'Portal')"
+										productName={PRODUCT_TYPES.portal}
+									/>
+								}
+								path="deactivate"
+							/>
 
 							<Route
 								element={
@@ -228,7 +216,7 @@ const ProjectRoutes = () => {
 							<Route
 								element={
 									<DeactivateKeysTable
-										initialFilter="(startswith(productName,'DXP') or startswith(productName,'Digital'))"
+										initialFilter="(startswith(productName,'DXP') or startswith(productName,'Digital') or startswith(productName,'Liferay Self-Hosted'))"
 										productName={PRODUCT_TYPES.dxp}
 									/>
 								}
@@ -328,9 +316,7 @@ const ProjectRoutes = () => {
 						</Route>
 					</Route>
 
-					{featureFlags.includes('ISSD-119') && (
-						<Route element={<Attachments />} path="attachments" />
-					)}
+					<Route element={<Attachments />} path="attachments" />
 
 					<Route element={<TeamMembers />} path="team-members" />
 
@@ -338,7 +324,7 @@ const ProjectRoutes = () => {
 						<Route path="business-events">
 							<Route element={<BusinessEvents />} index />
 							<Route element={<BusinessEventAdd />} path="new"/>
-							<Route path=":id" element={<BusinessEventOutlet project={project} skip={!project} />}>
+							<Route path=":id" element={<BusinessEventOutlet skip={!project} />}>
 								<Route element={<BusinessEventsItemDetails />} index />
 								<Route element={<BusinessEventsItemEdit />} path="edit"/>
 								<Route element={<BusinessEventsItemActivityHistory />} path="activity-history"/>

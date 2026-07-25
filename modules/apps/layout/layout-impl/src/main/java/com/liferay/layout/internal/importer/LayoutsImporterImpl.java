@@ -14,6 +14,8 @@ import com.liferay.client.extension.model.ClientExtensionEntryRel;
 import com.liferay.client.extension.service.ClientExtensionEntryRelLocalService;
 import com.liferay.client.extension.type.CET;
 import com.liferay.client.extension.type.manager.CETManager;
+import com.liferay.depot.service.DepotEntryGroupRelLocalService;
+import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.service.DLAppService;
 import com.liferay.fragment.contributor.FragmentCollectionContributorRegistry;
 import com.liferay.fragment.listener.FragmentEntryLinkListener;
@@ -146,6 +148,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -356,6 +359,7 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 			new ContainerLayoutStructureItemImporter());
 		_addLayoutStructureItemImporter(
 			new DropZoneLayoutStructureItemImporter(
+				_companyLocalService, _depotEntryLocalService,
 				_fragmentCollectionContributorRegistry,
 				_fragmentCollectionLocalService, _fragmentEntryLocalService,
 				_fragmentRendererRegistry));
@@ -370,7 +374,8 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 			new FragmentDropZoneLayoutStructureItemImporter());
 		_addLayoutStructureItemImporter(
 			new FragmentLayoutStructureItemImporter(
-				_companyLocalService, _fragmentCollectionContributorRegistry,
+				_companyLocalService, _depotEntryGroupRelLocalService,
+				_depotEntryLocalService, _fragmentCollectionContributorRegistry,
 				_fragmentCollectionService, _fragmentEntryLinkLocalService,
 				_fragmentEntryLocalService, _fragmentEntryProcessorRegistry,
 				_fragmentEntryValidator, _fragmentRendererRegistry,
@@ -1019,11 +1024,19 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 
 		List<FragmentEntryLink> fragmentEntryLinks = new ArrayList<>();
 
+		Set<String> warningMessages = new LinkedHashSet<>();
+
 		_processPageElement(
 			fragmentEntryLinks, layout, layoutStructure,
 			LayoutStructureConstants.LATEST_PAGE_DEFINITION_VERSION,
 			pageElement, parentItemId, position, preserveItemIds,
-			segmentsExperienceId, new HashSet<>());
+			segmentsExperienceId, warningMessages);
+
+		if (_log.isWarnEnabled()) {
+			for (String warningMessage : warningMessages) {
+				_log.warn(warningMessage);
+			}
+		}
 
 		consumer.accept(layoutStructure);
 
@@ -1622,14 +1635,6 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 						LayoutsImportStrategy.OVERWRITE,
 						layoutsImportStrategy)) {
 
-				_fragmentEntryLinkLocalService.
-					deleteLayoutPageTemplateEntryFragmentEntryLinks(
-						layoutPageTemplateEntry.getGroupId(),
-						layoutPageTemplateEntry.getPlid());
-
-				_deleteExistingPortletPreferences(
-					layoutPageTemplateEntry.getPlid());
-
 				layoutPageTemplateEntry =
 					_layoutPageTemplateEntryService.
 						updateLayoutPageTemplateEntry(
@@ -1795,11 +1800,18 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 		try {
 			boolean added = false;
 
+			ServiceContext serviceContext =
+				ServiceContextThreadLocal.getServiceContext();
+
+			if (serviceContext == null) {
+				serviceContext = new ServiceContext();
+			}
+
 			if (layoutUtilityPageEntry == null) {
 				layoutUtilityPageEntry =
 					_layoutUtilityPageEntryService.addLayoutUtilityPageEntry(
 						externalReferenceCode, groupId, 0, 0, false, name, type,
-						null, ServiceContextThreadLocal.getServiceContext());
+						null, serviceContext);
 
 				added = true;
 			}
@@ -1807,18 +1819,10 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 						LayoutsImportStrategy.OVERWRITE,
 						layoutsImportStrategy)) {
 
-				_fragmentEntryLinkLocalService.
-					deleteLayoutPageTemplateEntryFragmentEntryLinks(
-						layoutUtilityPageEntry.getGroupId(),
-						layoutUtilityPageEntry.getPlid());
-
-				_deleteExistingPortletPreferences(
-					layoutUtilityPageEntry.getPlid());
-
 				layoutUtilityPageEntry =
 					_layoutUtilityPageEntryService.updateLayoutUtilityPageEntry(
 						layoutUtilityPageEntry.getLayoutUtilityPageEntryId(),
-						name);
+						name, serviceContext);
 
 				added = true;
 			}
@@ -1838,7 +1842,7 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 				if (previewFileEntryId > 0) {
 					_layoutUtilityPageEntryService.updateLayoutUtilityPageEntry(
 						layoutUtilityPageEntry.getLayoutUtilityPageEntryId(),
-						previewFileEntryId);
+						previewFileEntryId, serviceContext);
 				}
 
 				layoutsImporterResultEntries.add(
@@ -1960,6 +1964,14 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 
 		Layout layout = _layoutLocalService.getLayout(plid);
 
+		Layout draftLayout = layout.fetchDraftLayout();
+
+		_fragmentEntryLinkLocalService.
+			deleteLayoutPageTemplateEntryFragmentEntryLinks(
+				draftLayout.getGroupId(), draftLayout.getPlid());
+
+		_deleteExistingPortletPreferences(draftLayout.getPlid());
+
 		LayoutStructure layoutStructure = new LayoutStructure();
 
 		if (pageDefinition != null) {
@@ -1979,13 +1991,13 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 						pageElement.getPageElements()) {
 
 					if (_processPageElement(
-							new ArrayList<>(), layout, layoutStructure,
+							new ArrayList<>(), draftLayout, layoutStructure,
 							pageDefinitionVersion, childPageElement,
 							rootLayoutStructureItem.getItemId(), position,
 							preserveItemIds,
 							_segmentsExperienceLocalService.
 								fetchDefaultSegmentsExperienceId(
-									layout.getPlid()),
+									draftLayout.getPlid()),
 							warningMessages)) {
 
 						position++;
@@ -2000,19 +2012,16 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 				}
 			}
 
-			Settings settings = pageDefinition.getSettings();
-
-			layout = _layoutLocalService.fetchLayout(layout.getPlid());
-
-			layout = _updateLayoutSettings(userId, layout, settings);
+			draftLayout = _updateLayoutSettings(
+				userId, draftLayout, pageDefinition.getSettings());
 		}
 		else {
 			layoutStructure.addRootLayoutStructureItem();
 		}
 
-		_updateLayoutPageTemplateStructure(layout, layoutStructure);
+		_updateLayoutPageTemplateStructure(draftLayout, layoutStructure);
 
-		_updateLayouts(plid, userId);
+		_publishLayout(draftLayout, layout, userId);
 	}
 
 	private boolean _processPageElement(
@@ -2125,6 +2134,20 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 		}
 	}
 
+	private void _publishLayout(Layout draftLayout, Layout layout, long userId)
+		throws Exception {
+
+		_layoutLocalService.copyLayoutContent(draftLayout, layout);
+
+		_layoutLocalService.updateStatus(
+			userId, draftLayout.getPlid(), WorkflowConstants.STATUS_APPROVED,
+			ServiceContextThreadLocal.getServiceContext());
+
+		_layoutLocalService.updateStatus(
+			userId, layout.getPlid(), WorkflowConstants.STATUS_APPROVED,
+			ServiceContextThreadLocal.getServiceContext());
+	}
+
 	private String _toTypeName(int layoutPageTemplateEntryType) {
 		if (layoutPageTemplateEntryType ==
 				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE) {
@@ -2189,23 +2212,6 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 				}
 			}
 		}
-	}
-
-	private void _updateLayouts(long plid, long userId) throws Exception {
-		Layout layout = _layoutLocalService.fetchLayout(plid);
-
-		Layout draftLayout = layout.fetchDraftLayout();
-
-		draftLayout = _layoutLocalService.copyLayoutContent(
-			layout, draftLayout);
-
-		_layoutLocalService.updateStatus(
-			userId, draftLayout.getPlid(), WorkflowConstants.STATUS_APPROVED,
-			ServiceContextThreadLocal.getServiceContext());
-
-		_layoutLocalService.updateStatus(
-			userId, plid, WorkflowConstants.STATUS_APPROVED,
-			ServiceContextThreadLocal.getServiceContext());
 	}
 
 	private Layout _updateLayoutSettings(
@@ -2373,12 +2379,17 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 					}
 				}
 			}
-			else if (favIconMap.containsKey("externalReferenceCode")) {
-				_addClientExtensionEntryRel(
-					String.valueOf(favIconMap.get("externalReferenceCode")),
-					layout, serviceContext,
-					ClientExtensionEntryConstants.TYPE_THEME_FAVICON, null,
-					userId);
+			else {
+				Object externalReferenceCode = favIconMap.get(
+					"externalReferenceCode");
+
+				if (externalReferenceCode != null) {
+					_addClientExtensionEntryRel(
+						String.valueOf(externalReferenceCode), layout,
+						serviceContext,
+						ClientExtensionEntryConstants.TYPE_THEME_FAVICON, null,
+						userId);
+				}
 			}
 		}
 
@@ -2465,6 +2476,12 @@ public class LayoutsImporterImpl implements LayoutsImporter {
 
 	@Reference
 	private CompanyLocalService _companyLocalService;
+
+	@Reference
+	private DepotEntryGroupRelLocalService _depotEntryGroupRelLocalService;
+
+	@Reference
+	private DepotEntryLocalService _depotEntryLocalService;
 
 	@Reference
 	private DLAppService _dlAppService;

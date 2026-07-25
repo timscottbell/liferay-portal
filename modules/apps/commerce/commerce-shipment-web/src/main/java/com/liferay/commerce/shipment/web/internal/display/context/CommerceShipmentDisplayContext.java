@@ -22,7 +22,7 @@ import com.liferay.commerce.model.CommerceShipmentItem;
 import com.liferay.commerce.model.CommerceShippingMethod;
 import com.liferay.commerce.product.model.CommerceChannel;
 import com.liferay.commerce.product.service.CommerceChannelService;
-import com.liferay.commerce.service.CommerceAddressService;
+import com.liferay.commerce.service.CommerceAddressLocalService;
 import com.liferay.commerce.service.CommerceOrderItemService;
 import com.liferay.commerce.service.CommerceOrderLocalService;
 import com.liferay.commerce.service.CommerceShipmentItemService;
@@ -46,7 +46,9 @@ import com.liferay.portal.kernel.search.BaseModelSearchResult;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.QueryConfig;
 import com.liferay.portal.kernel.search.SearchContext;
-import com.liferay.portal.kernel.security.permission.resource.PortletResourcePermission;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
+import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.service.CountryService;
 import com.liferay.portal.kernel.service.RegionService;
 import com.liferay.portal.kernel.util.ArrayUtil;
@@ -76,20 +78,23 @@ public class CommerceShipmentDisplayContext
 	public CommerceShipmentDisplayContext(
 		ActionHelper actionHelper,
 		CommerceAddressFormatter commerceAddressFormatter,
-		CommerceAddressService commerceAddressService,
+		CommerceAddressLocalService commerceAddressLocalService,
 		CommerceChannelService commerceChannelService,
 		CommerceOrderItemService commerceOrderItemService,
 		CommerceOrderLocalService commerceOrderLocalService,
 		CommerceShipmentItemService commerceShipmentItemService,
+		ModelResourcePermission<CommerceShipment>
+			commerceShipmentModelResourcePermission,
 		CommerceShippingMethodService commerceShippingMethodService,
 		CountryService countryService, HttpServletRequest httpServletRequest,
-		PortletResourcePermission portletResourcePermission,
 		RegionService regionService) {
 
-		super(actionHelper, httpServletRequest, portletResourcePermission);
+		super(
+			actionHelper, commerceShipmentModelResourcePermission,
+			httpServletRequest);
 
 		_commerceAddressFormatter = commerceAddressFormatter;
-		_commerceAddressService = commerceAddressService;
+		_commerceAddressLocalService = commerceAddressLocalService;
 		_commerceChannelService = commerceChannelService;
 		_commerceOrderItemService = commerceOrderItemService;
 		_commerceOrderLocalService = commerceOrderLocalService;
@@ -186,7 +191,7 @@ public class CommerceShipmentDisplayContext
 		}
 
 		CommerceAddress commerceAddress =
-			_commerceAddressService.getCommerceAddress(
+			_commerceAddressLocalService.getCommerceAddress(
 				commerceShipment.getCommerceAddressId());
 
 		return _commerceShippingMethodService.getCommerceShippingMethods(
@@ -328,7 +333,9 @@ public class CommerceShipmentDisplayContext
 
 		CommerceShipment commerceShipment = getCommerceShipment();
 
-		if (hasManageCommerceShipmentsPermission() &&
+		if (commerceShipmentModelResourcePermission.contains(
+				PermissionThreadLocal.getPermissionChecker(),
+				commerceShipment.getCommerceShipmentId(), ActionKeys.VIEW) &&
 			(commerceShipment.getStatus() ==
 				CommerceShipmentConstants.SHIPMENT_STATUS_PROCESSING)) {
 
@@ -345,7 +352,9 @@ public class CommerceShipmentDisplayContext
 
 		CommerceShipment commerceShipment = getCommerceShipment();
 
-		if (hasManageCommerceShipmentsPermission() &&
+		if (commerceShipmentModelResourcePermission.contains(
+				PermissionThreadLocal.getPermissionChecker(),
+				commerceShipment.getCommerceShipmentId(), ActionKeys.UPDATE) &&
 			(commerceShipment.getStatus() ==
 				CommerceShipmentConstants.SHIPMENT_STATUS_PROCESSING)) {
 
@@ -415,7 +424,7 @@ public class CommerceShipmentDisplayContext
 	public CommerceAddress getShippingAddress() throws PortalException {
 		CommerceShipment commerceShipment = getCommerceShipment();
 
-		return _commerceAddressService.fetchCommerceAddress(
+		return _commerceAddressLocalService.fetchCommerceAddress(
 			commerceShipment.getCommerceAddressId());
 	}
 
@@ -490,7 +499,7 @@ public class CommerceShipmentDisplayContext
 		CommerceShipmentDisplayContext.class);
 
 	private final CommerceAddressFormatter _commerceAddressFormatter;
-	private final CommerceAddressService _commerceAddressService;
+	private final CommerceAddressLocalService _commerceAddressLocalService;
 	private final CommerceChannelService _commerceChannelService;
 	private final CommerceOrderItemService _commerceOrderItemService;
 	private final CommerceOrderLocalService _commerceOrderLocalService;

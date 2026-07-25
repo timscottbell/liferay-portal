@@ -5,13 +5,16 @@
 
 package com.liferay.sharing.internal.security.permission.resource;
 
+import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.model.GroupedModel;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermissionLogic;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
+import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.UserGroupLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -26,10 +29,11 @@ import com.liferay.sharing.security.permission.SharingEntryAction;
 import com.liferay.sharing.security.permission.resource.SharingModelResourcePermissionConfigurator;
 import com.liferay.sharing.service.SharingEntryLocalService;
 
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.osgi.framework.BundleContext;
@@ -113,9 +117,13 @@ public class SharingModelResourcePermissionConfiguratorImpl
 	private ClassNameLocalService _classNameLocalService;
 
 	@Reference
+	private CompanyLocalService _companyLocalService;
+
+	@Reference
 	private GroupLocalService _groupLocalService;
 
-	private final Set<String> _modelClassNames = new HashSet<>();
+	private final Set<String> _modelClassNames = Collections.newSetFromMap(
+		new ConcurrentHashMap<>());
 
 	@Reference
 	private SharingConfigurationFactory _sharingConfigurationFactory;
@@ -142,8 +150,20 @@ public class SharingModelResourcePermissionConfiguratorImpl
 				String actionId)
 			throws PortalException {
 
-			SharingEntryAction sharingEntryAction = _sharingEntryActions.get(
-				actionId);
+			if (actionId == null) {
+				return null;
+			}
+
+			SharingEntryAction sharingEntryAction = null;
+
+			if (actionId.startsWith(
+					ActionKeys.DOWNLOAD + StringPool.UNDERLINE)) {
+
+				sharingEntryAction = SharingEntryAction.DOWNLOAD;
+			}
+			else {
+				sharingEntryAction = _sharingEntryActions.get(actionId);
+			}
 
 			if (sharingEntryAction == null) {
 				return null;
@@ -163,9 +183,21 @@ public class SharingModelResourcePermissionConfiguratorImpl
 				return null;
 			}
 
-			SharingConfiguration sharingConfiguration =
-				_sharingConfigurationFactory.getGroupSharingConfiguration(
-					_groupLocalService.getGroup(model.getGroupId()));
+			// See LPD-90975. ObjectEntry implements GroupedModel,
+			// but can be instance scoped.
+
+			SharingConfiguration sharingConfiguration = null;
+
+			if (model.getGroupId() > 0) {
+				sharingConfiguration =
+					_sharingConfigurationFactory.getGroupSharingConfiguration(
+						_groupLocalService.getGroup(model.getGroupId()));
+			}
+			else {
+				sharingConfiguration =
+					_sharingConfigurationFactory.getCompanySharingConfiguration(
+						_companyLocalService.getCompany(model.getCompanyId()));
+			}
 
 			if (sharingConfiguration.isEnabled()) {
 				return true;

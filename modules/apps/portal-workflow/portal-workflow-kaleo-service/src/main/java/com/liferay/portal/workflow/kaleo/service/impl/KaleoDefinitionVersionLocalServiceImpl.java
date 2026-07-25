@@ -7,6 +7,7 @@ package com.liferay.portal.workflow.kaleo.service.impl;
 
 import com.liferay.exportimport.kernel.staging.Staging;
 import com.liferay.petra.function.transform.TransformUtil;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
@@ -24,6 +25,7 @@ import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.Validator;
@@ -55,6 +57,7 @@ import com.liferay.portal.search.sort.SortOrder;
 import com.liferay.portal.search.sort.Sorts;
 import com.liferay.portal.workflow.constants.WorkflowDefinitionConstants;
 import com.liferay.portal.workflow.exception.IncompleteWorkflowInstancesException;
+import com.liferay.portal.workflow.kaleo.exception.NoSuchDefinitionVersionException;
 import com.liferay.portal.workflow.kaleo.model.KaleoDefinition;
 import com.liferay.portal.workflow.kaleo.model.KaleoDefinitionVersion;
 import com.liferay.portal.workflow.kaleo.service.KaleoConditionLocalService;
@@ -63,6 +66,7 @@ import com.liferay.portal.workflow.kaleo.service.KaleoNodeLocalService;
 import com.liferay.portal.workflow.kaleo.service.KaleoTaskLocalService;
 import com.liferay.portal.workflow.kaleo.service.KaleoTransitionLocalService;
 import com.liferay.portal.workflow.kaleo.service.base.KaleoDefinitionVersionLocalServiceBaseImpl;
+import com.liferay.portal.workflow.kaleo.service.persistence.KaleoInstancePersistence;
 import com.liferay.portal.workflow.kaleo.util.comparator.KaleoDefinitionVersionIdComparator;
 
 import java.util.ArrayList;
@@ -145,9 +149,8 @@ public class KaleoDefinitionVersionLocalServiceImpl
 
 		// Kaleo definition version
 
-		int kaleoInstancesCount =
-			_kaleoInstanceLocalService.getKaleoInstancesCount(
-				kaleoDefinitionVersion.getKaleoDefinitionVersionId(), false);
+		int kaleoInstancesCount = _kaleoInstancePersistence.countByKDVI_C(
+			kaleoDefinitionVersion.getKaleoDefinitionVersionId(), false);
 
 		if (kaleoInstancesCount > 0) {
 			throw new IncompleteWorkflowInstancesException(kaleoInstancesCount);
@@ -202,9 +205,8 @@ public class KaleoDefinitionVersionLocalServiceImpl
 	public void deleteKaleoDefinitionVersions(KaleoDefinition kaleoDefinition)
 		throws PortalException {
 
-		int kaleoInstancesCount =
-			_kaleoInstanceLocalService.getKaleoDefinitionKaleoInstancesCount(
-				kaleoDefinition.getKaleoDefinitionId(), false);
+		int kaleoInstancesCount = _kaleoInstancePersistence.countByKDI_C(
+			kaleoDefinition.getKaleoDefinitionId(), false);
 
 		if (kaleoInstancesCount > 0) {
 			throw new IncompleteWorkflowInstancesException(kaleoInstancesCount);
@@ -255,16 +257,6 @@ public class KaleoDefinitionVersionLocalServiceImpl
 		return kaleoDefinitionVersionPersistence.fetchByC_N_First(
 			companyId, name,
 			KaleoDefinitionVersionIdComparator.getInstance(false));
-	}
-
-	@Override
-	public KaleoDefinitionVersion fetchLatestKaleoDefinitionVersion(
-			long companyId, String name,
-			OrderByComparator<KaleoDefinitionVersion> orderByComparator)
-		throws PortalException {
-
-		return kaleoDefinitionVersionPersistence.fetchByC_N_Last(
-			companyId, name, orderByComparator);
 	}
 
 	@Override
@@ -327,13 +319,23 @@ public class KaleoDefinitionVersionLocalServiceImpl
 			long companyId, String name, String version)
 		throws PortalException {
 
-		KaleoDefinitionVersion kaleoDefinitionVersion =
-			kaleoDefinitionVersionPersistence.findByC_N_V(
-				companyId, name, version);
+		KaleoDefinitionVersion[] kaleoDefinitionVersions =
+			ListUtil.getPreviousAndNext(
+				kaleoDefinitionVersionPersistence.findByC_N(
+					companyId, name, QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+					KaleoDefinitionVersionIdComparator.getInstance(true)),
+				kaleoDefinitionVersion -> Objects.equals(
+					version, kaleoDefinitionVersion.getVersion()),
+				KaleoDefinitionVersion[]::new);
 
-		return kaleoDefinitionVersionPersistence.findByC_N_PrevAndNext(
-			kaleoDefinitionVersion.getKaleoDefinitionVersionId(), companyId,
-			name, KaleoDefinitionVersionIdComparator.getInstance(true));
+		if (kaleoDefinitionVersions[1] != null) {
+			return kaleoDefinitionVersions;
+		}
+
+		throw new NoSuchDefinitionVersionException(
+			StringBundler.concat(
+				"{companyId=", companyId, ", name=", name, ", version=",
+				version, "}"));
 	}
 
 	@Override
@@ -552,6 +554,9 @@ public class KaleoDefinitionVersionLocalServiceImpl
 
 	@Reference
 	private KaleoInstanceLocalService _kaleoInstanceLocalService;
+
+	@Reference
+	private KaleoInstancePersistence _kaleoInstancePersistence;
 
 	@Reference
 	private KaleoNodeLocalService _kaleoNodeLocalService;

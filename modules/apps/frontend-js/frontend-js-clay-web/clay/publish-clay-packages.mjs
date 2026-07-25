@@ -134,8 +134,10 @@ function isReleaseCommitSubject(subject) {
 	const normalizedSubject = subject.trim();
 
 	return (
-		/\bRelease clay v\d+\.\d+\.\d+\b/i.test(normalizedSubject) ||
-		/\bpublish\s+v?\d+\.\d+\.\d+\b/i.test(normalizedSubject)
+		/\bBump Clay versions? to v?\d+\.\d+\.\d+\b/i.test(normalizedSubject) ||
+		/\bPublish\s+v?\d+\.\d+\.\d+\b/i.test(normalizedSubject) ||
+		/\bRelease Clay v?\d+\.\d+\.\d+\b/i.test(normalizedSubject) ||
+		/\bUpdate Clay to v?\d+\.\d+\.\d+\b/i.test(normalizedSubject)
 	);
 }
 
@@ -171,10 +173,14 @@ function insertAfterUnifiedChangelogIntro(content, section) {
 }
 
 async function getClayReleaseBoundaryCommit() {
-	const history = await run('git', ['log', '--pretty=%H%x09%s', '--', CLAY_DIR], {
-		cwd: ROOT_DIR,
-		stdio: 'pipe',
-	});
+	const history = await run(
+		'git',
+		['log', '--pretty=%H%x09%s', '--', CLAY_DIR],
+		{
+			cwd: ROOT_DIR,
+			stdio: 'pipe',
+		}
+	);
 
 	const lines = (history.stdout || '')
 		.split('\n')
@@ -195,7 +201,7 @@ async function getClayReleaseBoundaryCommit() {
 	}
 
 	throw new Error(
-		'Unable to find prior Clay release commit in git history. Expected a commit subject containing "Release clay vX.Y.Z" or "publish X.Y.Z".'
+		'Unable to find prior Clay release commit in git history. Expected a commit subject containing "Bump Clay versions to X.Y.Z", "Publish vX.Y.Z", "Release Clay vX.Y.Z", or "Update Clay to X.Y.Z".'
 	);
 }
 
@@ -266,7 +272,10 @@ function updateUnifiedChangelog(targetVersion, section, previewOnly) {
 			return;
 		}
 
-		fs.writeFileSync(UNIFIED_CHANGELOG_PATH, `${createdContent}${section}\n`);
+		fs.writeFileSync(
+			UNIFIED_CHANGELOG_PATH,
+			`${createdContent}${section}\n`
+		);
 
 		return;
 	}
@@ -309,7 +318,10 @@ async function updateUnifiedChangelogForTargetVersion() {
 			continue;
 		}
 
-		const commits = await getPackageCommitsSinceBoundary(boundaryCommitHash, dir);
+		const commits = await getPackageCommitsSinceBoundary(
+			boundaryCommitHash,
+			dir
+		);
 
 		if (!commits.length) {
 			continue;
@@ -331,7 +343,10 @@ async function updateUnifiedChangelogForTargetVersion() {
 		return;
 	}
 
-	const section = renderUnifiedChangelogSection(TARGET_VERSION, packageChanges);
+	const section = renderUnifiedChangelogSection(
+		TARGET_VERSION,
+		packageChanges
+	);
 
 	updateUnifiedChangelog(TARGET_VERSION, section, PREVIEW_CHANGES);
 }

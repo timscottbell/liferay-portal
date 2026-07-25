@@ -31,7 +31,7 @@ type BaseOutletProps = {
 	actionButtons?: ReactNode | ((data: ProductAndOrderPayload) => ReactNode);
 	backTitle: string;
 	backURL?: string;
-	description?: string;
+	description?: ReactNode | ((data: ProductAndOrderPayload) => ReactNode);
 	routes:
 		| NavbarProps['routes']
 		| ((data: ProductAndOrderPayload) => NavbarProps['routes']);
@@ -50,6 +50,8 @@ const BaseOutlet: React.FC<BaseOutletProps> = ({
 	const outletContext = useOutletContext();
 	const {data, error, isLoading} = useGetProductByOrderId(orderId as string);
 
+	const beta =
+		data?.marketplaceDeliveryProduct?.specificationValues?.APP_BETA;
 	const placedOrderItems = data?.placedOrder.placedOrderItems ?? [];
 	const productCreatorAccountName = data?.product?.catalogName || '';
 
@@ -62,9 +64,10 @@ const BaseOutlet: React.FC<BaseOutletProps> = ({
 			<BackLink path={backURL}>{backTitle}</BackLink>
 
 			<div className="d-flex justify-content-between">
-				<div className="d-flex flex-column">
+				<div className="d-flex flex-column w-100">
 					<div className="d-flex justify-content-between">
 						<OrderDetailsHeader
+							beta={beta}
 							className="d-flex flex-row justify-content-between pb-3 pt-5"
 							hasOrderDetails
 							image={placedOrderItems[0]?.thumbnail}
@@ -84,7 +87,11 @@ const BaseOutlet: React.FC<BaseOutletProps> = ({
 						)}
 					</div>
 
-					<p className="app-details-description">{description}</p>
+					<p className="app-details-description">
+						{typeof description === 'function'
+							? description(data as ProductAndOrderPayload)
+							: description}
+					</p>
 				</div>
 
 				{showActions && (
@@ -180,9 +187,10 @@ const AppOutlet = () => (
 					name: i18n.translate('licenses'),
 					path: 'licenses',
 					visible:
-						isPaidApp &&
 						orderCompleted &&
+						isPaidApp &&
 						[
+							OrderTypes.COMPOSITE_APP,
 							OrderTypes.CLIENT_EXTENSION,
 							OrderTypes.DXP_APP,
 						].includes(

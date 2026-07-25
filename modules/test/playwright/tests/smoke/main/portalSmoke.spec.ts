@@ -6,7 +6,8 @@
 import {expect, mergeTests} from '@playwright/test';
 
 import {apiHelpersTest} from '../../../fixtures/apiHelpersTest';
-import {applicationsMenuPageTest} from '../../../fixtures/applicationsMenuPageTest';
+import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
+import {globalMenuPagesTest} from '../../../fixtures/globalMenuPagesTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {pageEditorPagesTest} from '../../../fixtures/pageEditorPagesTest';
 import {pageViewModePagesTest} from '../../../fixtures/pageViewModePagesTest';
@@ -22,7 +23,10 @@ import {sitesAdminPagesTest} from '../../site-admin-web/main/fixtures/sitesAdmin
 
 export const test = mergeTests(
 	apiHelpersTest,
-	applicationsMenuPageTest,
+	featureFlagsTest({
+		'LPD-76864': {enabled: true},
+	}),
+	globalMenuPagesTest,
 	loginTest(),
 	pageEditorPagesTest,
 	pageViewModePagesTest,
@@ -42,7 +46,7 @@ test.afterEach(async ({sitesAdminPage, sitesPage}) => {
 
 test('Smoke', async ({
 	apiHelpers,
-	applicationsMenuPage,
+	globalMenuPage,
 	page,
 	pageEditorPage,
 	pagesAdminPage,
@@ -77,7 +81,7 @@ test('Smoke', async ({
 	});
 
 	await test.step('When the admin user creates a new blank site', async () => {
-		await applicationsMenuPage.goToSites(false);
+		await globalMenuPage.goToControlPanel('Sites');
 
 		siteName = getRandomString();
 
@@ -93,7 +97,7 @@ test('Smoke', async ({
 	});
 
 	await test.step('Then the created site should be visible in the sites page with the correct membership, status, and options', async () => {
-		await applicationsMenuPage.goToSites(false);
+		await globalMenuPage.goToControlPanel('Sites');
 
 		const row = page.getByRole('row').filter({hasText: siteName});
 
@@ -111,9 +115,12 @@ test('Smoke', async ({
 	});
 
 	await test.step('When the admin user creates three widget pages for the site', async () => {
-		await applicationsMenuPage.goToSite(siteName);
+		await globalMenuPage.goToSite(siteName);
 
-		await page.locator('.control-menu').getByText('Style Books').waitFor();
+		await page
+			.locator('.control-menu')
+			.getByText('Site Settings')
+			.waitFor();
 
 		await productMenuPage.goToPages();
 
@@ -199,7 +206,7 @@ test('Smoke', async ({
 	});
 
 	await test.step('When the admin opens the product menu and accesses the web content portlet', async () => {
-		await applicationsMenuPage.goToSite(siteName);
+		await globalMenuPage.goToSite(siteName);
 
 		await productMenuPage.openProductMenuIfClosed();
 

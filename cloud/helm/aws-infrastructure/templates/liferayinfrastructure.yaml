@@ -9,16 +9,21 @@ metadata:
     namespace: {{ .Release.Namespace }}
 spec:
     backup: {{ .Values.backup | toYaml | nindent 8 }}
+    cmk: {{ .Values.cmk | toYaml | nindent 8 }}
     commonTags:
         EnvironmentId: {{ .Values.environmentId }}
         ProjectId: {{ .Values.projectId }}
     database: {{ .Values.database | toYaml | nindent 8 }}
     environmentId: {{ .Values.environmentId }}
+    forceDestroy: {{ .Values.forceDestroy }}
     orphanOnDelete: {{ .Values.orphanOnDelete }}
-    overlay: {{ .Values.overlay | toYaml | nindent 8 }}
+    overlayAccess:
+        enabled: {{ .Values.overlayAccess.enabled }}
     projectId: {{ .Values.projectId }}
     region: {{ .Values.region }}
     search:
+        elasticsearch:
+            enabled: {{ .Values.search.elasticsearch.enabled }}
         opensearch: {{ .Values.search.opensearch | toYaml | nindent 12 }}
     storage: {{ .Values.storage | toYaml | nindent 8 }}
 {{- end -}}

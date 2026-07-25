@@ -49,6 +49,7 @@ import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -141,7 +142,8 @@ public abstract class BaseCommentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -151,7 +153,8 @@ public abstract class BaseCommentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).locale(
 			LocaleUtil.getDefault()
 		).build();
@@ -252,6 +255,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment1 = testGraphQLDeleteComment_addComment();
 
 		Assert.assertTrue(
@@ -282,6 +286,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment2 = testGraphQLDeleteComment_addComment();
 
 		Assert.assertTrue(
@@ -416,6 +421,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment1 =
 			testGraphQLDeleteSiteBlogPostingByExternalReferenceCodeBlogPostingExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -476,6 +482,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment2 =
 			testGraphQLDeleteSiteBlogPostingByExternalReferenceCodeBlogPostingExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -615,6 +622,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment1 =
 			testGraphQLDeleteSiteCommentByExternalReferenceCodeParentCommentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -675,6 +683,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment2 =
 			testGraphQLDeleteSiteCommentByExternalReferenceCodeParentCommentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -815,6 +824,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment1 =
 			testGraphQLDeleteSiteDocumentByExternalReferenceCodeDocumentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -875,6 +885,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment2 =
 			testGraphQLDeleteSiteDocumentByExternalReferenceCodeDocumentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -1023,6 +1034,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// No namespace
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment1 =
 			testGraphQLDeleteSiteStructuredContentByExternalReferenceCodeStructuredContentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -1083,6 +1095,7 @@ public abstract class BaseCommentResourceTestCase {
 
 		// Using the namespace headlessDelivery_v1_0
 
+		@SuppressWarnings("PMD.UnusedLocalVariable")
 		Comment comment2 =
 			testGraphQLDeleteSiteStructuredContentByExternalReferenceCodeStructuredContentExternalReferenceCodeCommentByExternalReferenceCode_addComment();
 
@@ -1232,8 +1245,9 @@ public abstract class BaseCommentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/blog-postings/{blogPostingId}/comments/batch".
-				replace("{blogPostingId}", String.valueOf(blogPostingId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/blog-postings/{blogPostingId}/comments/batch").
+					replace("{blogPostingId}", String.valueOf(blogPostingId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -1578,18 +1592,9 @@ public abstract class BaseCommentResourceTestCase {
 	public void testGraphQLGetBlogPostingCommentsPage() throws Exception {
 		Long blogPostingId = testGetBlogPostingCommentsPage_getBlogPostingId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"blogPostingComments",
-			new HashMap<String, Object>() {
-				{
-					put("blogPostingId", blogPostingId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetBlogPostingCommentsPageBlogPostingComment_getGraphQLField(
+				blogPostingId);
 
 		// No namespace
 
@@ -1647,6 +1652,25 @@ public abstract class BaseCommentResourceTestCase {
 			Arrays.asList(
 				CommentSerDes.toDTOs(
 					blogPostingCommentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetBlogPostingCommentsPageBlogPostingComment_getGraphQLField(
+				Long blogPostingId)
+		throws Exception {
+
+		return new GraphQLField(
+			"blogPostingComments",
+			new HashMap<String, Object>() {
+				{
+					put("blogPostingId", blogPostingId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -1721,8 +1745,9 @@ public abstract class BaseCommentResourceTestCase {
 			public StringBuffer getRequestURL() {
 				return new StringBuffer(
 					StringBundler.concat(
-						"http://localhost:8080/o/v1.0/",
-						RandomTestUtil.randomString(), "/",
+						"http://localhost:",
+						String.valueOf(PortalUtil.getPortalServerPort(false)),
+						"/o/v1.0/", RandomTestUtil.randomString(), "/",
 						RandomTestUtil.randomString()));
 			}
 
@@ -1758,8 +1783,10 @@ public abstract class BaseCommentResourceTestCase {
 			@Override
 			public URI getRequestUri() {
 				return URI.create(
-					"http://localhost:8080/o/" + applicationPath +
-						resourcePath);
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath, resourcePath));
 			}
 
 			@Override
@@ -1779,7 +1806,11 @@ public abstract class BaseCommentResourceTestCase {
 
 			@Override
 			public URI getBaseUri() {
-				return URI.create("http://localhost:8080/o/" + applicationPath);
+				return URI.create(
+					StringBundler.concat(
+						"http://localhost:",
+						PortalUtil.getPortalServerPort(false), "/o/",
+						applicationPath));
 			}
 
 			@Override
@@ -2380,8 +2411,9 @@ public abstract class BaseCommentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/documents/{documentId}/comments/batch".
-				replace("{documentId}", String.valueOf(documentId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/documents/{documentId}/comments/batch").
+					replace("{documentId}", String.valueOf(documentId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -2713,18 +2745,9 @@ public abstract class BaseCommentResourceTestCase {
 	public void testGraphQLGetDocumentCommentsPage() throws Exception {
 		Long documentId = testGetDocumentCommentsPage_getDocumentId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"documentComments",
-			new HashMap<String, Object>() {
-				{
-					put("documentId", documentId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetDocumentCommentsPageDocumentComment_getGraphQLField(
+				documentId);
 
 		// No namespace
 
@@ -2779,6 +2802,25 @@ public abstract class BaseCommentResourceTestCase {
 			Arrays.asList(
 				CommentSerDes.toDTOs(
 					documentCommentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetDocumentCommentsPageDocumentComment_getGraphQLField(
+				Long documentId)
+		throws Exception {
+
+		return new GraphQLField(
+			"documentComments",
+			new HashMap<String, Object>() {
+				{
+					put("documentId", documentId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -3653,10 +3695,11 @@ public abstract class BaseCommentResourceTestCase {
 		createBatchAction.put("method", "POST");
 		createBatchAction.put(
 			"href",
-			"http://localhost:8080/o/headless-delivery/v1.0/structured-contents/{structuredContentId}/comments/batch".
-				replace(
-					"{structuredContentId}",
-					String.valueOf(structuredContentId)));
+			("http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/headless-delivery/v1.0/structured-contents/{structuredContentId}/comments/batch").
+					replace(
+						"{structuredContentId}",
+						String.valueOf(structuredContentId)));
 
 		expectedActions.put("createBatch", createBatchAction);
 
@@ -4021,18 +4064,9 @@ public abstract class BaseCommentResourceTestCase {
 		Long structuredContentId =
 			testGetStructuredContentCommentsPage_getStructuredContentId();
 
-		GraphQLField graphQLField = new GraphQLField(
-			"structuredContentComments",
-			new HashMap<String, Object>() {
-				{
-					put("structuredContentId", structuredContentId);
-					put("search", null);
-					put("page", 1);
-					put("pageSize", 10);
-				}
-			},
-			new GraphQLField("items", getGraphQLFields()),
-			new GraphQLField("page"), new GraphQLField("totalCount"));
+		GraphQLField graphQLField =
+			testGraphQLGetStructuredContentCommentsPageStructuredContentComment_getGraphQLField(
+				structuredContentId);
 
 		// No namespace
 
@@ -4091,6 +4125,25 @@ public abstract class BaseCommentResourceTestCase {
 			Arrays.asList(
 				CommentSerDes.toDTOs(
 					structuredContentCommentsJSONObject.getString("items"))));
+	}
+
+	protected GraphQLField
+			testGraphQLGetStructuredContentCommentsPageStructuredContentComment_getGraphQLField(
+				Long structuredContentId)
+		throws Exception {
+
+		return new GraphQLField(
+			"structuredContentComments",
+			new HashMap<String, Object>() {
+				{
+					put("structuredContentId", structuredContentId);
+					put("search", null);
+					put("page", 1);
+					put("pageSize", 10);
+				}
+			},
+			new GraphQLField("items", getGraphQLFields()),
+			new GraphQLField("page"), new GraphQLField("totalCount"));
 	}
 
 	@Test
@@ -4604,7 +4657,8 @@ public abstract class BaseCommentResourceTestCase {
 			_testCompanyAdminUser.getEmailAddress(),
 			PropsValues.DEFAULT_ADMIN_PASSWORD
 		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
+			testCompany.getVirtualHostname(),
+			PortalUtil.getPortalServerPort(false), "http"
 		).parameters(
 			parameters
 		).build();
@@ -4811,16 +4865,22 @@ public abstract class BaseCommentResourceTestCase {
 		else if (value instanceof Boolean || value instanceof Number) {
 			return value.toString();
 		}
-		else if (value instanceof Date date) {
+		else if (value instanceof Date) {
+			Date date = (Date)value;
+
 			return "\"" +
 				DateUtil.getDate(
 					date, "yyyy-MM-dd'T'HH:mm:ss'Z'", LocaleUtil.getDefault(),
 					TimeZone.getTimeZone("UTC")) + "\"";
 		}
-		else if (value instanceof Enum<?> enm) {
+		else if (value instanceof Enum) {
+			Enum<?> enm = (Enum<?>)value;
+
 			return enm.name();
 		}
-		else if (value instanceof Map<?, ?> map) {
+		else if (value instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>)value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -4833,7 +4893,9 @@ public abstract class BaseCommentResourceTestCase {
 
 			return "{" + String.join(", ", entries) + "}";
 		}
-		else if (value instanceof Object[] array) {
+		else if (value instanceof Object[]) {
+			Object[] array = (Object[])value;
+
 			List<String> entries = new ArrayList<>();
 
 			for (Object entry : array) {
@@ -5582,7 +5644,9 @@ public abstract class BaseCommentResourceTestCase {
 			).toString(),
 			"application/json");
 		httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
-		httpInvoker.path("http://localhost:8080/o/graphql");
+		httpInvoker.path(
+			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+				"/o/graphql");
 		httpInvoker.userNameAndPassword(
 			"test@liferay.com:" + PropsValues.DEFAULT_ADMIN_PASSWORD);
 
@@ -5893,3 +5957,4 @@ public abstract class BaseCommentResourceTestCase {
 		_vulcanCRUDItemDelegateBuilderRegistry;
 
 }
+// LIFERAY-REST-BUILDER-HASH:1074758882

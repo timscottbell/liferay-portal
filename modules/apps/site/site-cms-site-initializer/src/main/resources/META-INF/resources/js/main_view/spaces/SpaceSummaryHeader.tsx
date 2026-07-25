@@ -103,6 +103,7 @@ export default function SpaceSummaryHeader({
 				trigger={
 					<ClayButtonWithIcon
 						aria-label={`Add ${title}`}
+						data-canonical-name={`Add ${title}`}
 						displayType="secondary"
 						small
 						symbol="plus"
@@ -184,6 +185,8 @@ export default function SpaceSummaryHeader({
 					(url ? (
 						<ClayLink
 							className="text-3 text-weight-semi-bold"
+							data-canonical-name={label}
+							displayType="unstyled"
 							href={url}
 						>
 							{label}
@@ -191,6 +194,7 @@ export default function SpaceSummaryHeader({
 					) : (
 						<ClayButton
 							className="text-3 text-weight-semi-bold"
+							data-canonical-name={label}
 							displayType="link"
 							onClick={getActionCallback}
 							size="sm"

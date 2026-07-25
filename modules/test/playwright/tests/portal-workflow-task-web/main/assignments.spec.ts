@@ -25,13 +25,14 @@ import performLogin, {
 import {PORTLET_URLS} from '../../../utils/portletUrls';
 import getBasicWebContentStructureId from '../../../utils/structured-content/getBasicWebContentStructureId';
 import {blogsPagesTest} from '../../blogs-web/main/fixtures/blogsPagesTest';
-import {generateObjectEntryValues} from '../../object-web/main/utils/generateObjectEntry';
+import {generateObjectEntryValues} from '../../object-web/utils/generateObjectEntry';
 
 export const test = mergeTests(
 	apiHelpersTest,
 	blogsPagesTest,
 	dataApiHelpersTest,
 	featureFlagsTest({
+		'LPD-11235': {enabled: true},
 		'LPS-178052': {enabled: true},
 	}),
 	isolatedSiteTest,
@@ -566,3 +567,57 @@ test('verify that the user can order the results inside Assigned to My Roles by 
 		expect(webContent2Index).toBeLessThan(webContent1Index);
 	});
 });
+
+test(
+	'workflow status is pending when a message board thread is submitted for workflow',
+	{tag: '@LRQA-69694'},
+	async ({
+		messageBoardsEditThreadPage,
+		messageBoardsPage,
+		page,
+		site,
+		workflowPage,
+		workflowTaskDetailsPage,
+		workflowTasksPage,
+	}) => {
+		await workflowPage.goto(site.friendlyUrlPath);
+
+		await workflowPage.changeWorkflow(
+			'Message Boards Message',
+			'Single Approver'
+		);
+
+		const threadBody = getRandomString();
+
+		const threadSubject = getRandomString();
+
+		await messageBoardsPage.goto(site.friendlyUrlPath);
+
+		await messageBoardsEditThreadPage.publishNewThreadForWorkflow(
+			threadSubject,
+			threadBody
+		);
+
+		await page.waitForLoadState('networkidle');
+
+		await workflowTasksPage.goToAssignedToMyRoles();
+
+		const row = page.getByRole('row', {name: threadSubject});
+
+		await expect(row).toBeVisible();
+
+		await expect(row.getByText('Message Boards Message')).toBeVisible();
+
+		await expect(row.getByText('Review')).toBeVisible();
+
+		await workflowTaskDetailsPage.selectAsset(threadSubject);
+
+		const newTabPagePromise = page.waitForEvent('popup');
+
+		await page.getByRole('link', {exact: true, name: 'View'}).click();
+
+		const newTabPage = await newTabPagePromise;
+
+		await expect(newTabPage.getByText('Pending')).toBeVisible();
+	}
+);

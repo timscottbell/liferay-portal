@@ -186,7 +186,7 @@ function deploy_osgi_modules {
 
 		for osgi_module_name in $(cat ${osgi_modules_list_file})
 		do
-			local osgi_module_dir=$(find ${_PORTAL_PROJECT_DIR}/modules/apps -type d -name "${osgi_module_name}" | grep -v .releng | grep -v .npmscripts | grep -v node_modules)
+			local osgi_module_dir=$(find ${_PORTAL_PROJECT_DIR}/modules/apps ${_PORTAL_PROJECT_DIR}/modules/dxp/apps -type d -name "${osgi_module_name}" | grep -v .releng | grep -v .npmscripts | grep -v node_modules)
 
 			if [[ $(echo ${osgi_module_dir} | wc -w | grep -o -E '[0-9]+') > 1 ]]
 			then
@@ -300,7 +300,7 @@ function get_app_server_dir {
 }
 
 function get_client_extension_dir {
-	local clients_extension_name=${1}
+	local client_extension_name=${1}
 
 	local client_extension_dir=$(find ${_PORTAL_PROJECT_DIR}/workspaces -type d | grep "${client_extension_name}$" | grep -v .releng | grep -v .npmscripts | grep -v dist | grep -v node_modules)
 
@@ -330,7 +330,7 @@ function get_client_extension_dirs {
 	then
 		for client_extension_name in $(cat ${client_extensions_list_file})
 		do
-			client_extension_dirs+=($(get_client_extension_dir))
+			client_extension_dirs+=($(get_client_extension_dir ${client_extension_name}))
 		done
 	fi
 

@@ -12,6 +12,7 @@ import com.liferay.headless.admin.site.dto.v1_0.CollectionItemPageElementDefinit
 import com.liferay.headless.admin.site.dto.v1_0.ContainerPageElementDefinition;
 import com.liferay.headless.admin.site.dto.v1_0.DropZonePageElementDefinition;
 import com.liferay.headless.admin.site.dto.v1_0.FormContainerPageElementDefinition;
+import com.liferay.headless.admin.site.dto.v1_0.FormRelationshipPageElementDefinition;
 import com.liferay.headless.admin.site.dto.v1_0.FormStepContainerPageElementDefinition;
 import com.liferay.headless.admin.site.dto.v1_0.FormStepPageElementDefinition;
 import com.liferay.headless.admin.site.dto.v1_0.FragmentDropZonePageElementDefinition;
@@ -27,6 +28,7 @@ import com.liferay.layout.util.structure.CollectionStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.ColumnLayoutStructureItem;
 import com.liferay.layout.util.structure.ContainerStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.DropZoneLayoutStructureItem;
+import com.liferay.layout.util.structure.FormRelationshipStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.FormStepContainerStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.FormStyledLayoutStructureItem;
 import com.liferay.layout.util.structure.FragmentDropZoneLayoutStructureItem;
@@ -81,41 +83,44 @@ public class PageElementDTOConverter
 			throw new UnsupportedOperationException();
 		}
 
-		return new PageElement() {
-			{
-				setExternalReferenceCode(layoutStructureItem::getItemId);
-				setPageElementDefinition(
-					() -> _getPageElementDefinition(
-						dtoConverterContext, layoutStructureItem));
-				setPageElements(
-					() -> _getPageElements(
-						dtoConverterContext, layoutStructure,
-						layoutStructureItem));
-				setParentExternalReferenceCode(
-					() -> {
-						if (Objects.equals(
-								layoutStructure.getMainItemId(),
-								layoutStructureItem.getParentItemId())) {
+		PageElementDefinition pageElementDefinition = _getPageElementDefinition(
+			dtoConverterContext, layoutStructureItem);
 
-							return StringPool.BLANK;
-						}
+		if (pageElementDefinition == null) {
+			return null;
+		}
 
-						return layoutStructureItem.getParentItemId();
-					});
-				setPosition(
-					() -> {
-						LayoutStructureItem parentLayoutStructureItem =
-							layoutStructure.getLayoutStructureItem(
-								layoutStructureItem.getParentItemId());
+		PageElement pageElement = new PageElement();
 
-						List<String> childrenItemIds =
-							parentLayoutStructureItem.getChildrenItemIds();
+		pageElement.setExternalReferenceCode(layoutStructureItem::getItemId);
+		pageElement.setPageElementDefinition(() -> pageElementDefinition);
+		pageElement.setPageElements(
+			() -> _getPageElements(
+				dtoConverterContext, layoutStructure, layoutStructureItem));
+		pageElement.setParentExternalReferenceCode(
+			() -> {
+				if (Objects.equals(
+						layoutStructure.getMainItemId(),
+						layoutStructureItem.getParentItemId())) {
 
-						return childrenItemIds.indexOf(
-							layoutStructureItem.getItemId());
-					});
-			}
-		};
+					return StringPool.BLANK;
+				}
+
+				return layoutStructureItem.getParentItemId();
+			});
+		pageElement.setPosition(
+			() -> {
+				LayoutStructureItem parentLayoutStructureItem =
+					layoutStructure.getLayoutStructureItem(
+						layoutStructureItem.getParentItemId());
+
+				List<String> childrenItemIds =
+					parentLayoutStructureItem.getChildrenItemIds();
+
+				return childrenItemIds.indexOf(layoutStructureItem.getItemId());
+			});
+
+		return pageElement;
 	}
 
 	private PageElementDefinition _getPageElementDefinition(
@@ -177,6 +182,15 @@ public class PageElementDTOConverter
 			return _formContainerPageElementDefinitionDTOConverter.toDTO(
 				dtoConverterContext,
 				(FormStyledLayoutStructureItem)layoutStructureItem);
+		}
+
+		if (Objects.equals(
+				layoutStructureItem.getItemType(),
+				LayoutDataItemTypeConstants.TYPE_FORM_RELATIONSHIP)) {
+
+			return _formRelationshipPageElementDefinitionDTOConverter.toDTO(
+				dtoConverterContext,
+				(FormRelationshipStyledLayoutStructureItem)layoutStructureItem);
 		}
 
 		if (Objects.equals(
@@ -350,6 +364,14 @@ public class PageElementDTOConverter
 	private DTOConverter
 		<FormStyledLayoutStructureItem, FormContainerPageElementDefinition>
 			_formContainerPageElementDefinitionDTOConverter;
+
+	@Reference(
+		target = "(component.name=com.liferay.headless.admin.site.internal.dto.v1_0.converter.FormRelationshipPageElementDefinitionDTOConverter)"
+	)
+	private DTOConverter
+		<FormRelationshipStyledLayoutStructureItem,
+		 FormRelationshipPageElementDefinition>
+			_formRelationshipPageElementDefinitionDTOConverter;
 
 	@Reference(
 		target = "(component.name=com.liferay.headless.admin.site.internal.dto.v1_0.converter.FormStepContainerPageElementDefinitionDTOConverter)"

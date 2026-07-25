@@ -5,6 +5,9 @@
 
 package com.liferay.fragment.internal.input.template.parser;
 
+import com.liferay.depot.constants.DepotConstants;
+import com.liferay.depot.model.DepotEntry;
+import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.document.library.util.DLURLHelper;
 import com.liferay.fragment.constants.FragmentConfigurationFieldDataType;
@@ -20,12 +23,14 @@ import com.liferay.info.field.InfoFieldValue;
 import com.liferay.info.field.RelatedInfoFieldValue;
 import com.liferay.info.field.type.DateInfoFieldType;
 import com.liferay.info.field.type.DateTimeInfoFieldType;
+import com.liferay.info.field.type.EmailInfoFieldType;
 import com.liferay.info.field.type.FileInfoFieldType;
 import com.liferay.info.field.type.InfoFieldType;
 import com.liferay.info.field.type.LongTextInfoFieldType;
 import com.liferay.info.field.type.MultiselectInfoFieldType;
 import com.liferay.info.field.type.NumberInfoFieldType;
 import com.liferay.info.field.type.OptionInfoFieldType;
+import com.liferay.info.field.type.PhoneNumberInfoFieldType;
 import com.liferay.info.field.type.PicklistMultiselectInfoFieldType;
 import com.liferay.info.field.type.PicklistSelectInfoFieldType;
 import com.liferay.info.field.type.RelationshipInfoFieldType;
@@ -57,26 +62,32 @@ import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.InfoFormException;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.Country;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupedModel;
 import com.liferay.portal.kernel.portlet.RequestBackedPortletURLFactoryUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.service.CountryLocalService;
+import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.servlet.SessionMessages;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.DateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.KeyValuePair;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
+import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.TempFileEntryUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -96,7 +107,9 @@ import java.time.temporal.TemporalAccessor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -315,6 +328,22 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			(Map<String, String>)SessionMessages.get(
 				httpServletRequest, "infoFormParameterMap");
 
+		long groupId = _getGroupId(httpServletRequest);
+
+		Set<Locale> availableLocales = _language.getAvailableLocales(groupId);
+
+		Locale siteDefaultLocale = locale;
+
+		try {
+			siteDefaultLocale = _portal.getSiteDefaultLocale(groupId);
+		}
+		catch (PortalException portalException) {
+			_log.error(portalException);
+		}
+
+		Locale currentLocale = _getCurrentLocale(
+			availableLocales, locale, siteDefaultLocale);
+
 		if (infoFormParameterMap != null) {
 			label = String.valueOf(
 				infoFormParameterMap.get(infoField.getUniqueId() + "-label"));
@@ -326,7 +355,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 				Map<Locale, String> map =
 					(Map<Locale, String>)infoParameterMapValue;
 
-				value = String.valueOf(map.get(locale));
+				value = String.valueOf(map.get(currentLocale));
 				valueI18n = map;
 			}
 			else {
@@ -336,7 +365,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		else {
 			Object infoFieldValue = _getValue(
 				value, httpServletRequest, infoField, infoForm.getName(),
-				locale);
+				currentLocale);
 
 			if (infoFieldValue instanceof KeyValuePair) {
 				KeyValuePair keyValuePair = (KeyValuePair)infoFieldValue;
@@ -347,7 +376,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			else if (infoFieldValue instanceof Map) {
 				Map<Locale, String> map = (Map<Locale, String>)infoFieldValue;
 
-				value = map.get(locale);
+				value = map.get(currentLocale);
 				valueI18n = map;
 			}
 			else {
@@ -355,20 +384,16 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			}
 		}
 
-		if (infoFieldType instanceof LongTextInfoFieldType ||
-			infoFieldType instanceof TextInfoFieldType) {
+		value = HtmlUtil.escape(value);
 
-			value = HtmlUtil.escape(value);
+		Map<Locale, String> escapedValueI18n = new HashMap<>();
 
-			Map<Locale, String> escapedValueI18n = new HashMap<>();
-
-			for (Map.Entry<Locale, String> entry : valueI18n.entrySet()) {
-				escapedValueI18n.put(
-					entry.getKey(), HtmlUtil.escape(entry.getValue()));
-			}
-
-			valueI18n = escapedValueI18n;
+		for (Map.Entry<Locale, String> entry : valueI18n.entrySet()) {
+			escapedValueI18n.put(
+				entry.getKey(), HtmlUtil.escape(entry.getValue()));
 		}
+
+		valueI18n = escapedValueI18n;
 
 		InputTemplateNode inputTemplateNode = new InputTemplateNode(
 			errorMessage, inputHelpText, inputLabel, localizable, name,
@@ -376,8 +401,9 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			infoFieldType.getName(), value, valueI18n);
 
 		_addInputTemplateNodeAttributes(
-			attributes, fragmentEntryLink, httpServletRequest, infoField,
-			inputTemplateNode, label, locale, value, valueI18n);
+			attributes, availableLocales, fragmentEntryLink, groupId,
+			httpServletRequest, infoField, inputTemplateNode, label, locale,
+			siteDefaultLocale, value, valueI18n);
 
 		if (!localizable) {
 			_addLocalizationOptionsAttributes(
@@ -388,8 +414,16 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		return inputTemplateNode;
 	}
 
+	private void _addEmailInfoFieldTypeInputTemplateNodeAttributes(
+		InfoField infoField, InputTemplateNode inputTemplateNode) {
+
+		inputTemplateNode.addAttribute(
+			"preferredDomains",
+			infoField.getAttribute(EmailInfoFieldType.PREFERRED_DOMAINS));
+	}
+
 	private void _addFileInfoFieldTypeInputTemplateNodeAttributes(
-		FragmentEntryLink fragmentEntryLink,
+		FragmentEntryLink fragmentEntryLink, long groupId,
 		HttpServletRequest httpServletRequest, InfoField infoField,
 		InputTemplateNode inputTemplateNode, String value,
 		Map<Locale, String> valueI18n) {
@@ -436,18 +470,9 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			}
 		}
 
-		inputTemplateNode.addAttribute(
-			"fileNameI18n", _jsonFactory.createJSONObject(fileNameI18n));
+		inputTemplateNode.addAttribute("fileNameI18n", fileNameI18n);
 
-		Object object = httpServletRequest.getAttribute(
-			InfoDisplayWebKeys.INFO_ITEM);
-
-		if (object instanceof GroupedModel) {
-			GroupedModel groupedModel = (GroupedModel)object;
-
-			inputTemplateNode.addAttribute(
-				"groupId", groupedModel.getGroupId());
-		}
+		inputTemplateNode.addAttribute("groupId", groupId);
 
 		ThemeDisplay themeDisplay =
 			(ThemeDisplay)httpServletRequest.getAttribute(
@@ -455,7 +480,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 
 		Group group = themeDisplay.getScopeGroup();
 
-		inputTemplateNode.addAttribute("isCMS", group.isCMS());
+		inputTemplateNode.addAttribute("isCMS", _isCMSGroup(group));
 
 		String previewURL = _getPreviewURL(httpServletRequest, value);
 
@@ -476,8 +501,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			}
 		}
 
-		inputTemplateNode.addAttribute(
-			"previewURLI18n", _jsonFactory.createJSONObject(previewURLI18n));
+		inputTemplateNode.addAttribute("previewURLI18n", previewURLI18n);
 
 		boolean selectFromDocumentLibrary = false;
 
@@ -515,15 +539,19 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 	}
 
 	private void _addInputTemplateNodeAttributes(
-		Map<String, Serializable> attributes,
-		FragmentEntryLink fragmentEntryLink,
+		Map<String, Serializable> attributes, Set<Locale> availableLocales,
+		FragmentEntryLink fragmentEntryLink, long groupId,
 		HttpServletRequest httpServletRequest, InfoField infoField,
 		InputTemplateNode inputTemplateNode, String label, Locale locale,
-		String value, Map<Locale, String> valueI18n) {
+		Locale siteDefaultLocale, String value, Map<Locale, String> valueI18n) {
 
-		if (infoField.getInfoFieldType() instanceof FileInfoFieldType) {
+		if (infoField.getInfoFieldType() instanceof EmailInfoFieldType) {
+			_addEmailInfoFieldTypeInputTemplateNodeAttributes(
+				infoField, inputTemplateNode);
+		}
+		else if (infoField.getInfoFieldType() instanceof FileInfoFieldType) {
 			_addFileInfoFieldTypeInputTemplateNodeAttributes(
-				fragmentEntryLink, httpServletRequest, infoField,
+				fragmentEntryLink, groupId, httpServletRequest, infoField,
 				inputTemplateNode, value, valueI18n);
 		}
 		else if (infoField.getInfoFieldType() instanceof
@@ -543,6 +571,12 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 				infoField, inputTemplateNode);
 		}
 		else if (infoField.getInfoFieldType() instanceof
+					PhoneNumberInfoFieldType) {
+
+			_addPhoneNumberInfoFieldTypeInputTemplateNodeAttributes(
+				infoField, inputTemplateNode, locale);
+		}
+		else if (infoField.getInfoFieldType() instanceof
 					RelationshipInfoFieldType) {
 
 			_addRelationshipInfoFieldTypeInputTemplateNodeAttributes(
@@ -556,6 +590,11 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			_addTextInfoFieldTypeInputTemplateNodeAttributes(
 				infoField, inputTemplateNode);
 		}
+
+		inputTemplateNode.addAttribute(
+			"availableLanguageIds", LocaleUtil.toLanguageIds(availableLocales));
+		inputTemplateNode.addAttribute(
+			"defaultLanguageId", LocaleUtil.toLanguageId(siteDefaultLocale));
 
 		for (Map.Entry<String, Serializable> entry : attributes.entrySet()) {
 			inputTemplateNode.addAttribute(entry.getKey(), entry.getValue());
@@ -613,7 +652,8 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			inputTemplateNode.addAttribute(
 				"unlocalizedFieldsMessage",
 				_language.format(
-					locale, "x-field-cannot-be-localized", inputLabel));
+					locale, "x-field-cannot-be-localized",
+					HtmlUtil.escape(inputLabel)));
 			inputTemplateNode.addAttribute(
 				"unlocalizedFieldsState", "disabled");
 
@@ -704,6 +744,19 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		}
 	}
 
+	private void _addPhoneNumberInfoFieldTypeInputTemplateNodeAttributes(
+		InfoField infoField, InputTemplateNode inputTemplateNode,
+		Locale locale) {
+
+		inputTemplateNode.addAttribute("countries", _getCountries(locale));
+		inputTemplateNode.addAttribute(
+			"country",
+			infoField.getAttribute(PhoneNumberInfoFieldType.COUNTRY));
+		inputTemplateNode.addAttribute(
+			"countrySource",
+			infoField.getAttribute(PhoneNumberInfoFieldType.COUNTRY_SOURCE));
+	}
+
 	private void _addRelationshipInfoFieldTypeInputTemplateNodeAttributes(
 		InfoField infoField, InputTemplateNode inputTemplateNode, String label,
 		String value) {
@@ -769,7 +822,7 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 
 	private FileEntry _fetchFileEntry(long fileEntryId) {
 		try {
-			return _dlAppLocalService.getFileEntry(fileEntryId);
+			return _dlAppLocalService.fetchFileEntry(fileEntryId);
 		}
 		catch (PortalException portalException) {
 			if (_log.isWarnEnabled()) {
@@ -807,6 +860,77 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		return sb.toString();
 	}
 
+	private List<Map<String, Object>> _getCountries(Locale locale) {
+		ServiceContext serviceContext =
+			ServiceContextThreadLocal.getServiceContext();
+
+		if (serviceContext == null) {
+			return Collections.emptyList();
+		}
+
+		long companyId = serviceContext.getCompanyId();
+
+		if (companyId == 0) {
+			return Collections.emptyList();
+		}
+
+		Set<String> a2s = new HashSet<>();
+
+		for (String languageId : PropsValues.LOCALES) {
+			Locale availableLocale = LocaleUtil.fromLanguageId(
+				languageId, false);
+
+			String a2 = availableLocale.getCountry();
+
+			if (Validator.isNotNull(a2)) {
+				a2s.add(a2);
+			}
+		}
+
+		List<Map<String, Object>> countries = new ArrayList<>();
+
+		String languageId = LocaleUtil.toLanguageId(locale);
+
+		for (Country country :
+				_countryLocalService.getCompanyCountries(companyId, true)) {
+
+			String a2 = country.getA2();
+
+			if (!a2s.contains(a2)) {
+				continue;
+			}
+
+			String idd = country.getIdd();
+
+			if (Validator.isNull(idd)) {
+				continue;
+			}
+
+			countries.add(
+				HashMapBuilder.<String, Object>put(
+					"a2", a2
+				).put(
+					"name", country.getTitle(languageId)
+				).put(
+					"prefix", idd
+				).build());
+		}
+
+		return ListUtil.sort(
+			countries,
+			Comparator.comparing(country -> (String)country.get("name")));
+	}
+
+	private Locale _getCurrentLocale(
+		Set<Locale> availableLocales, Locale locale, Locale siteDefaultLocale) {
+
+		if (availableLocales.contains(locale)) {
+			return locale;
+		}
+
+		return siteDefaultLocale;
+	}
+
 	private String _getFileName(
 		FileInfoFieldType.FileSourceType fileSourceType, Object value) {
 
@@ -833,6 +957,23 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		}
 
 		return null;
+	}
+
+	private long _getGroupId(HttpServletRequest httpServletRequest) {
+		Object infoItem = httpServletRequest.getAttribute(
+			InfoDisplayWebKeys.INFO_ITEM);
+
+		if (infoItem instanceof GroupedModel) {
+			GroupedModel groupedModel = (GroupedModel)infoItem;
+
+			return groupedModel.getGroupId();
+		}
+
+		ThemeDisplay themeDisplay =
+			(ThemeDisplay)httpServletRequest.getAttribute(
+				WebKeys.THEME_DISPLAY);
+
+		return themeDisplay.getScopeGroupId();
 	}
 
 	private InfoFieldValue<?> _getInfoFieldValue(
@@ -863,6 +1004,11 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			infoField.getUniqueId());
 
 		if (!(infoParameterMapValue instanceof RelatedInfoFieldValue<?>)) {
+			if (infoParameterMapValue instanceof Map) {
+				return _parseLocalizedValues(
+					infoField, (Map<Locale, ?>)infoParameterMapValue);
+			}
+
 			return infoParameterMapValue;
 		}
 
@@ -912,7 +1058,8 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			InfoLocalizedValue<?> infoLocalizedValue =
 				(InfoLocalizedValue<?>)value;
 
-			return infoLocalizedValue.getValues();
+			return _parseLocalizedValues(
+				infoField, infoLocalizedValue.getValues());
 		}
 
 		return String.valueOf(value);
@@ -1123,6 +1270,43 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 			defaultValue, infoField, locale, infoFieldValue.getValue());
 	}
 
+	private boolean _isCMSGroup(Group group) {
+		if (group.isCMS()) {
+			return true;
+		}
+
+		if (group.isDepot()) {
+			DepotEntry depotEntry =
+				_depotEntryLocalService.fetchGroupDepotEntry(
+					group.getGroupId());
+
+			if ((depotEntry != null) &&
+				(depotEntry.getType() == DepotConstants.TYPE_SPACE)) {
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private Map<Locale, String> _parseLocalizedValues(
+		InfoField infoField, Map<Locale, ?> values) {
+
+		Map<Locale, String> localizedValues = new HashMap<>();
+
+		for (Map.Entry<Locale, ?> entry : values.entrySet()) {
+			localizedValues.put(
+				entry.getKey(),
+				String.valueOf(
+					_parseValue(
+						StringPool.BLANK, infoField, entry.getKey(),
+						entry.getValue())));
+		}
+
+		return localizedValues;
+	}
+
 	private Object _parseValue(
 		String defaultValue, InfoField infoField, Locale locale, Object value) {
 
@@ -1299,6 +1483,12 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 		FragmentEntryInputTemplateNodeContextHelperImpl.class);
 
 	@Reference
+	private CountryLocalService _countryLocalService;
+
+	@Reference
+	private DepotEntryLocalService _depotEntryLocalService;
+
+	@Reference
 	private DLAppLocalService _dlAppLocalService;
 
 	@Reference
@@ -1317,13 +1507,13 @@ public class FragmentEntryInputTemplateNodeContextHelperImpl
 	private ItemSelector _itemSelector;
 
 	@Reference
-	private JSONFactory _jsonFactory;
-
-	@Reference
 	private Language _language;
 
 	@Reference
 	private LayoutPageTemplateStructureLocalService
 		_layoutPageTemplateStructureLocalService;
+
+	@Reference
+	private Portal _portal;
 
 }

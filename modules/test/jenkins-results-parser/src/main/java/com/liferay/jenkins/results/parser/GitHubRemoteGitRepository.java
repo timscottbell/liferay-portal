@@ -72,7 +72,7 @@ public class GitHubRemoteGitRepository extends BaseRemoteGitRepository {
 			return _collaboratorUsernames;
 		}
 
-		String url = JenkinsResultsParserUtil.getGitHubApiUrl(
+		String url = JenkinsResultsParserUtil.getGitHubAPIURL(
 			getName(), getUsername(), "collaborators");
 
 		try {
@@ -116,8 +116,10 @@ public class GitHubRemoteGitRepository extends BaseRemoteGitRepository {
 	public List<Label> getLabels() {
 		String labelRequestURL = getLabelRequestURL();
 
-		if (_labelsLists.containsKey(labelRequestURL)) {
-			return _labelsLists.get(labelRequestURL);
+		List<Label> labelsList = _labelsLists.get(labelRequestURL);
+
+		if (labelsList != null) {
+			return labelsList;
 		}
 
 		JSONArray labelsJSONArray;
@@ -328,7 +330,7 @@ public class GitHubRemoteGitRepository extends BaseRemoteGitRepository {
 			return _labelRequestURL;
 		}
 
-		_labelRequestURL = JenkinsResultsParserUtil.getGitHubApiUrl(
+		_labelRequestURL = JenkinsResultsParserUtil.getGitHubAPIURL(
 			getName(), getUsername(), "/labels");
 
 		return _labelRequestURL;

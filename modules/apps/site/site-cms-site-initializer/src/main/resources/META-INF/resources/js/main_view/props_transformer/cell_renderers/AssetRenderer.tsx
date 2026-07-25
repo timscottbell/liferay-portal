@@ -6,7 +6,7 @@
 import ClayIcon from '@clayui/icon';
 import ClayLink from '@clayui/link';
 import ClaySticker from '@clayui/sticker';
-import {replaceTokens} from '@liferay/frontend-data-set-web';
+import {findAction, replaceTokens} from '@liferay/frontend-data-set-web';
 import classNames from 'classnames';
 import {dateUtils, sub} from 'frontend-js-web';
 import React from 'react';
@@ -26,6 +26,7 @@ export default function AssetRenderer({
 	actions,
 	additionalProps,
 	itemData,
+	onViewClick,
 	options,
 	value,
 }: {
@@ -37,6 +38,7 @@ export default function AssetRenderer({
 		objectDefinitionIcons: Record<string, string>;
 	};
 	itemData: any;
+	onViewClick?: (itemData: any) => void;
 	options: {actionId: string};
 	value: string;
 }) {
@@ -44,17 +46,27 @@ export default function AssetRenderer({
 	const title =
 		value && value !== '' ? value : Liferay.Language.get('untitled-asset');
 
-	if (!actions.length || !actionId) {
-		return <>{title}</>;
+	const hasUpdatePermission = Boolean(itemData?.actions?.update);
+
+	let formattedHref = null;
+	let shouldOpenModal = false;
+
+	if (actions.length && actionId) {
+		if (hasUpdatePermission) {
+			const selectedAction = findAction(actions, actionId);
+
+			if (selectedAction?.href) {
+				formattedHref = replaceTokens(selectedAction.href, itemData);
+			}
+		}
+		else if (onViewClick) {
+			shouldOpenModal = true;
+		}
 	}
 
-	const selectedAction = actions.find(({data}) => data?.id === actionId);
-
-	if (!selectedAction?.href) {
+	if (!formattedHref && !shouldOpenModal) {
 		return <>{title}</>;
 	}
-
-	const formattedHref = replaceTokens(selectedAction.href, itemData);
 
 	return (
 		<div className="d-flex">
@@ -86,17 +98,24 @@ export default function AssetRenderer({
 						aria-label={title}
 						className="text-decoration-underline"
 						data-senna-off
-						href={formattedHref}
+						href={formattedHref || '#'}
+						onClick={(event: React.MouseEvent) => {
+							if (shouldOpenModal && onViewClick) {
+								event.preventDefault();
+								onViewClick(itemData);
+							}
+						}}
 					>
-						<div>{title}</div>
+						{title}
 					</ClayLink>
 				</div>
 
-				<div className="text-2 text-secondary">
+				<div className="text-3 text-secondary">
 					{sub(
 						Liferay.Language.get('modified-at-x-by-x'),
 						formatDate(itemData.dateModified),
-						itemData.embedded.creator.name
+						itemData.embedded?.modifiedBy?.name ??
+							itemData.embedded?.creator?.name
 					)}
 				</div>
 			</div>
